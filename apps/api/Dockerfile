@@ -14,5 +14,6 @@ RUN npm run build
 
 EXPOSE 4000
 
-# Espera o Postgres, aplica migrations e sobe a API.
-CMD ["sh", "-c", "until node -e \"require('net').connect(5432,'db').on('connect',()=>process.exit(0)).on('error',()=>process.exit(1))\" 2>/dev/null; do echo 'aguardando o banco...'; sleep 1; done; node dist/db/migrate.js && node dist/server.js"]
+# Aplica as migrations (tenta at\u00e9 o banco responder) e sobe a API.
+# Funciona tanto no Compose local quanto em provedores (Render + Neon).
+CMD ["sh", "-c", "n=0; until node dist/db/migrate.js || [ \"$n\" -ge 30 ]; do n=$((n+1)); echo \"aguardando o banco... ($n)\"; sleep 2; done; node dist/server.js"]

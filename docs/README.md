@@ -32,6 +32,11 @@ docs/
 - [Setup de Infraestrutura (ferramentas gratuitas)](./desenvolvimento/infraestrutura-setup.md)
 - [Pontos de alinhamento com o cliente](./desenvolvimento/pontos-de-alinhamento.md)
 
+## Deploy
+
+- [Contas e acessos para o deploy (guia do cliente)](./deploy/contas-e-acessos.md)
+- [Deploy na Vercel e no Render (passo a passo)](./deploy/deploy-vercel-render.md)
+
 ## Arquivos auxiliares (referências)
 
 - `referencias/ImobParcerias Escopo MVP v1.pdf` — escopo funcional enviado pelo cliente (v1.4).
