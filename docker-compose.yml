@@ -1,0 +1,49 @@
+services:
+  db:
+    image: docker.io/library/postgres:16-alpine
+    environment:
+      POSTGRES_USER: imob
+      POSTGRES_PASSWORD: imob
+      POSTGRES_DB: imob
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U imob"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      DATABASE_URL: postgresql://imob:imob@db:5432/imob
+      JWT_SECRET: dev-secret-local-please-change-min-32-chars
+      JWT_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN: 7d
+      PORT: "4000"
+      NODE_ENV: development
+      CORS_ORIGIN: http://localhost:3000
+      APP_WEB_URL: http://localhost:3000
+      TERMO_VERSAO: "2026-07-01"
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

@@ -1,0 +1,17 @@
+{
+  "name": "Imob Parcerias",
+  "short_name": "Imob Parcerias",
+  "description": "Plataforma de parcerias entre corretores de imóveis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#16283D",
+  "theme_color": "#16283D",
+  "icons": [
+    {
+      "src": "/logo-mark.png",
+      "sizes": "401x401",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
