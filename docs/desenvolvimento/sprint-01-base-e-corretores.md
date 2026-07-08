@@ -546,7 +546,7 @@ REFRESH_TOKEN_EXPIRES_IN=7d
 RESEND_API_KEY=
 NODE_ENV=development
 CORS_ORIGIN=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:4000
+BACKEND_URL=http://localhost:4000
 ```
 
 > Segurança: nunca commitar `.env`; gerar `JWT_SECRET` forte (`openssl rand -base64 32`);

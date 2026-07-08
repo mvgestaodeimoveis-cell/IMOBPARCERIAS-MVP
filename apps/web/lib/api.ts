@@ -1,6 +1,5 @@
 // Chamadas vão para o próprio Next (mesma origem) e são repassadas ao backend
-// pelo BFF em app/api/[...path]/route.ts. Vazio = mesma origem.
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+// pelo BFF em app/api/[...path]/route.ts.
 
 export interface ApiError {
   code: string;
@@ -28,7 +27,7 @@ interface ApiOptions {
 export async function apiFetch<T = unknown>(path: string, options: ApiOptions = {}): Promise<T> {
   const { method = 'GET', body, token } = options;
 
-  const res = await fetch(`${API_URL}/api/v1${path}`, {
+  const res = await fetch(`/api/v1${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
