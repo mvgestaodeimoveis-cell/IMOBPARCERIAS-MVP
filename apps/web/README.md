@@ -15,6 +15,6 @@ npm run start   # servir build
 ```
 
 ## Variáveis de ambiente
-- `NEXT_PUBLIC_API_URL` — URL da API (backend Node.js).
+- `BACKEND_URL` — URL interna do backend usada pelo BFF (route handler `app/api/[...path]`).
 
 > Consulte a documentação em `docs/` para o detalhamento de telas e fluxos.

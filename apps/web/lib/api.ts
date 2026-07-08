@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+// Chamadas vão para o próprio Next (mesma origem) e são repassadas ao backend
+// pelo BFF em app/api/[...path]/route.ts. Vazio = mesma origem.
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 export interface ApiError {
   code: string;

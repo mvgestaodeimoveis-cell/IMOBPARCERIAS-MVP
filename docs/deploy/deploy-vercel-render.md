@@ -77,17 +77,23 @@ npm run seed:admin -w apps/api
 4. **Environment Variables:**
    | Chave | Valor |
    |---|---|
-   | `NEXT_PUBLIC_API_URL` | a URL do Render (ex.: `https://imobparcerias-api.onrender.com`) |
+   | `BACKEND_URL` | a URL do Render (ex.: `https://imobparcerias-api.onrender.com`) |
+
+   > `BACKEND_URL` é **server-side** (não `NEXT_PUBLIC_`). O browser chama o próprio
+   > Next em `/api/*` e o **BFF** (`app/api/[...path]`) repassa para o backend. Assim
+   > não há CORS no navegador nem a URL da API exposta no bundle.
 5. **Deploy**. A Vercel gera uma URL, ex.: **`https://imobparcerias-mvp.vercel.app`**.
 
 ---
 
-## C) Fechar o laço (CORS)
+## C) Fechar o laço (links de e-mail)
 
-1. Volte no **Render** → **Environment** e ajuste:
-   - `CORS_ORIGIN` = `https://<sua-url-da-vercel>`
-   - `APP_WEB_URL` = `https://<sua-url-da-vercel>`
-2. Salve → o Render faz **redeploy automático**. Pronto: front e back conversando.
+Com o **BFF**, o navegador fala apenas com a Vercel (mesma origem), então **CORS deixa
+de ser um problema**. Ainda assim, ajuste no **Render** → **Environment**:
+1. `APP_WEB_URL` = `https://<sua-url-da-vercel>` (usado nos links de recuperação de senha).
+2. `CORS_ORIGIN` pode ficar como está (opcional — as requisições agora chegam do
+   servidor Next, sem `Origin` de navegador).
+3. Salve → o Render faz **redeploy automático**.
 
 ---
 
@@ -97,7 +103,7 @@ npm run seed:admin -w apps/api
    (a Vercel mostra os registros → adicione no **Cloudflare**).
 2. **Render** → Settings → **Custom Domain** → `api.imobparcerias.com.br`
    (adicione o CNAME no Cloudflare).
-3. Atualize `NEXT_PUBLIC_API_URL` (Vercel) e `CORS_ORIGIN`/`APP_WEB_URL` (Render) para os domínios finais.
+3. Atualize `BACKEND_URL` (Vercel) e `APP_WEB_URL` (Render) para os domínios finais.
 
 ---
 

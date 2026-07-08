@@ -36,10 +36,9 @@ services:
   web:
     build:
       context: ./apps/web
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:4000
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:4000
+      # BFF: o servidor Next repassa /api/* para o backend (rede interna do compose).
+      BACKEND_URL: http://api:4000
     ports:
       - "3000:3000"
     depends_on:

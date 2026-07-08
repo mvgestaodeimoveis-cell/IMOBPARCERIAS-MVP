@@ -52,7 +52,7 @@ e **produção** usando os tiers gratuitos. Stack: **Next.js (frontend) + Node.j
 
 ### 2.4 Frontend Next.js (Vercel)
 1. Importar o repositório na Vercel, root em `apps/web`.
-2. Variáveis: `NEXT_PUBLIC_API_URL` (URL do backend no Render).
+2. Variáveis: `BACKEND_URL` (URL do backend no Render) — usada server-side pelo BFF.
 3. Deploy automático a cada push na `main` (produção) e por PR (preview/staging).
 
 ### 2.5 E-mail (Resend)
@@ -79,7 +79,7 @@ RESEND_API_KEY=
 # App
 NODE_ENV=development
 CORS_ORIGIN=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:4000
+BACKEND_URL=http://localhost:4000
 ```
 
 > **Segurança:** nunca commite `.env`. Gere `JWT_SECRET` forte
@@ -104,7 +104,7 @@ npm run dev               # sobe a API em http://localhost:4000
 
 # frontend (outro terminal)
 cd ../web
-cp .env.example .env      # NEXT_PUBLIC_API_URL=http://localhost:4000
+  cp .env.example .env      # BACKEND_URL=http://localhost:4000
 npm install
 npm run dev               # sobe o Next em http://localhost:3000
 ```
