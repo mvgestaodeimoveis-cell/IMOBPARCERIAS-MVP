@@ -39,6 +39,8 @@ export function routeForStatus(status: string): string {
   switch (status) {
     case 'ativo':
       return '/painel';
+    case 'cadastro_incompleto':
+      return '/completar-cadastro';
     case 'rejeitado':
       return '/perfil/rejeitado';
     case 'suspenso':

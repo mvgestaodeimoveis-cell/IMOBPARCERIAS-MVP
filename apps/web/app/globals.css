@@ -293,6 +293,31 @@ select.input {
   margin-top: 0.3rem;
 }
 
+/* Campo de senha com \u00edcone de olho */
+.input-wrap {
+  position: relative;
+}
+.input-wrap .input {
+  padding-right: 2.9rem;
+}
+.input-eye {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.4rem;
+  cursor: pointer;
+  color: var(--gray-500);
+  display: inline-flex;
+  border-radius: 8px;
+  line-height: 0;
+}
+.input-eye:hover {
+  color: var(--gray-700);
+}
+
 /* ===== Segmented (Entrar / Cadastrar) ===== */
 .segment {
   display: flex;

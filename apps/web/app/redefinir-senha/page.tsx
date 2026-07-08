@@ -4,7 +4,9 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
+import { validateSenha } from '@/lib/validation';
 import { AuthShell } from '@/components/AuthShell';
+import { PasswordInput } from '@/components/PasswordInput';
 
 function RedefinirSenhaForm() {
   const router = useRouter();
@@ -14,6 +16,7 @@ function RedefinirSenhaForm() {
   const [senha, setSenha] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [erro, setErro] = useState<string | null>(null);
+  const [senhaErro, setSenhaErro] = useState<string | null>(null);
   const [fieldErro, setFieldErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [ok, setOk] = useState(false);
@@ -25,6 +28,11 @@ function RedefinirSenhaForm() {
 
     if (!token) {
       setErro('Link inválido. Solicite uma nova recuperação de senha.');
+      return;
+    }
+    const sErr = validateSenha(senha);
+    if (sErr) {
+      setSenhaErro(sErr);
       return;
     }
     if (senha !== confirmar) {
@@ -75,22 +83,29 @@ function RedefinirSenhaForm() {
 
       <div className="field">
         <label htmlFor="senha">Nova senha</label>
-        <input
+        <PasswordInput
           id="senha"
-          type="password"
-          className={`input ${fieldErro ? 'error' : ''}`}
+          placeholder="Mín. 8 caracteres"
+          autoComplete="new-password"
+          hasError={!!senhaErro}
           value={senha}
-          onChange={(e) => setSenha(e.target.value)}
+          onChange={(e) => {
+            setSenha(e.target.value);
+            if (senhaErro) setSenhaErro(validateSenha(e.target.value));
+          }}
+          onBlur={() => setSenhaErro(validateSenha(senha))}
           required
         />
+        {senhaErro && <div className="field-error">{senhaErro}</div>}
       </div>
 
       <div className="field">
         <label htmlFor="confirmar">Confirmar nova senha</label>
-        <input
+        <PasswordInput
           id="confirmar"
-          type="password"
-          className={`input ${fieldErro ? 'error' : ''}`}
+          placeholder="Repita a senha"
+          autoComplete="new-password"
+          hasError={!!fieldErro}
           value={confirmar}
           onChange={(e) => setConfirmar(e.target.value)}
           required

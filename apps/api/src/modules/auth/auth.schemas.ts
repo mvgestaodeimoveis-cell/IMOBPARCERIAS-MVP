@@ -26,24 +26,30 @@ const senhaSchema = z
   .regex(/[A-Za-z]/, 'A senha deve conter ao menos uma letra.')
   .regex(/\d/, 'A senha deve conter ao menos um número.');
 
+const creciSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/\s+/g, ''))
+  .pipe(z.string().min(4, 'CRECI inválido.').max(20, 'CRECI inválido.'));
+
+// Etapa 1 — captura do lead (persistido imediatamente)
 export const registroSchema = z.object({
   nome: z.string().trim().min(3, 'Informe seu nome completo.').max(120),
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .email('E-mail inválido.'),
+  email: z.string().trim().toLowerCase().email('E-mail inválido.'),
   senha: senhaSchema,
-  creci: z
-    .string()
-    .trim()
-    .transform((v) => v.replace(/\s+/g, ''))
-    .pipe(z.string().min(4, 'CRECI inválido.').max(20, 'CRECI inválido.')),
+});
+
+// Etapa 2 — completa o cadastro do corretor
+export const completarCadastroSchema = z.object({
   whatsapp: whatsappSchema,
   cidade: z.string().trim().min(2, 'Informe sua cidade.').max(80),
-  papel: z.enum(['captador', 'comprador', 'ambos'], {
-    errorMap: () => ({ message: 'Selecione o tipo de atuação.' }),
-  }),
+  creci: creciSchema,
+  imobiliaria: z
+    .string()
+    .trim()
+    .max(120, 'Nome da imobiliária muito longo.')
+    .optional()
+    .transform((v) => (v ? v : null)),
   aceite_termo: z.literal(true, {
     errorMap: () => ({ message: 'É necessário aceitar o Termo de Uso.' }),
   }),
@@ -69,6 +75,7 @@ export const redefinirSenhaSchema = z.object({
 });
 
 export type RegistroInput = z.infer<typeof registroSchema>;
+export type CompletarCadastroInput = z.infer<typeof completarCadastroSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
 export type EsqueciSenhaInput = z.infer<typeof esqueciSenhaSchema>;

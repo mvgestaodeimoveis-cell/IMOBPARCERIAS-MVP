@@ -8,18 +8,10 @@ import type {
   RegistroInput,
 } from './auth.schemas';
 
-function clientIp(req: Request): string {
-  return req.ip || req.socket.remoteAddress || '0.0.0.0';
-}
-
 export async function registro(req: Request, res: Response) {
   const input = req.body as RegistroInput;
-  const corretor = await authService.registrarCorretor(
-    input,
-    clientIp(req),
-    req.get('user-agent') ?? 'desconhecido',
-  );
-  res.status(201).json({ corretor });
+  const result = await authService.iniciarCadastro(input);
+  res.status(201).json(result);
 }
 
 export async function login(req: Request, res: Response) {

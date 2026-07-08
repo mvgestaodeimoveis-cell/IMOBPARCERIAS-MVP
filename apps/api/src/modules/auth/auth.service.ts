@@ -8,18 +8,19 @@ import {
   hashRefreshToken,
   signAccessToken,
 } from '../../lib/jwt';
-import { badRequest, conflict, unauthorized } from '../../lib/errors';
+import { badRequest, conflict, notFound, unauthorized } from '../../lib/errors';
 import { sendEmail } from '../../lib/email';
 import type { UserRole } from '../../types/express';
-import type { LoginInput, RegistroInput } from './auth.schemas';
+import type { CompletarCadastroInput, LoginInput, RegistroInput } from './auth.schemas';
 
 export interface CorretorSafe {
   id: string;
   nome: string;
   email: string;
-  creci: string;
-  whatsapp: string;
-  cidade: string;
+  creci: string | null;
+  whatsapp: string | null;
+  cidade: string | null;
+  imobiliaria: string | null;
   papel: string;
   status: string;
   motivo_rejeicao: string | null;
@@ -54,55 +55,80 @@ async function issueTokens(subjectId: string, role: UserRole, status?: string): 
   return { access_token, refresh_token: value };
 }
 
-export async function registrarCorretor(
-  input: RegistroInput,
-  ip: string,
-  userAgent: string,
-): Promise<Pick<CorretorSafe, 'id' | 'nome' | 'email' | 'status' | 'papel'>> {
-  const dupe = await query<{ email: string; creci: string }>(
-    'SELECT email, creci FROM corretor WHERE email = $1 OR creci = $2',
-    [input.email, input.creci],
-  );
+/** Etapa 1 — cria o corretor como lead (cadastro_incompleto) e já autentica. */
+export async function iniciarCadastro(input: RegistroInput) {
+  const dupe = await query<{ email: string }>('SELECT email FROM corretor WHERE email = $1', [
+    input.email,
+  ]);
   if (dupe.rowCount) {
-    const row = dupe.rows[0];
-    const fields: Record<string, string> = {};
-    if (row.email === input.email) fields.email = 'Este e-mail já está cadastrado.';
-    if (row.creci === input.creci) fields.creci = 'Este CRECI já está cadastrado.';
-    throw conflict('Cadastro já existente.', fields);
+    throw conflict('Cadastro já existente.', { email: 'Este e-mail já está cadastrado.' });
   }
 
   const senhaHash = await hashPassword(input.senha);
+  const inserted = await query<{
+    id: string;
+    nome: string;
+    email: string;
+    status: string;
+    papel: string;
+  }>(
+    `INSERT INTO corretor (nome, email, senha_hash, papel, status)
+     VALUES ($1, $2, $3, 'ambos', 'cadastro_incompleto')
+     RETURNING id, nome, email, status, papel`,
+    [input.nome, input.email, senhaHash],
+  );
+  const corretor = inserted.rows[0];
+  const tokens = await issueTokens(corretor.id, 'corretor', corretor.status);
+  return { ...tokens, corretor };
+}
+
+/** Etapa 2 — completa o cadastro do lead e registra o aceite do Termo. */
+export async function completarCadastro(
+  corretorId: string,
+  input: CompletarCadastroInput,
+  ip: string,
+  userAgent: string,
+) {
+  const atual = await query<{ status: string }>('SELECT status FROM corretor WHERE id = $1', [
+    corretorId,
+  ]);
+  if (!atual.rows[0]) throw notFound('Corretor não encontrado.');
+  if (atual.rows[0].status !== 'cadastro_incompleto') {
+    throw conflict('Cadastro já concluído.');
+  }
+
+  const dupe = await query<{ id: string }>(
+    'SELECT id FROM corretor WHERE creci = $1 AND id <> $2',
+    [input.creci, corretorId],
+  );
+  if (dupe.rowCount) {
+    throw conflict('CRECI já cadastrado.', { creci: 'Este CRECI já está cadastrado.' });
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const inserted = await client.query<{
-      id: string;
-      nome: string;
-      email: string;
-      status: string;
-      papel: string;
-    }>(
-      `INSERT INTO corretor (nome, email, senha_hash, creci, whatsapp, cidade, papel)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, nome, email, status, papel`,
-      [input.nome, input.email, senhaHash, input.creci, input.whatsapp, input.cidade, input.papel],
+    await client.query(
+      `UPDATE corretor
+       SET whatsapp = $2, cidade = $3, creci = $4, imobiliaria = $5,
+           status = 'verificacao_pendente', atualizado_em = now()
+       WHERE id = $1`,
+      [corretorId, input.whatsapp, input.cidade, input.creci, input.imobiliaria],
     );
-    const corretor = inserted.rows[0];
-
     await client.query(
       `INSERT INTO termo_aceite (corretor_id, versao_termo, ip, user_agent)
        VALUES ($1, $2, $3, $4)`,
-      [corretor.id, input.versao_termo, ip, userAgent],
+      [corretorId, input.versao_termo, ip, userAgent],
     );
-
     await client.query('COMMIT');
-    return corretor;
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
   }
+
+  return { id: corretorId, status: 'verificacao_pendente' as const };
 }
 
 export async function loginCorretor(input: LoginInput) {
@@ -171,7 +197,7 @@ export async function logout(refreshToken: string): Promise<void> {
 
 export async function getCorretorById(id: string): Promise<CorretorSafe | null> {
   const { rows } = await query<CorretorSafe>(
-    `SELECT id, nome, email, creci, whatsapp, cidade, papel, status, motivo_rejeicao, criado_em
+    `SELECT id, nome, email, creci, whatsapp, cidade, imobiliaria, papel, status, motivo_rejeicao, criado_em
      FROM corretor WHERE id = $1`,
     [id],
   );
