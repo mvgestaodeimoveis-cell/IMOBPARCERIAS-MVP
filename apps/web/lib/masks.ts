@@ -27,3 +27,18 @@ export function maskCep(value: string): string {
 export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
+
+/** Agrupa milhares com ponto a partir de dígitos (ex.: "450000" → "450.000"). */
+export function formatMilhar(value: string): string {
+  const d = value.replace(/\D/g, '');
+  if (!d) return '';
+  return d.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+/** Converte string com máscara/dígitos em número (ou null). */
+export function parseNumero(value: string): number | null {
+  const d = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
+  if (!d) return null;
+  const n = Number(d);
+  return Number.isFinite(n) ? n : null;
+}
