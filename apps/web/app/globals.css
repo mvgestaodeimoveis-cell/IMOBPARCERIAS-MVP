@@ -724,6 +724,201 @@ th {
   }
 }
 
+/* ============================================================
+   Site de marketing (landing / como funciona) — largura total
+   ============================================================ */
+.site {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.site > main {
+  flex: 1;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.site-header-inner {
+  position: relative;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0.8rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* Hero full-bleed */
+.hero-band {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  text-align: center;
+  padding: 3rem 1.25rem 3.25rem;
+  background: radial-gradient(120% 90% at 50% -10%, #26496a 0%, var(--navy) 55%, #0e1a28 100%);
+}
+.hero-band::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(50% 40% at 50% 0%, rgba(23, 163, 103, 0.18), transparent 70%);
+  pointer-events: none;
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.hero-content .logo-hero {
+  margin: 0 auto 1.25rem;
+}
+.hero-content h1 {
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1.08;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+.hero-content h1 .hl {
+  color: var(--orange);
+}
+.hero-sub {
+  font-weight: 600;
+  color: #e3eaf1;
+  margin: 1rem 0 0.35rem;
+}
+.hero-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #9fb0c0;
+  margin-bottom: 1.75rem;
+}
+.hero-actions {
+  display: flex;
+  justify-content: center;
+}
+.hero-nomensalidade {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.5rem auto 0;
+  padding: 0.55rem 1.15rem;
+  border-radius: 999px;
+  background: rgba(23, 163, 103, 0.16);
+  border: 1px solid rgba(23, 163, 103, 0.55);
+  color: #b9f0d4;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.hero-nomensalidade span {
+  color: #2fd48c;
+  font-weight: 800;
+}
+
+/* Seções full width com container central */
+.section {
+  padding: 3rem 1.25rem;
+}
+.section-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+.section-inner.section-narrow {
+  max-width: 820px;
+}
+.feature p strong {
+  color: var(--navy);
+}
+.veja-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 2.25rem;
+}
+.btn.btn-inline {
+  width: 100%;
+}
+
+/* Rodapé */
+.site-footer {
+  background: var(--navy);
+  color: #cdd6df;
+  padding: 2.25rem 1.25rem;
+}
+.site-footer-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  text-align: center;
+}
+.site-footer .brandmark {
+  color: #fff;
+}
+.site-footer .foot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  justify-content: center;
+}
+.site-footer .foot-links a {
+  color: #cdd6df;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.site-footer .foot-links a:hover {
+  color: #fff;
+  text-decoration: none;
+}
+.site-footer .foot-copy {
+  font-size: 0.8rem;
+  color: #8ea0b2;
+}
+
+@media (min-width: 768px) {
+  .site-header-inner {
+    padding: 0.9rem 2rem;
+  }
+  .hero-band {
+    padding: 4.75rem 1.5rem 5rem;
+  }
+  .hero-content h1 {
+    font-size: 3rem;
+  }
+  .section {
+    padding: 4rem 1.5rem;
+  }
+  .btn.btn-inline {
+    width: auto;
+    min-width: 260px;
+  }
+  .site-footer-inner {
+    flex-direction: row;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+@media (min-width: 1024px) {
+  .hero-content h1 {
+    font-size: 3.4rem;
+  }
+}
+
 /* Hero: profundidade e brilho sutil */
 .hero {
   box-shadow: 0 26px 60px -28px rgba(16, 24, 40, 0.55);
