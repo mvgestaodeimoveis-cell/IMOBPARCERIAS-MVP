@@ -1906,9 +1906,29 @@ th {
     display: none;
   }
 
-  /* Painel: nav no topo, sem barra inferior, conteúdo mais largo */
+  /* App: header ocupa a largura toda; conteúdo centralizado num container */
   .frame.frame-app {
-    max-width: 1080px;
+    max-width: none;
+  }
+  .frame-app > .topbar {
+    padding-left: max(2rem, calc((100% - 1120px) / 2));
+    padding-right: max(2rem, calc((100% - 1120px) / 2));
+  }
+  .frame-app > .screen {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .wizard-frame > .topbar,
+  .wizard-frame > .wizard-footer {
+    padding-left: max(1.25rem, calc((100% - 640px) / 2));
+    padding-right: max(1.25rem, calc((100% - 640px) / 2));
+  }
+  .wizard-frame > .wizard-progress,
+  .wizard-frame > .wizard-body {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
   }
   .bottomnav {
     display: none;
