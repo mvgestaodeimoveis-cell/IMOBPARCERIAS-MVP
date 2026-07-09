@@ -880,6 +880,31 @@ th {
   max-width: 440px;
   margin: 0 auto;
 }
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.auth-back:hover {
+  color: var(--navy);
+}
+.auth-brand-lockup {
+  text-decoration: none;
+  color: inherit;
+}
+.auth-back-brand {
+  margin-top: 2rem;
+  align-self: flex-start;
+  color: #cdd6df;
+}
+.auth-back-brand:hover {
+  color: #fff;
+}
 
 /* ---- Painel: navegação no topo aparece só no desktop ---- */
 .desktop-nav {
