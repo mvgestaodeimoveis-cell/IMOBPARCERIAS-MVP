@@ -30,7 +30,12 @@ export interface Imovel {
   descricao: string | null;
   fotos: string[];
   diferenciais: string[];
+  documentacao: string[];
   exclusividade_verificada: boolean;
+  exclusividade: boolean;
+  exclusividade_contrato_url: string | null;
+  exclusividade_vencimento: string | null;
+  exclusividade_status: string;
   status: string;
   origem: string;
   link_origem: string | null;
@@ -45,8 +50,9 @@ interface ImovelRow extends Omit<Imovel, 'preco' | 'area_m2'> {
 
 const COLUNAS = `id, corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro,
   numero, complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
-  vagas, descricao, fotos, diferenciais, exclusividade_verificada, status, origem, link_origem,
-  criado_em, atualizado_em`;
+  vagas, descricao, fotos, diferenciais, documentacao, exclusividade_verificada, exclusividade,
+  exclusividade_contrato_url, exclusividade_vencimento::text AS exclusividade_vencimento,
+  exclusividade_status, status, origem, link_origem, criado_em, atualizado_em`;
 
 // Nível 1 (vitrine pública): NUNCA expõe logradouro, número, complemento ou CEP.
 const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, area_m2, quartos,
@@ -197,8 +203,10 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
       `INSERT INTO imovel
          (corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro, numero,
           complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
-          vagas, descricao, fotos, diferenciais, chave_dedupe, chave_predio, origem, link_origem)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
+          vagas, descricao, fotos, diferenciais, documentacao, chave_dedupe, chave_predio, origem,
+          link_origem, exclusividade, exclusividade_contrato_url, exclusividade_vencimento,
+          exclusividade_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)
        RETURNING ${COLUNAS}`,
       [
         corretorId,
@@ -223,10 +231,15 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
         input.descricao,
         JSON.stringify(input.fotos ?? []),
         JSON.stringify(input.diferenciais ?? []),
+        JSON.stringify(input.documentacao ?? []),
         chave,
         predio,
         input.link_origem ? 'importado' : 'manual',
         input.link_origem ?? null,
+        input.exclusividade ?? false,
+        input.exclusividade_contrato_url ?? null,
+        input.exclusividade_vencimento ?? null,
+        input.exclusividade ? 'pendente' : 'nao',
       ],
     );
     return mapImovel(rows[0]);
@@ -286,6 +299,7 @@ export async function atualizarImovel(
     descricao: input.descricao === undefined ? atual.descricao : input.descricao,
     fotos: input.fotos ?? atual.fotos,
     diferenciais: input.diferenciais ?? atual.diferenciais,
+    documentacao: input.documentacao ?? atual.documentacao,
     status: input.status ?? atual.status,
   };
 
@@ -303,8 +317,8 @@ export async function atualizarImovel(
        finalidade = $2, tipo = $3, preco = $4, cidade = $5, bairro = $6, cep = $7,
        logradouro = $8, numero = $9, complemento = $10, unidade = $11, andar = $12, bloco = $13,
        nome_condominio = $14, area_m2 = $15, quartos = $16, suites = $17, banheiros = $18,
-       vagas = $19, descricao = $20, fotos = $21, diferenciais = $22, status = $23,
-       chave_dedupe = $24, chave_predio = $25, atualizado_em = now()
+       vagas = $19, descricao = $20, fotos = $21, diferenciais = $22, documentacao = $23,
+       status = $24, chave_dedupe = $25, chave_predio = $26, atualizado_em = now()
      WHERE id = $1
      RETURNING ${COLUNAS}`,
     [
@@ -330,6 +344,7 @@ export async function atualizarImovel(
       merged.descricao,
       JSON.stringify(merged.fotos),
       JSON.stringify(merged.diferenciais),
+      JSON.stringify(merged.documentacao),
       merged.status,
       chave,
       predio,

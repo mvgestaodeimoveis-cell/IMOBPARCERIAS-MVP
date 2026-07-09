@@ -93,3 +93,56 @@ export async function rejeitarCorretor(id: string, equipeId: string, motivo: str
 
   return { id, status: 'rejeitado' as const };
 }
+
+// ============================================================
+// Verificação de exclusividade (Fase 2/7.5)
+// ============================================================
+
+interface ExclusividadeRow {
+  id: string;
+  bairro: string;
+  cidade: string;
+  tipo: string;
+  preco: string;
+  exclusividade_contrato_url: string | null;
+  exclusividade_vencimento: string | null;
+  corretor_nome: string;
+  corretor_creci: string | null;
+  criado_em: string;
+}
+
+export async function listarExclusividadesPendentes() {
+  const { rows } = await query<ExclusividadeRow>(
+    `SELECT i.id, i.bairro, i.cidade, i.tipo, i.preco::text AS preco,
+            i.exclusividade_contrato_url,
+            i.exclusividade_vencimento::text AS exclusividade_vencimento,
+            i.criado_em, c.nome AS corretor_nome, c.creci AS corretor_creci
+     FROM imovel i
+     JOIN corretor c ON c.id = i.corretor_id
+     WHERE i.exclusividade_status = 'pendente'
+     ORDER BY i.criado_em ASC`,
+  );
+  return { data: rows.map((r) => ({ ...r, preco: Number(r.preco) })) };
+}
+
+export async function verificarExclusividade(id: string) {
+  const { rowCount } = await query(
+    `UPDATE imovel
+     SET exclusividade_status = 'verificada', exclusividade_verificada = true, atualizado_em = now()
+     WHERE id = $1 AND exclusividade_status = 'pendente'`,
+    [id],
+  );
+  if (!rowCount) throw notFound('Imóvel não encontrado ou já processado.');
+  return { id, exclusividade_status: 'verificada' as const };
+}
+
+export async function rejeitarExclusividade(id: string) {
+  const { rowCount } = await query(
+    `UPDATE imovel
+     SET exclusividade_status = 'rejeitada', exclusividade_verificada = false, atualizado_em = now()
+     WHERE id = $1 AND exclusividade_status = 'pendente'`,
+    [id],
+  );
+  if (!rowCount) throw notFound('Imóvel não encontrado ou já processado.');
+  return { id, exclusividade_status: 'rejeitada' as const };
+}

@@ -20,8 +20,9 @@ export interface UploadAssinatura {
  * O API secret nunca sai do servidor; o cliente só recebe a assinatura.
  */
 export function assinarUpload(folder = 'imoveis'): UploadAssinatura {
+  const pasta = folder === 'contratos' ? 'contratos' : 'imoveis';
   const timestamp = Math.floor(Date.now() / 1000);
-  const paramsToSign = `folder=${folder}&timestamp=${timestamp}`;
+  const paramsToSign = `folder=${pasta}&timestamp=${timestamp}`;
   const signature = crypto
     .createHash('sha1')
     .update(paramsToSign + env.CLOUDINARY_API_SECRET)
@@ -31,7 +32,7 @@ export function assinarUpload(folder = 'imoveis'): UploadAssinatura {
     cloud_name: env.CLOUDINARY_CLOUD_NAME as string,
     api_key: env.CLOUDINARY_API_KEY as string,
     timestamp,
-    folder,
+    folder: pasta,
     signature,
   };
 }

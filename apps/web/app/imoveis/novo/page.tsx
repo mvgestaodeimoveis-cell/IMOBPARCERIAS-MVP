@@ -57,6 +57,15 @@ const DIFERENCIAIS_SUGERIDOS = [
   'Vista livre',
 ];
 
+const DOCS_SUGERIDOS = [
+  'Escritura',
+  'Matrícula atualizada',
+  'IPTU em dia',
+  'Contrato de compra e venda',
+  'Habite-se',
+  'Planta do imóvel',
+];
+
 const TOTAL_ETAPAS = 5;
 const TITULOS = ['Tipo do anúncio', 'Localização', 'Detalhes', 'Fotos', 'Revisão'];
 
@@ -111,6 +120,12 @@ export default function NovoImovelPage() {
   const [diferenciais, setDiferenciais] = useState<string[]>([]);
   const [difInput, setDifInput] = useState('');
   const [fotos, setFotos] = useState<string[]>([]);
+  const [documentacao, setDocumentacao] = useState<string[]>([]);
+  const [exclusividade, setExclusividade] = useState(false);
+  const [exclusividadeVencimento, setExclusividadeVencimento] = useState('');
+  const [contratoUrl, setContratoUrl] = useState<string | null>(null);
+  const [enviandoContrato, setEnviandoContrato] = useState(false);
+  const [contratoErro, setContratoErro] = useState<string | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [erro, setErro] = useState<string | null>(null);
@@ -136,6 +151,48 @@ export default function NovoImovelPage() {
     if (!v) return;
     setDiferenciais((d) => (d.includes(v) || d.length >= 20 ? d : [...d, v]));
     setDifInput('');
+  }
+
+  function toggleDoc(d: string) {
+    setDocumentacao((arr) => (arr.includes(d) ? arr.filter((x) => x !== d) : [...arr, d]));
+    if (fieldErrors.documentacao) setFieldErrors((e) => ({ ...e, documentacao: '' }));
+  }
+
+  async function enviarContrato(file?: File) {
+    if (!file) return;
+    const token = getAccessToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setContratoErro(null);
+    setEnviandoContrato(true);
+    try {
+      const sig = await apiFetch<{
+        cloud_name: string;
+        api_key: string;
+        timestamp: number;
+        folder: string;
+        signature: string;
+      }>('/imoveis/upload-assinatura?folder=contratos', { method: 'POST', token });
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('api_key', sig.api_key);
+      fd.append('timestamp', String(sig.timestamp));
+      fd.append('folder', sig.folder);
+      fd.append('signature', sig.signature);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/auto/upload`, {
+        method: 'POST',
+        body: fd,
+      });
+      if (!res.ok) throw new Error('upload');
+      const data = await res.json();
+      setContratoUrl(data.secure_url as string);
+    } catch {
+      setContratoErro('Não foi possível enviar o contrato. Tente novamente.');
+    } finally {
+      setEnviandoContrato(false);
+    }
   }
 
   async function onCepBlur() {
@@ -224,6 +281,7 @@ export default function NovoImovelPage() {
       if (!parseNumero(form.preco)) e.preco = 'Informe o preço.';
       if (!parseNumero(form.area_m2)) e.area_m2 = 'Informe a metragem.';
       if (diferenciais.length === 0) e.diferenciais = 'Escolha ao menos 1 diferencial.';
+      if (documentacao.length === 0) e.documentacao = 'Selecione ao menos 1 documento disponível.';
     }
     setFieldErrors(e);
     return Object.keys(e).length === 0;
@@ -248,6 +306,10 @@ export default function NovoImovelPage() {
       router.replace('/login');
       return;
     }
+    if (exclusividade && (!contratoUrl || !exclusividadeVencimento)) {
+      setErro('Para exclusividade, envie o contrato e informe o vencimento.');
+      return;
+    }
     const payload = {
       finalidade: form.finalidade,
       tipo: form.tipo,
@@ -269,7 +331,11 @@ export default function NovoImovelPage() {
       vagas: counts.vagas,
       descricao: form.descricao || undefined,
       diferenciais,
+      documentacao,
       fotos,
+      exclusividade,
+      exclusividade_contrato_url: exclusividade ? contratoUrl ?? undefined : undefined,
+      exclusividade_vencimento: exclusividade ? exclusividadeVencimento || undefined : undefined,
       link_origem: linkOrigem ?? undefined,
       confirmar_distinto: confirmarDistinto,
     };
@@ -611,6 +677,26 @@ export default function NovoImovelPage() {
               )}
               {fieldErrors.diferenciais && <div className="field-error">{fieldErrors.diferenciais}</div>}
             </div>
+
+            <div className="field">
+              <label>Documentação disponível</label>
+              <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.84rem' }}>
+                Selecione o que o imóvel possui (mín. 1).
+              </p>
+              <div className="sug-chips">
+                {DOCS_SUGERIDOS.map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`sug-chip ${documentacao.includes(d) ? 'on' : ''}`}
+                    onClick={() => toggleDoc(d)}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+              {fieldErrors.documentacao && <div className="field-error">{fieldErrors.documentacao}</div>}
+            </div>
           </>
         )}
 
@@ -648,6 +734,61 @@ export default function NovoImovelPage() {
               />
             </div>
 
+            <div className="field">
+              <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={exclusividade}
+                  onChange={(e) => setExclusividade(e.target.checked)}
+                  style={{ marginTop: '0.2rem', width: 18, height: 18 }}
+                />
+                <span>
+                  Tenho <strong>contrato de exclusividade</strong> com o proprietário
+                </span>
+              </label>
+              {exclusividade && (
+                <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.75rem' }}>
+                  <div className="field" style={{ margin: 0 }}>
+                    <label htmlFor="venc">Vencimento do contrato</label>
+                    <input
+                      id="venc"
+                      type="date"
+                      className="input"
+                      value={exclusividadeVencimento}
+                      onChange={(e) => setExclusividadeVencimento(e.target.value)}
+                    />
+                  </div>
+                  <div className="field" style={{ margin: 0 }}>
+                    <label>Contrato (imagem ou PDF)</label>
+                    {contratoUrl ? (
+                      <div className="import-msg">
+                        ✓ Contrato enviado.{' '}
+                        <a href={contratoUrl} target="_blank" rel="noreferrer">
+                          ver
+                        </a>
+                      </div>
+                    ) : (
+                      <label className="btn btn-ghost" style={{ cursor: 'pointer' }}>
+                        {enviandoContrato ? 'Enviando…' : 'Enviar contrato'}
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          hidden
+                          disabled={enviandoContrato}
+                          onChange={(e) => enviarContrato(e.target.files?.[0])}
+                        />
+                      </label>
+                    )}
+                    {contratoErro && <div className="field-error">{contratoErro}</div>}
+                  </div>
+                  <p className="muted" style={{ margin: 0, fontSize: '0.82rem' }}>
+                    A equipe verifica em até 48h úteis. Com exclusividade verificada, o imóvel ganha
+                    o selo.
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="review">
               <div className="review-row"><span>Anúncio</span><b>{FINALIDADES.find((f) => f.value === form.finalidade)?.label} · {tipoLabel}</b></div>
               <div className="review-row"><span>Preço</span><b>{form.preco ? `R$ ${form.preco}` : '—'}</b></div>
@@ -655,6 +796,8 @@ export default function NovoImovelPage() {
               <div className="review-row"><span>Metragem</span><b>{form.area_m2 ? `${form.area_m2} m²` : '—'}</b></div>
               <div className="review-row"><span>Cômodos</span><b>{counts.quartos} qto · {counts.suites} suíte · {counts.banheiros} banh · {counts.vagas} vaga</b></div>
               <div className="review-row"><span>Diferenciais</span><b>{diferenciais.length || 0}</b></div>
+              <div className="review-row"><span>Documentação</span><b>{documentacao.length || 0}</b></div>
+              <div className="review-row"><span>Exclusividade</span><b>{exclusividade ? 'Sim (a verificar)' : 'Não'}</b></div>
               <div className="review-row"><span>Fotos</span><b>{fotos.length} {fotos.length < 5 ? '(mín. 5 p/ vitrine)' : ''}</b></div>
             </div>
           </>

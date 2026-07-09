@@ -31,7 +31,8 @@ imoveisRoutes.post(
     if (!isCloudinaryConfigured()) {
       throw badRequest('Upload de fotos ainda não está configurado.');
     }
-    res.json(assinarUpload('imoveis'));
+    const folder = req.query.folder === 'contratos' ? 'contratos' : 'imoveis';
+    res.json(assinarUpload(folder));
   }),
 );
 

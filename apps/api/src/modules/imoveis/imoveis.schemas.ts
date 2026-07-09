@@ -39,8 +39,16 @@ const imovelBase = z.object({
   vagas: inteiroOpcional,
   descricao: z.string().trim().max(4000).optional().transform((v) => v || null),
   diferenciais: z.array(z.string().trim().min(1).max(60)).max(20).optional().default([]),
+  documentacao: z.array(z.string().trim().min(1).max(60)).max(15).optional().default([]),
   fotos: z.array(z.string().url()).max(20).optional().default([]),
   link_origem: z.string().url().max(500).optional(),
+  // Exclusividade (Fase 2/7.5): contrato assinado com o proprietário + vencimento.
+  exclusividade: z.boolean().optional().default(false),
+  exclusividade_contrato_url: z.string().url().max(500).optional(),
+  exclusividade_vencimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Data inválida.')
+    .optional(),
   // Confirmação manual em caso de DUPLICATA POSSÍVEL (mesmo prédio, unidade distinta).
   confirmar_distinto: z.boolean().optional().default(false),
 });
@@ -59,6 +67,29 @@ export const criarImovelSchema = imovelBase.superRefine((v, ctx) => {
   }
   if (v.tipo === 'terreno' && !v.area_m2) {
     ctx.addIssue({ path: ['area_m2'], code: z.ZodIssueCode.custom, message: 'Informe a metragem.' });
+  }
+  if ((v.documentacao?.length ?? 0) === 0) {
+    ctx.addIssue({
+      path: ['documentacao'],
+      code: z.ZodIssueCode.custom,
+      message: 'Selecione ao menos um documento disponível.',
+    });
+  }
+  if (v.exclusividade) {
+    if (!v.exclusividade_contrato_url) {
+      ctx.addIssue({
+        path: ['exclusividade_contrato_url'],
+        code: z.ZodIssueCode.custom,
+        message: 'Envie o contrato de exclusividade.',
+      });
+    }
+    if (!v.exclusividade_vencimento) {
+      ctx.addIssue({
+        path: ['exclusividade_vencimento'],
+        code: z.ZodIssueCode.custom,
+        message: 'Informe a data de vencimento.',
+      });
+    }
   }
 });
 

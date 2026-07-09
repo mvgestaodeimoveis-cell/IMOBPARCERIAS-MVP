@@ -39,3 +39,29 @@ adminRoutes.post(
     res.json(result);
   }),
 );
+
+adminRoutes.get(
+  '/exclusividades',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const result = await adminService.listarExclusividadesPendentes();
+    res.json(result);
+  }),
+);
+
+adminRoutes.post(
+  '/exclusividades/:id/verificar',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    const result = await adminService.verificarExclusividade(req.params.id);
+    res.json(result);
+  }),
+);
+
+adminRoutes.post(
+  '/exclusividades/:id/rejeitar',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    const result = await adminService.rejeitarExclusividade(req.params.id);
+    res.json(result);
+  }),
+);
