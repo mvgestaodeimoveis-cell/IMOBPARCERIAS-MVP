@@ -11,7 +11,10 @@ const cepSchema = z.string().transform((v, ctx) => {
 
 const inteiroOpcional = z.number().int().min(0).max(200).nullish();
 
-export const criarImovelSchema = z.object({
+const opcional = (max = 80) =>
+  z.string().trim().max(max).optional().transform((v) => v || null);
+
+const imovelBase = z.object({
   finalidade: z.enum(['venda', 'aluguel'], {
     errorMap: () => ({ message: 'Selecione a finalidade.' }),
   }),
@@ -24,7 +27,11 @@ export const criarImovelSchema = z.object({
   cep: cepSchema,
   logradouro: z.string().trim().min(2, 'Informe o logradouro.').max(160),
   numero: z.string().trim().min(1, 'Informe o número.').max(20),
-  complemento: z.string().trim().max(80).optional().transform((v) => v || null),
+  complemento: opcional(80),
+  unidade: opcional(20),
+  andar: opcional(20),
+  bloco: opcional(40),
+  nome_condominio: opcional(120),
   area_m2: z.number().positive().max(1_000_000).nullish(),
   quartos: inteiroOpcional,
   suites: inteiroOpcional,
@@ -34,6 +41,25 @@ export const criarImovelSchema = z.object({
   diferenciais: z.array(z.string().trim().min(1).max(60)).max(20).optional().default([]),
   fotos: z.array(z.string().url()).max(20).optional().default([]),
   link_origem: z.string().url().max(500).optional(),
+  // Confirmação manual em caso de DUPLICATA POSSÍVEL (mesmo prédio, unidade distinta).
+  confirmar_distinto: z.boolean().optional().default(false),
+});
+
+// Campos obrigatórios da chave por tipo (Seção 5): apto/comercial exigem unidade.
+export const criarImovelSchema = imovelBase.superRefine((v, ctx) => {
+  if ((v.tipo === 'apartamento' || v.tipo === 'comercial') && !v.unidade) {
+    ctx.addIssue({
+      path: ['unidade'],
+      code: z.ZodIssueCode.custom,
+      message: v.tipo === 'apartamento' ? 'Informe a unidade/apto.' : 'Informe a sala/unidade.',
+    });
+  }
+  if (v.tipo === 'apartamento' && !v.andar) {
+    ctx.addIssue({ path: ['andar'], code: z.ZodIssueCode.custom, message: 'Informe o andar.' });
+  }
+  if (v.tipo === 'terreno' && !v.area_m2) {
+    ctx.addIssue({ path: ['area_m2'], code: z.ZodIssueCode.custom, message: 'Informe a metragem.' });
+  }
 });
 
 export const importarImovelSchema = z.object({
@@ -53,7 +79,7 @@ export const vitrineQuerySchema = z.object({
   page_size: z.coerce.number().int().min(1).max(48).default(12),
 });
 
-export const atualizarImovelSchema = criarImovelSchema.partial().extend({
+export const atualizarImovelSchema = imovelBase.partial().extend({
   status: z.enum(['ativo', 'inativo', 'vendido']).optional(),
 });
 

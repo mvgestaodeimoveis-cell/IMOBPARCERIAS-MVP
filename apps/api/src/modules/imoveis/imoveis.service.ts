@@ -1,5 +1,5 @@
 import { pool, query } from '../../db/pool';
-import { conflict, forbidden, notFound } from '../../lib/errors';
+import { conflict, duplicataPossivel, forbidden, notFound } from '../../lib/errors';
 import type {
   AtualizarImovelInput,
   CriarImovelInput,
@@ -18,6 +18,10 @@ export interface Imovel {
   logradouro: string;
   numero: string;
   complemento: string | null;
+  unidade: string | null;
+  andar: string | null;
+  bloco: string | null;
+  nome_condominio: string | null;
   area_m2: number | null;
   quartos: number | null;
   suites: number | null;
@@ -40,8 +44,9 @@ interface ImovelRow extends Omit<Imovel, 'preco' | 'area_m2'> {
 }
 
 const COLUNAS = `id, corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro,
-  numero, complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, diferenciais,
-  exclusividade_verificada, status, origem, link_origem, criado_em, atualizado_em`;
+  numero, complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
+  vagas, descricao, fotos, diferenciais, exclusividade_verificada, status, origem, link_origem,
+  criado_em, atualizado_em`;
 
 // Nível 1 (vitrine pública): NUNCA expõe logradouro, número, complemento ou CEP.
 const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, area_m2, quartos,
@@ -55,9 +60,70 @@ function mapImovel(row: ImovelRow): Imovel {
   };
 }
 
-/** Chave global de exclusividade: CEP + número + complemento (normalizados). */
-function chaveDedupe(cep: string, numero: string, complemento: string | null): string {
-  return `${cep}|${numero.trim().toLowerCase()}|${(complemento ?? '').trim().toLowerCase()}`;
+interface CamposChave {
+  tipo: string;
+  cidade: string;
+  logradouro: string;
+  numero: string;
+  unidade: string | null;
+  andar: string | null;
+  bloco: string | null;
+  nome_condominio: string | null;
+  area_m2: number | null;
+}
+
+const norm = (s: string | null | undefined): string => (s ?? '').trim().toLowerCase();
+
+function baseEndereco(c: CamposChave): string {
+  return `${norm(c.cidade)}|${norm(c.logradouro)}|${norm(c.numero)}`;
+}
+
+/** Chave única por tipo de imóvel (Seção 5 do escopo). */
+function chaveDedupe(c: CamposChave): string {
+  const base = baseEndereco(c);
+  switch (c.tipo) {
+    case 'apartamento':
+      return `apt|${base}|${norm(c.unidade)}|${norm(c.andar)}|${norm(c.bloco)}`;
+    case 'comercial':
+      return `com|${base}|${norm(c.unidade)}`;
+    case 'terreno':
+      return `ter|${base}|${c.area_m2 ?? ''}`;
+    case 'casa':
+      return c.nome_condominio
+        ? `casacond|${norm(c.cidade)}|${norm(c.nome_condominio)}|${norm(c.numero)}`
+        : `casa|${base}`;
+    default:
+      return `x|${base}`;
+  }
+}
+
+/** Chave do prédio (endereço-base) para detectar DUPLICATA POSSÍVEL. */
+function chavePredio(c: CamposChave): string {
+  return `predio|${baseEndereco(c)}`;
+}
+
+function camposDe(input: {
+  tipo: string;
+  cidade: string;
+  logradouro: string;
+  numero: string;
+  unidade: string | null;
+  andar: string | null;
+  bloco: string | null;
+  nome_condominio: string | null;
+  area_m2: number | null;
+}): CamposChave {
+  return {
+    tipo: input.tipo,
+    cidade: input.cidade,
+    logradouro: input.logradouro,
+    numero: input.numero,
+    unidade: input.unidade,
+    andar: input.andar,
+    bloco: input.bloco,
+    nome_condominio: input.nome_condominio,
+    area_m2: input.area_m2,
+  };
 }
 
 async function garantirCorretorAtivo(corretorId: string): Promise<void> {
@@ -70,37 +136,69 @@ async function garantirCorretorAtivo(corretorId: string): Promise<void> {
   }
 }
 
-async function checarDuplicata(chave: string, corretorId: string, ignorarId?: string): Promise<void> {
-  const params: unknown[] = [chave];
-  let sql = `SELECT corretor_id FROM imovel WHERE chave_dedupe = $1 AND status = 'ativo'`;
+/**
+ * Verifica duplicata (Seção 5): EXATA bloqueia; POSSÍVEL (mesmo prédio, unidade
+ * diferente em apto/comercial) exige confirmação manual do corretor.
+ */
+async function checarDuplicata(
+  c: CamposChave,
+  corretorId: string,
+  confirmarDistinto: boolean,
+  ignorarId?: string,
+): Promise<{ chave: string; predio: string }> {
+  const chave = chaveDedupe(c);
+  const predio = chavePredio(c);
+
+  const p1: unknown[] = [chave];
+  let sql1 = `SELECT corretor_id FROM imovel WHERE chave_dedupe = $1 AND status = 'ativo'`;
   if (ignorarId) {
-    params.push(ignorarId);
-    sql += ` AND id <> $${params.length}`;
+    p1.push(ignorarId);
+    sql1 += ` AND id <> $${p1.length}`;
   }
-  const { rows } = await query<{ corretor_id: string }>(sql, params);
-  const existente = rows[0];
-  if (existente) {
-    if (existente.corretor_id === corretorId) {
-      throw conflict('Você já cadastrou este imóvel.');
-    }
+  const exata = await query<{ corretor_id: string }>(sql1, p1);
+  if (exata.rows[0]) {
     throw conflict(
-      'Este imóvel já foi cadastrado por outro corretor (exclusividade verificada).',
+      exata.rows[0].corretor_id === corretorId
+        ? 'Você já cadastrou este imóvel.'
+        : 'Este imóvel já foi cadastrado por outro corretor (exclusividade verificada).',
     );
   }
+
+  if ((c.tipo === 'apartamento' || c.tipo === 'comercial') && !confirmarDistinto) {
+    const p2: unknown[] = [predio];
+    let sql2 = `SELECT id FROM imovel WHERE chave_predio = $1 AND status = 'ativo'`;
+    if (ignorarId) {
+      p2.push(ignorarId);
+      sql2 += ` AND id <> $${p2.length}`;
+    }
+    sql2 += ' LIMIT 1';
+    const poss = await query<{ id: string }>(sql2, p2);
+    if (poss.rows[0]) {
+      throw duplicataPossivel(
+        'Já existe um imóvel neste mesmo endereço/prédio. Confirme que é uma unidade diferente para continuar.',
+      );
+    }
+  }
+
+  return { chave, predio };
 }
 
 export async function criarImovel(corretorId: string, input: CriarImovelInput): Promise<Imovel> {
   await garantirCorretorAtivo(corretorId);
-  const chave = chaveDedupe(input.cep, input.numero, input.complemento);
-  await checarDuplicata(chave, corretorId);
+  const campos = camposDe({ ...input, area_m2: input.area_m2 ?? null });
+  const { chave, predio } = await checarDuplicata(
+    campos,
+    corretorId,
+    input.confirmar_distinto ?? false,
+  );
 
   try {
     const { rows } = await query<ImovelRow>(
       `INSERT INTO imovel
          (corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro, numero,
-          complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, diferenciais,
-          chave_dedupe, origem, link_origem)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+          complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
+          vagas, descricao, fotos, diferenciais, chave_dedupe, chave_predio, origem, link_origem)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
        RETURNING ${COLUNAS}`,
       [
         corretorId,
@@ -113,6 +211,10 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
         input.logradouro,
         input.numero,
         input.complemento,
+        input.unidade,
+        input.andar,
+        input.bloco,
+        input.nome_condominio,
         input.area_m2 ?? null,
         input.quartos ?? null,
         input.suites ?? null,
@@ -122,6 +224,7 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
         JSON.stringify(input.fotos ?? []),
         JSON.stringify(input.diferenciais ?? []),
         chave,
+        predio,
         input.link_origem ? 'importado' : 'manual',
         input.link_origem ?? null,
       ],
@@ -171,6 +274,10 @@ export async function atualizarImovel(
     logradouro: input.logradouro ?? atual.logradouro,
     numero: input.numero ?? atual.numero,
     complemento: input.complemento === undefined ? atual.complemento : input.complemento,
+    unidade: input.unidade === undefined ? atual.unidade : input.unidade,
+    andar: input.andar === undefined ? atual.andar : input.andar,
+    bloco: input.bloco === undefined ? atual.bloco : input.bloco,
+    nome_condominio: input.nome_condominio === undefined ? atual.nome_condominio : input.nome_condominio,
     area_m2: input.area_m2 === undefined ? atual.area_m2 : input.area_m2,
     quartos: input.quartos === undefined ? atual.quartos : input.quartos,
     suites: input.suites === undefined ? atual.suites : input.suites,
@@ -182,17 +289,22 @@ export async function atualizarImovel(
     status: input.status ?? atual.status,
   };
 
-  const chave = chaveDedupe(merged.cep, merged.numero, merged.complemento);
+  const campos = camposDe(merged);
+  let chave = chaveDedupe(campos);
+  let predio = chavePredio(campos);
   if (merged.status === 'ativo') {
-    await checarDuplicata(chave, corretorId, id);
+    const r = await checarDuplicata(campos, corretorId, input.confirmar_distinto ?? false, id);
+    chave = r.chave;
+    predio = r.predio;
   }
 
   const { rows } = await query<ImovelRow>(
     `UPDATE imovel SET
        finalidade = $2, tipo = $3, preco = $4, cidade = $5, bairro = $6, cep = $7,
-       logradouro = $8, numero = $9, complemento = $10, area_m2 = $11, quartos = $12,
-       suites = $13, banheiros = $14, vagas = $15, descricao = $16, fotos = $17,
-       diferenciais = $18, status = $19, chave_dedupe = $20, atualizado_em = now()
+       logradouro = $8, numero = $9, complemento = $10, unidade = $11, andar = $12, bloco = $13,
+       nome_condominio = $14, area_m2 = $15, quartos = $16, suites = $17, banheiros = $18,
+       vagas = $19, descricao = $20, fotos = $21, diferenciais = $22, status = $23,
+       chave_dedupe = $24, chave_predio = $25, atualizado_em = now()
      WHERE id = $1
      RETURNING ${COLUNAS}`,
     [
@@ -206,6 +318,10 @@ export async function atualizarImovel(
       merged.logradouro,
       merged.numero,
       merged.complemento,
+      merged.unidade,
+      merged.andar,
+      merged.bloco,
+      merged.nome_condominio,
       merged.area_m2,
       merged.quartos,
       merged.suites,
@@ -216,6 +332,7 @@ export async function atualizarImovel(
       JSON.stringify(merged.diferenciais),
       merged.status,
       chave,
+      predio,
     ],
   );
   return mapImovel(rows[0]);

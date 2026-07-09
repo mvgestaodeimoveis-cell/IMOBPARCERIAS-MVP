@@ -97,11 +97,16 @@ export default function NovoImovelPage() {
     logradouro: '',
     numero: '',
     complemento: '',
+    unidade: '',
+    andar: '',
+    bloco: '',
+    nome_condominio: '',
     bairro: '',
     cidade: '',
     area_m2: '',
     descricao: '',
   });
+  const [emCondominio, setEmCondominio] = useState(false);
   const [counts, setCounts] = useState({ quartos: 0, suites: 0, banheiros: 0, vagas: 0 });
   const [diferenciais, setDiferenciais] = useState<string[]>([]);
   const [difInput, setDifInput] = useState('');
@@ -210,6 +215,10 @@ export default function NovoImovelPage() {
       if (!form.numero.trim()) e.numero = 'Informe o número.';
       if (!form.bairro.trim()) e.bairro = 'Informe o bairro.';
       if (!form.cidade.trim()) e.cidade = 'Informe a cidade.';
+      if ((form.tipo === 'apartamento' || form.tipo === 'comercial') && !form.unidade.trim()) {
+        e.unidade = form.tipo === 'apartamento' ? 'Informe a unidade/apto.' : 'Informe a sala/unidade.';
+      }
+      if (form.tipo === 'apartamento' && !form.andar.trim()) e.andar = 'Informe o andar.';
     }
     if (step === 3) {
       if (!parseNumero(form.preco)) e.preco = 'Informe o preço.';
@@ -232,7 +241,7 @@ export default function NovoImovelPage() {
     else setStep((s) => s - 1);
   }
 
-  async function publicar() {
+  async function publicar(confirmarDistinto = false) {
     setErro(null);
     const token = getAccessToken();
     if (!token) {
@@ -247,6 +256,10 @@ export default function NovoImovelPage() {
       logradouro: form.logradouro,
       numero: form.numero,
       complemento: form.complemento || undefined,
+      unidade: form.unidade || undefined,
+      andar: form.andar || undefined,
+      bloco: form.bloco || undefined,
+      nome_condominio: emCondominio ? form.nome_condominio || undefined : undefined,
       bairro: form.bairro,
       cidade: form.cidade,
       area_m2: parseNumero(form.area_m2),
@@ -258,6 +271,7 @@ export default function NovoImovelPage() {
       diferenciais,
       fotos,
       link_origem: linkOrigem ?? undefined,
+      confirmar_distinto: confirmarDistinto,
     };
     setLoading(true);
     try {
@@ -265,11 +279,21 @@ export default function NovoImovelPage() {
       router.push('/painel?imovel=ok');
     } catch (err) {
       if (err instanceof ApiRequestError) {
+        if (err.code === 'DUPLICATA_POSSIVEL' && !confirmarDistinto) {
+          setLoading(false);
+          if (
+            window.confirm(
+              `${err.message}\n\nConfirmo que é uma unidade/imóvel diferente. Publicar mesmo assim?`,
+            )
+          ) {
+            return publicar(true);
+          }
+          return;
+        }
         setErro(err.message);
         if (err.fields) {
           setFieldErrors(err.fields);
-          // Volta para a etapa do campo com erro.
-          if (err.fields.cep || err.fields.logradouro || err.fields.numero || err.fields.bairro || err.fields.cidade) setStep(2);
+          if (err.fields.cep || err.fields.logradouro || err.fields.numero || err.fields.bairro || err.fields.cidade || err.fields.unidade || err.fields.andar) setStep(2);
           else if (err.fields.preco || err.fields.area_m2) setStep(3);
         }
       } else {
@@ -427,6 +451,45 @@ export default function NovoImovelPage() {
                 />
               </div>
             </div>
+
+            {form.tipo === 'apartamento' && (
+              <div className="grid-3">
+                <div className="field">
+                  <label htmlFor="unidade">Apto/unidade</label>
+                  <input id="unidade" className={`input ${fieldErrors.unidade ? 'error' : ''}`} placeholder="101" value={form.unidade} onChange={(e) => set('unidade', e.target.value)} />
+                  {fieldErrors.unidade && <div className="field-error">{fieldErrors.unidade}</div>}
+                </div>
+                <div className="field">
+                  <label htmlFor="andar">Andar</label>
+                  <input id="andar" className={`input ${fieldErrors.andar ? 'error' : ''}`} placeholder="10" value={form.andar} onChange={(e) => set('andar', e.target.value)} />
+                  {fieldErrors.andar && <div className="field-error">{fieldErrors.andar}</div>}
+                </div>
+                <div className="field">
+                  <label htmlFor="bloco">Bloco/torre</label>
+                  <input id="bloco" className="input" placeholder="Opcional" value={form.bloco} onChange={(e) => set('bloco', e.target.value)} />
+                </div>
+              </div>
+            )}
+
+            {form.tipo === 'comercial' && (
+              <div className="field">
+                <label htmlFor="unidade">Sala/unidade</label>
+                <input id="unidade" className={`input ${fieldErrors.unidade ? 'error' : ''}`} placeholder="Ex.: Sala 302" value={form.unidade} onChange={(e) => set('unidade', e.target.value)} />
+                {fieldErrors.unidade && <div className="field-error">{fieldErrors.unidade}</div>}
+              </div>
+            )}
+
+            {form.tipo === 'casa' && (
+              <div className="field">
+                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 400 }}>
+                  <input type="checkbox" checked={emCondominio} onChange={(e) => setEmCondominio(e.target.checked)} style={{ width: 18, height: 18 }} />
+                  <span>Casa em condomínio fechado</span>
+                </label>
+                {emCondominio && (
+                  <input className="input" style={{ marginTop: '0.5rem' }} placeholder="Nome do condomínio" value={form.nome_condominio} onChange={(e) => set('nome_condominio', e.target.value)} />
+                )}
+              </div>
+            )}
 
             <div className="grid-2">
               <div className="field">
@@ -607,7 +670,7 @@ export default function NovoImovelPage() {
             Continuar
           </button>
         ) : (
-          <button type="button" className="btn btn-emerald" onClick={publicar} disabled={loading}>
+          <button type="button" className="btn btn-emerald" onClick={() => publicar()} disabled={loading}>
             {loading ? 'Publicando…' : 'Publicar imóvel'}
           </button>
         )}
