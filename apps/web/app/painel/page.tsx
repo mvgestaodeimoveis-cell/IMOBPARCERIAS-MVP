@@ -72,10 +72,10 @@ export default function AppHomePage() {
         <Brandmark />
         <nav className="desktop-nav">
           <Link href="/painel" className="active">Início</Link>
+          <Link href="/vitrine">Vitrine</Link>
           <Link href="/painel">Demandas</Link>
           <Link href="/painel">Matches</Link>
           <Link href="/painel">Agenda</Link>
-          <Link href="/painel">Feedback</Link>
         </nav>
         <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
           Sair

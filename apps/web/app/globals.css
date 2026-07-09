@@ -1294,6 +1294,111 @@ th {
   font-weight: 600;
 }
 
+/* Chips (diferenciais) */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.chip button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--gray-500);
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+}
+.chip-static {
+  background: #e6f5ec;
+  color: var(--emerald-600);
+}
+
+/* Vitrine */
+.filtros {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.filtros .input {
+  min-height: 46px;
+}
+.vitrine-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+.vitrine-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.vitrine-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  text-decoration: none;
+}
+.vitrine-foto {
+  position: relative;
+  height: 180px;
+  background: var(--gray-100);
+  display: grid;
+  place-items: center;
+  font-size: 2.5rem;
+}
+.vitrine-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.vitrine-excl {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  background: var(--emerald);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+}
+.vitrine-body {
+  padding: 0.9rem 1rem 1.1rem;
+}
+
+@media (min-width: 640px) {
+  .filtros {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@media (min-width: 768px) {
+  .vitrine-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1000px) {
+  .vitrine-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* Hero: profundidade e brilho sutil */
 .hero {
   box-shadow: 0 26px 60px -28px rgba(16, 24, 40, 0.55);

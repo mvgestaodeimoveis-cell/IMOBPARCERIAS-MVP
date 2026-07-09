@@ -15,6 +15,7 @@ export function Topbar() {
         </Link>
 
         <nav className="nav-desktop" aria-label="Principal">
+          <Link href="/vitrine">Vitrine</Link>
           <Link href="/como-funciona">Como funciona</Link>
           <Link href="/login">Entrar</Link>
           <Link href="/cadastro" className="btn btn-emerald nav-cta">
@@ -44,6 +45,9 @@ export function Topbar() {
 
         {open && (
           <div className="nav-mobile">
+            <Link href="/vitrine" onClick={() => setOpen(false)}>
+              Vitrine
+            </Link>
             <Link href="/como-funciona" onClick={() => setOpen(false)}>
               Como funciona
             </Link>

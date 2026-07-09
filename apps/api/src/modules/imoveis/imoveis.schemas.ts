@@ -31,12 +31,26 @@ export const criarImovelSchema = z.object({
   banheiros: inteiroOpcional,
   vagas: inteiroOpcional,
   descricao: z.string().trim().max(4000).optional().transform((v) => v || null),
+  diferenciais: z.array(z.string().trim().min(1).max(60)).max(20).optional().default([]),
   fotos: z.array(z.string().url()).max(20).optional().default([]),
   link_origem: z.string().url().max(500).optional(),
 });
 
 export const importarImovelSchema = z.object({
   url: z.string().url('Informe um link válido.').max(500),
+});
+
+export const vitrineQuerySchema = z.object({
+  tipo: z.enum(['apartamento', 'casa', 'terreno', 'comercial']).optional(),
+  finalidade: z.enum(['venda', 'aluguel']).optional(),
+  cidade: z.string().trim().min(1).max(80).optional(),
+  bairro: z.string().trim().min(1).max(80).optional(),
+  preco_min: z.coerce.number().min(0).optional(),
+  preco_max: z.coerce.number().min(0).optional(),
+  area_min: z.coerce.number().min(0).optional(),
+  quartos_min: z.coerce.number().int().min(0).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(48).default(12),
 });
 
 export const atualizarImovelSchema = criarImovelSchema.partial().extend({
@@ -46,3 +60,4 @@ export const atualizarImovelSchema = criarImovelSchema.partial().extend({
 export type CriarImovelInput = z.infer<typeof criarImovelSchema>;
 export type AtualizarImovelInput = z.infer<typeof atualizarImovelSchema>;
 export type ImportarImovelInput = z.infer<typeof importarImovelSchema>;
+export type VitrineQuery = z.infer<typeof vitrineQuerySchema>;

@@ -63,8 +63,17 @@ export default function NovoImovelPage() {
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [fotos, setFotos] = useState<string[]>([]);
+  const [diferenciais, setDiferenciais] = useState<string[]>([]);
+  const [difInput, setDifInput] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function addDiferencial() {
+    const v = difInput.trim();
+    if (!v) return;
+    setDiferenciais((d) => (d.includes(v) || d.length >= 20 ? d : [...d, v]));
+    setDifInput('');
+  }
 
   const [importUrl, setImportUrl] = useState('');
   const [importando, setImportando] = useState(false);
@@ -148,6 +157,7 @@ export default function NovoImovelPage() {
       banheiros: inteiro(form.banheiros),
       vagas: inteiro(form.vagas),
       descricao: form.descricao || undefined,
+      diferenciais,
       fotos,
       link_origem: linkOrigem ?? undefined,
     };
@@ -400,6 +410,38 @@ export default function NovoImovelPage() {
               value={form.descricao}
               onChange={(e) => set('descricao', e.target.value)}
             />
+          </div>
+
+          <div className="field">
+            <label htmlFor="diferenciais">Diferenciais</label>
+            <div className="chips">
+              {diferenciais.map((d) => (
+                <span key={d} className="chip">
+                  {d}
+                  <button type="button" aria-label="Remover" onClick={() => setDiferenciais((arr) => arr.filter((x) => x !== d))}>
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="import-row">
+              <input
+                id="diferenciais"
+                className="input"
+                placeholder="Ex.: piscina, varanda gourmet…"
+                value={difInput}
+                onChange={(e) => setDifInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    addDiferencial();
+                  }
+                }}
+              />
+              <button type="button" className="btn btn-ghost" onClick={addDiferencial}>
+                Adicionar
+              </button>
+            </div>
           </div>
 
           <div className="field">

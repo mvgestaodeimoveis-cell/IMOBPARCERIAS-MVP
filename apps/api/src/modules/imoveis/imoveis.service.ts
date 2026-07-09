@@ -1,6 +1,10 @@
 import { pool, query } from '../../db/pool';
 import { conflict, forbidden, notFound } from '../../lib/errors';
-import type { AtualizarImovelInput, CriarImovelInput } from './imoveis.schemas';
+import type {
+  AtualizarImovelInput,
+  CriarImovelInput,
+  VitrineQuery,
+} from './imoveis.schemas';
 
 export interface Imovel {
   id: string;
@@ -21,6 +25,8 @@ export interface Imovel {
   vagas: number | null;
   descricao: string | null;
   fotos: string[];
+  diferenciais: string[];
+  exclusividade_verificada: boolean;
   status: string;
   origem: string;
   link_origem: string | null;
@@ -34,8 +40,12 @@ interface ImovelRow extends Omit<Imovel, 'preco' | 'area_m2'> {
 }
 
 const COLUNAS = `id, corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro,
-  numero, complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos,
-  status, origem, link_origem, criado_em, atualizado_em`;
+  numero, complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, diferenciais,
+  exclusividade_verificada, status, origem, link_origem, criado_em, atualizado_em`;
+
+// Nível 1 (vitrine pública): NUNCA expõe logradouro, número, complemento ou CEP.
+const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, area_m2, quartos,
+  banheiros, vagas, fotos, diferenciais, exclusividade_verificada, status, criado_em`;
 
 function mapImovel(row: ImovelRow): Imovel {
   return {
@@ -88,9 +98,9 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
     const { rows } = await query<ImovelRow>(
       `INSERT INTO imovel
          (corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro, numero,
-          complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, chave_dedupe,
-          origem, link_origem)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+          complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, diferenciais,
+          chave_dedupe, origem, link_origem)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
        RETURNING ${COLUNAS}`,
       [
         corretorId,
@@ -110,6 +120,7 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
         input.vagas ?? null,
         input.descricao,
         JSON.stringify(input.fotos ?? []),
+        JSON.stringify(input.diferenciais ?? []),
         chave,
         input.link_origem ? 'importado' : 'manual',
         input.link_origem ?? null,
@@ -167,6 +178,7 @@ export async function atualizarImovel(
     vagas: input.vagas === undefined ? atual.vagas : input.vagas,
     descricao: input.descricao === undefined ? atual.descricao : input.descricao,
     fotos: input.fotos ?? atual.fotos,
+    diferenciais: input.diferenciais ?? atual.diferenciais,
     status: input.status ?? atual.status,
   };
 
@@ -180,7 +192,7 @@ export async function atualizarImovel(
        finalidade = $2, tipo = $3, preco = $4, cidade = $5, bairro = $6, cep = $7,
        logradouro = $8, numero = $9, complemento = $10, area_m2 = $11, quartos = $12,
        suites = $13, banheiros = $14, vagas = $15, descricao = $16, fotos = $17,
-       status = $18, chave_dedupe = $19, atualizado_em = now()
+       diferenciais = $18, status = $19, chave_dedupe = $20, atualizado_em = now()
      WHERE id = $1
      RETURNING ${COLUNAS}`,
     [
@@ -201,6 +213,7 @@ export async function atualizarImovel(
       merged.vagas,
       merged.descricao,
       JSON.stringify(merged.fotos),
+      JSON.stringify(merged.diferenciais),
       merged.status,
       chave,
     ],
@@ -215,4 +228,90 @@ export async function removerImovel(id: string, corretorId: string): Promise<voi
     `UPDATE imovel SET status = 'inativo', atualizado_em = now() WHERE id = $1`,
     [id],
   );
+}
+
+// ============================================================
+// Vitrine (Nível 1 — público). Só imóveis disponíveis com ficha completa.
+// ============================================================
+
+export interface ImovelVitrine {
+  id: string;
+  finalidade: string;
+  tipo: string;
+  preco: number;
+  cidade: string;
+  bairro: string;
+  area_m2: number | null;
+  quartos: number | null;
+  banheiros: number | null;
+  vagas: number | null;
+  fotos: string[];
+  diferenciais: string[];
+  exclusividade_verificada: boolean;
+  status: string;
+  criado_em: string;
+}
+
+type ImovelVitrineRow = Omit<ImovelVitrine, 'preco' | 'area_m2'> & {
+  preco: string;
+  area_m2: string | null;
+};
+
+function mapVitrine(row: ImovelVitrineRow): ImovelVitrine {
+  return {
+    ...row,
+    preco: Number(row.preco),
+    area_m2: row.area_m2 === null ? null : Number(row.area_m2),
+  };
+}
+
+// Ficha completa (Seção 2.4): mín. 5 fotos, ≥ 1 diferencial, quartos/banheiros/vagas informados.
+const FICHA_COMPLETA = `status = 'ativo'
+  AND jsonb_array_length(fotos) >= 5
+  AND jsonb_array_length(diferenciais) >= 1
+  AND quartos IS NOT NULL AND banheiros IS NOT NULL AND vagas IS NOT NULL`;
+
+export async function listarVitrine(q: VitrineQuery) {
+  const cond: string[] = [FICHA_COMPLETA];
+  const params: unknown[] = [];
+  const add = (sql: string, value: unknown) => {
+    params.push(value);
+    cond.push(sql.replace('$?', `$${params.length}`));
+  };
+
+  if (q.tipo) add('tipo = $?', q.tipo);
+  if (q.finalidade) add('finalidade = $?', q.finalidade);
+  if (q.cidade) add('cidade ILIKE $?', `%${q.cidade}%`);
+  if (q.bairro) add('bairro ILIKE $?', `%${q.bairro}%`);
+  if (q.preco_min != null) add('preco >= $?', q.preco_min);
+  if (q.preco_max != null) add('preco <= $?', q.preco_max);
+  if (q.area_min != null) add('area_m2 >= $?', q.area_min);
+  if (q.quartos_min != null) add('quartos >= $?', q.quartos_min);
+
+  const where = `WHERE ${cond.join(' AND ')}`;
+
+  const totalRes = await query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM imovel ${where}`,
+    params,
+  );
+  const total = Number(totalRes.rows[0]?.count ?? 0);
+
+  const offset = (q.page - 1) * q.page_size;
+  const dataRes = await query<ImovelVitrineRow>(
+    `SELECT ${COLUNAS_VITRINE} FROM imovel ${where}
+     ORDER BY exclusividade_verificada DESC, criado_em DESC
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, q.page_size, offset],
+  );
+
+  return { data: dataRes.rows.map(mapVitrine), page: q.page, page_size: q.page_size, total };
+}
+
+export async function obterVitrine(id: string): Promise<ImovelVitrine> {
+  const { rows } = await query<ImovelVitrineRow>(
+    `SELECT ${COLUNAS_VITRINE} FROM imovel WHERE id = $1 AND ${FICHA_COMPLETA}`,
+    [id],
+  );
+  if (!rows[0]) throw notFound('Imóvel não encontrado ou indisponível.');
+  return mapVitrine(rows[0]);
 }
