@@ -40,7 +40,7 @@ export default function PerfilRejeitadoPage() {
 
   if (loading) {
     return (
-      <div className="frame">
+      <div className="frame frame-app">
         <header className="topbar">
           <Link href="/" className="brand-link">
             <Brandmark />
@@ -52,7 +52,7 @@ export default function PerfilRejeitadoPage() {
   }
 
   return (
-    <div className="frame">
+    <div className="frame frame-app">
       <header className="topbar">
         <Link href="/" className="brand-link">
           <Brandmark />

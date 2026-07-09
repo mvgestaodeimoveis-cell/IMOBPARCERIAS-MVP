@@ -61,7 +61,7 @@ export default function PerfilAnalisePage() {
 
   if (loading) {
     return (
-      <div className="frame">
+      <div className="frame frame-app">
         <header className="topbar">
           <Link href="/" className="brand-link">
             <Brandmark />
@@ -73,7 +73,7 @@ export default function PerfilAnalisePage() {
   }
 
   return (
-    <div className="frame">
+    <div className="frame frame-app">
       <header className="topbar">
         <Link href="/" className="brand-link">
           <Brandmark />

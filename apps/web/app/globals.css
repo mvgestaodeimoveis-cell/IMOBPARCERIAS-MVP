@@ -1087,6 +1087,13 @@ th {
   display: grid;
   place-items: center;
   font-size: 1.6rem;
+  overflow: hidden;
+}
+.imovel-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .imovel-info {
   flex: 1;

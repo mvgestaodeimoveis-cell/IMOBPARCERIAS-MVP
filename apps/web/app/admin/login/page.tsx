@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="frame">
+    <div className="frame frame-app">
       <header className="topbar">
         <span className="brand-link">
           <Brandmark />
