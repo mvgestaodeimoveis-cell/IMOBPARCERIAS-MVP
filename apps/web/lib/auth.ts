@@ -23,6 +23,11 @@ export function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_KEY);
 }
 
+export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REFRESH_KEY);
+}
+
 export function getRole(): Role | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(ROLE_KEY) as Role | null;
