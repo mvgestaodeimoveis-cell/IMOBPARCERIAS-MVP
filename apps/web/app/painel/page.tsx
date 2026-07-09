@@ -26,6 +26,7 @@ interface Imovel {
   quartos: number | null;
   vagas: number | null;
   area_m2: number | null;
+  fotos: string[];
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -109,7 +110,14 @@ export default function AppHomePage() {
           <div className="imovel-list">
             {imoveis.map((im) => (
               <Link key={im.id} href={`/imoveis/${im.id}`} className="imovel-card">
-                <div className="imovel-thumb" aria-hidden>🏠</div>
+                <div className="imovel-thumb" aria-hidden>
+                  {im.fotos && im.fotos.length > 0 ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={im.fotos[0]} alt="" />
+                  ) : (
+                    '🏠'
+                  )}
+                </div>
                 <div className="imovel-info">
                   <div className="imovel-top">
                     <strong>{formatBRL(im.preco)}</strong>

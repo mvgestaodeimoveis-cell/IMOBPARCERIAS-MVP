@@ -7,6 +7,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { maskCep } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
 import { Brandmark } from '@/components/Brandmark';
+import { PhotoUploader } from '@/components/PhotoUploader';
 
 type Finalidade = 'venda' | 'aluguel';
 type Tipo = 'apartamento' | 'casa' | 'terreno' | 'comercial';
@@ -43,6 +44,7 @@ export default function NovoImovelPage() {
     descricao: '',
   });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fotos, setFotos] = useState<string[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -77,6 +79,7 @@ export default function NovoImovelPage() {
       banheiros: inteiro(form.banheiros),
       vagas: inteiro(form.vagas),
       descricao: form.descricao || undefined,
+      fotos,
     };
 
     setLoading(true);
@@ -305,7 +308,7 @@ export default function NovoImovelPage() {
 
           <div className="field">
             <label>Fotos</label>
-            <div className="foto-placeholder">Upload de fotos em breve.</div>
+            <PhotoUploader value={fotos} onChange={setFotos} />
           </div>
 
           <button type="submit" className="btn btn-emerald" disabled={loading}>

@@ -3,7 +3,8 @@ import { asyncHandler } from '../../lib/async-handler';
 import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
-import { unauthorized } from '../../lib/errors';
+import { badRequest, unauthorized } from '../../lib/errors';
+import { assinarUpload, isCloudinaryConfigured } from '../../lib/cloudinary';
 import { atualizarImovelSchema, criarImovelSchema } from './imoveis.schemas';
 import type { AtualizarImovelInput, CriarImovelInput } from './imoveis.schemas';
 import * as imoveis from './imoveis.service';
@@ -11,6 +12,17 @@ import * as imoveis from './imoveis.service';
 export const imoveisRoutes = Router();
 
 imoveisRoutes.use(authenticate, authorize('corretor'));
+
+imoveisRoutes.post(
+  '/upload-assinatura',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    if (!isCloudinaryConfigured()) {
+      throw badRequest('Upload de fotos ainda não está configurado.');
+    }
+    res.json(assinarUpload('imoveis'));
+  }),
+);
 
 imoveisRoutes.post(
   '/',

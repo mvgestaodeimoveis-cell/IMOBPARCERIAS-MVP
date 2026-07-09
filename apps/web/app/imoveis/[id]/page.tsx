@@ -26,6 +26,7 @@ interface Imovel {
   vagas: number | null;
   descricao: string | null;
   status: string;
+  fotos: string[];
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -105,7 +106,22 @@ export default function ImovelDetalhePage() {
           <p className="muted">Carregando…</p>
         ) : (
           <>
-            <div className="imovel-hero" aria-hidden>🏠</div>
+            {imovel.fotos && imovel.fotos.length > 0 ? (
+              <div className="gallery">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="gallery-main" src={imovel.fotos[0]} alt="Foto do imóvel" />
+                {imovel.fotos.length > 1 && (
+                  <div className="gallery-thumbs">
+                    {imovel.fotos.slice(1).map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={url} src={url} alt={`Foto ${i + 2}`} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="imovel-hero" aria-hidden>🏠</div>
+            )}
 
             <div className="imovel-top" style={{ marginTop: '1rem' }}>
               <h1 style={{ fontSize: '1.5rem' }}>{formatBRL(imovel.preco)}</h1>
