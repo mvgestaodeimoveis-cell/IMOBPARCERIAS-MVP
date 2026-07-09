@@ -200,21 +200,38 @@ export function extrairDeHtml(html: string, linkOrigem: string): ImovelImportado
 
   // Heurísticas no texto (título + descrição + URL)
   const texto = `${draft.titulo ?? ''} ${draft.descricao ?? ''} ${linkOrigem}`.toLowerCase();
+  // Info SEM o link, para números e endereço (evita capturar o id do anúncio da URL).
+  const info = `${draft.titulo ?? ''} ${draft.descricao ?? ''}`;
+  const infoLower = info.toLowerCase();
+
   if (/alug|loca(?:ç|c)[aã]o|for rent/.test(texto)) draft.finalidade = 'aluguel';
   else if (/venda|à venda|a venda|comprar|for sale/.test(texto)) draft.finalidade = 'venda';
 
-  if (/\bapartamento\b|\bapto\b|\bap\b|\bflat\b|\bkitnet\b/.test(texto)) draft.tipo = 'apartamento';
+  if (/\bapartamento\b|\bapto\b|\bflat\b|\bkitnet\b/.test(texto)) draft.tipo = 'apartamento';
   else if (/\bcasa\b|\bsobrado\b|\bcondom[ií]nio\b/.test(texto)) draft.tipo = 'casa';
-  else if (/\bterreno\b|\blote\b|\b[aá]rea\b/.test(texto)) draft.tipo = 'terreno';
-  else if (/\bsala\b|\bloja\b|\bcomercial\b|\bgalp[aã]o\b|\bponto\b/.test(texto)) draft.tipo = 'comercial';
+  else if (/\bterreno\b|\blote\b/.test(texto)) draft.tipo = 'terreno';
+  else if (/\bsala\b|\bloja\b|\bcomercial\b|\bgalp[aã]o\b/.test(texto)) draft.tipo = 'comercial';
 
-  draft.preco = draft.preco ?? parsePreco(/r\$\s*([\d.,]+)/i.exec(texto)?.[1]);
-  draft.area_m2 = draft.area_m2 ?? primeiroNumero(/(\d{2,4})\s*m(?:²|2)/, texto);
-  draft.quartos = draft.quartos ?? primeiroNumero(/(\d+)\s*(?:quarto|dormit[óo]rio|dorm)/, texto);
-  draft.banheiros = draft.banheiros ?? primeiroNumero(/(\d+)\s*(?:banheiro|wc|lavabo)/, texto);
-  draft.vagas = draft.vagas ?? primeiroNumero(/(\d+)\s*(?:vaga|garagem)/, texto);
-  const cepMatch = /\b(\d{5})-?(\d{3})\b/.exec(texto);
-  if (!draft.cep && cepMatch) draft.cep = `${cepMatch[1]}${cepMatch[2]}`;
+  draft.preco = draft.preco ?? parsePreco(/r\$\s*([\d.,]+)/i.exec(infoLower)?.[1]);
+  draft.area_m2 = draft.area_m2 ?? primeiroNumero(/(\d{2,4})\s*m(?:²|2)/, infoLower);
+  draft.quartos = draft.quartos ?? primeiroNumero(/(\d+)\s*(?:quarto|dormit[óo]rio|dorm)/, infoLower);
+  draft.banheiros = draft.banheiros ?? primeiroNumero(/(\d+)\s*(?:banheiro|wc|lavabo)/, infoLower);
+  draft.vagas = draft.vagas ?? primeiroNumero(/(\d+)\s*(?:vaga|garage)/, infoLower);
+
+  // CEP: exige hífen (5-3) ou rótulo "cep" — evita capturar id do anúncio ou valores.
+  if (!draft.cep) {
+    const cep = /cep[:\s]*?(\d{5})-?(\d{3})/i.exec(info) ?? /\b(\d{5})-(\d{3})\b/.exec(info);
+    if (cep) draft.cep = `${cep[1]}${cep[2]}`;
+  }
+
+  // Bairro / cidade a partir do título no padrão "..., Bairro, Cidade - UF".
+  if (!draft.bairro || !draft.cidade) {
+    const loc = /,\s*([^,]+?),\s*([A-Za-zÀ-ÿ'.\s]+?)\s*-\s*[A-Z]{2}\b/.exec(draft.titulo ?? '');
+    if (loc) {
+      draft.bairro = draft.bairro ?? loc[1].trim();
+      draft.cidade = draft.cidade ?? loc[2].trim();
+    }
+  }
 
   return draft;
 }
