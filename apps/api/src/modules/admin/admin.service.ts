@@ -1,6 +1,8 @@
 import { query } from '../../db/pool';
+import { env } from '../../config/env';
 import { conflict, notFound } from '../../lib/errors';
 import { sendEmail } from '../../lib/email';
+import { emailCreciAprovado, emailCreciRejeitado } from '../../lib/email-templates';
 import type { ListCorretoresQuery } from './admin.schemas';
 
 interface CorretorListRow {
@@ -65,8 +67,7 @@ export async function aprovarCorretor(id: string, equipeId: string) {
 
   await sendEmail({
     to: atual.email,
-    subject: 'Imob Parcerias — cadastro aprovado',
-    html: `<p>Olá, ${atual.nome}. Seu CRECI foi verificado e seu perfil está <strong>ativo</strong>.</p>`,
+    ...emailCreciAprovado(atual.nome, `${env.APP_WEB_URL}/login`),
   });
 
   return { id, status: 'ativo' as const };
@@ -87,8 +88,7 @@ export async function rejeitarCorretor(id: string, equipeId: string, motivo: str
 
   await sendEmail({
     to: atual.email,
-    subject: 'Imob Parcerias — cadastro não aprovado',
-    html: `<p>Olá, ${atual.nome}. Seu cadastro não foi aprovado.</p><p><strong>Motivo:</strong> ${motivo}</p>`,
+    ...emailCreciRejeitado(atual.nome, motivo, `${env.APP_WEB_URL}/perfil/rejeitado`),
   });
 
   return { id, status: 'rejeitado' as const };

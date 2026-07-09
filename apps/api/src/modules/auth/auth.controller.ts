@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import * as authService from './auth.service';
 import type {
+  ConfirmarEmailInput,
   EsqueciSenhaInput,
   LoginInput,
   RedefinirSenhaInput,
@@ -47,4 +48,10 @@ export async function redefinirSenha(req: Request, res: Response) {
   const { token, senha } = req.body as RedefinirSenhaInput;
   await authService.redefinirSenha(token, senha);
   res.status(204).send();
+}
+
+export async function confirmarEmail(req: Request, res: Response) {
+  const { token } = req.body as ConfirmarEmailInput;
+  const result = await authService.confirmarEmail(token);
+  res.json(result);
 }

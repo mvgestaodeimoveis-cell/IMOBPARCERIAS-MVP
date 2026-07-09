@@ -10,6 +10,11 @@ import {
 } from '../../lib/jwt';
 import { badRequest, conflict, notFound, unauthorized } from '../../lib/errors';
 import { sendEmail } from '../../lib/email';
+import {
+  emailBoasVindas,
+  emailConfirmacao,
+  emailRecuperacaoSenha,
+} from '../../lib/email-templates';
 import type { UserRole } from '../../types/express';
 import type { CompletarCadastroInput, LoginInput, RegistroInput } from './auth.schemas';
 
@@ -78,8 +83,54 @@ export async function iniciarCadastro(input: RegistroInput) {
     [input.nome, input.email, senhaHash],
   );
   const corretor = inserted.rows[0];
+  await enviarConfirmacaoEmail(corretor.id, corretor.nome, corretor.email);
   const tokens = await issueTokens(corretor.id, 'corretor', corretor.status);
   return { ...tokens, corretor };
+}
+
+/** Gera token de confirmação de e-mail e envia o e-mail de confirmação. */
+async function enviarConfirmacaoEmail(corretorId: string, nome: string, email: string): Promise<void> {
+  const { value, hash } = generateOpaqueToken();
+  const expiresAt = new Date(Date.now() + parseDurationMs('2d'));
+  await query(
+    `INSERT INTO email_verificacao_token (corretor_id, token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [corretorId, hash, expiresAt],
+  );
+  const url = `${env.APP_WEB_URL}/confirmar-email?token=${value}`;
+  const { subject, html } = emailConfirmacao(nome, url);
+  await sendEmail({ to: email, subject, html });
+}
+
+/** Confirma o e-mail do corretor a partir do token e envia o e-mail de boas-vindas. */
+export async function confirmarEmail(token: string) {
+  const hash = hashOpaqueToken(token);
+  const { rows } = await query<{ id: string; corretor_id: string }>(
+    `SELECT id, corretor_id FROM email_verificacao_token
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()`,
+    [hash],
+  );
+  const registro = rows[0];
+  if (!registro) throw badRequest('Link de confirmação inválido ou expirado.');
+
+  const cr = await query<{ nome: string; email: string; email_verificado_em: string | null }>(
+    'SELECT nome, email, email_verificado_em FROM corretor WHERE id = $1',
+    [registro.corretor_id],
+  );
+  const corretor = cr.rows[0];
+  if (!corretor) throw notFound('Corretor não encontrado.');
+
+  await query('UPDATE email_verificacao_token SET used_at = now() WHERE id = $1', [registro.id]);
+
+  if (!corretor.email_verificado_em) {
+    await query('UPDATE corretor SET email_verificado_em = now() WHERE id = $1', [
+      registro.corretor_id,
+    ]);
+    const { subject, html } = emailBoasVindas(corretor.nome, `${env.APP_WEB_URL}/login`);
+    await sendEmail({ to: corretor.email, subject, html });
+  }
+
+  return { verificado: true };
 }
 
 /** Etapa 2 — completa o cadastro do lead e registra o aceite do Termo. */
@@ -225,11 +276,8 @@ export async function solicitarResetSenha(email: string): Promise<void> {
   );
 
   const link = `${env.APP_WEB_URL}/redefinir-senha?token=${value}`;
-  await sendEmail({
-    to: email,
-    subject: 'Imob Parcerias — recuperação de senha',
-    html: `<p>Olá, ${corretor.nome}.</p><p>Para redefinir sua senha, acesse: <a href="${link}">${link}</a></p><p>O link expira em breve. Se não foi você, ignore este e-mail.</p>`,
-  });
+  const { subject, html } = emailRecuperacaoSenha(corretor.nome, link);
+  await sendEmail({ to: email, subject, html });
 }
 
 export async function redefinirSenha(token: string, novaSenha: string): Promise<void> {

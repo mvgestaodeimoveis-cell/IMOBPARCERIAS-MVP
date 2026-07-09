@@ -74,9 +74,14 @@ export const redefinirSenhaSchema = z.object({
   senha: senhaSchema,
 });
 
+export const confirmarEmailSchema = z.object({
+  token: z.string().min(1, 'Token inválido.'),
+});
+
 export type RegistroInput = z.infer<typeof registroSchema>;
 export type CompletarCadastroInput = z.infer<typeof completarCadastroSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RefreshInput = z.infer<typeof refreshSchema>;
 export type EsqueciSenhaInput = z.infer<typeof esqueciSenhaSchema>;
 export type RedefinirSenhaInput = z.infer<typeof redefinirSenhaSchema>;
+export type ConfirmarEmailInput = z.infer<typeof confirmarEmailSchema>;

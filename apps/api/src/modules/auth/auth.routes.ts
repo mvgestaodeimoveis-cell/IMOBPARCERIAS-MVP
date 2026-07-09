@@ -3,6 +3,7 @@ import { asyncHandler } from '../../lib/async-handler';
 import { validate } from '../../middleware/validate';
 import { authRateLimit } from '../../middleware/rate-limit';
 import {
+  confirmarEmailSchema,
   esqueciSenhaSchema,
   loginSchema,
   redefinirSenhaSchema,
@@ -50,4 +51,11 @@ authRoutes.post(
   authRateLimit,
   validate(redefinirSenhaSchema),
   asyncHandler(authController.redefinirSenha),
+);
+
+authRoutes.post(
+  '/confirmar-email',
+  authRateLimit,
+  validate(confirmarEmailSchema),
+  asyncHandler(authController.confirmarEmail),
 );
