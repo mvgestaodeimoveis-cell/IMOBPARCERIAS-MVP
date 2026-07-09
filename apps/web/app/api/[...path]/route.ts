@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:4000';
 

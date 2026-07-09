@@ -226,7 +226,7 @@ export async function importarDeUrl(url: string): Promise<ImovelImportado> {
   try {
     res = await fetch(u.toString(), {
       redirect: 'follow',
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(9000),
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; ImobParceriasBot/1.0; +https://imobparcerias.com.br)',
         Accept: 'text/html,application/xhtml+xml',
