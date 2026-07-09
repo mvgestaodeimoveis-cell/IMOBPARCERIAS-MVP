@@ -9,7 +9,8 @@ interface EmailInput {
 /**
  * Serviço de e-mail transacional.
  * MVP/dev: sem RESEND_API_KEY, os e-mails são apenas logados no console.
- * Produção: plugar o Resend (ou SMTP) aqui quando o remetente estiver definido.
+ * Produção: envia via API REST do Resend (requer domínio verificado no Resend).
+ * Nunca lança — falhas são logadas para não quebrar os fluxos (ex.: recuperação de senha).
  */
 export async function sendEmail({ to, subject, html }: EmailInput): Promise<void> {
   if (!env.RESEND_API_KEY) {
@@ -17,8 +18,22 @@ export async function sendEmail({ to, subject, html }: EmailInput): Promise<void
     return;
   }
 
-  // TODO: integrar Resend quando EMAIL_FROM/domínio forem confirmados pelo cliente.
-  // const resend = new Resend(env.RESEND_API_KEY);
-  // await resend.emails.send({ from: env.EMAIL_FROM, to, subject, html });
-  console.log(`📧 [PENDENTE] envio real de e-mail para ${to} (integrar Resend).`);
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ from: env.EMAIL_FROM, to, subject, html }),
+    });
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '');
+      console.error(`❌ Resend falhou ao enviar para ${to}: ${res.status} ${detail}`);
+      return;
+    }
+  } catch (err) {
+    console.error(`❌ Erro de rede ao enviar e-mail para ${to}:`, err);
+  }
 }
