@@ -1030,6 +1030,150 @@ th {
   }
 }
 
+/* ============================================================
+   Sprint 2 — Imóveis (carteira, cards, formulário)
+   ============================================================ */
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+.foto-placeholder {
+  border: 1px dashed var(--gray-400);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  color: var(--gray-500);
+  font-size: 0.9rem;
+  background: var(--bg);
+}
+.carteira-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.carteira-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.imovel-list {
+  display: grid;
+  gap: 0.85rem;
+}
+.imovel-card {
+  display: flex;
+  gap: 0.9rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.imovel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  text-decoration: none;
+}
+.imovel-thumb {
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: var(--gray-100);
+  display: grid;
+  place-items: center;
+  font-size: 1.6rem;
+}
+.imovel-info {
+  flex: 1;
+  min-width: 0;
+}
+.imovel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.imovel-top strong {
+  font-size: 1.05rem;
+  color: var(--navy);
+}
+.imovel-sub {
+  margin: 0.15rem 0 0.25rem;
+  color: var(--gray-700);
+  font-size: 0.9rem;
+}
+.imovel-meta {
+  margin: 0;
+  color: var(--gray-500);
+  font-size: 0.82rem;
+}
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.badge-emerald {
+  background: #e6f5ec;
+  color: var(--emerald-600);
+}
+.badge-orange {
+  background: #fdecd9;
+  color: var(--orange-600);
+}
+.badge-gray {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+.empty-state {
+  text-align: center;
+}
+.empty-ico {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+@media (min-width: 768px) {
+  .imovel-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.imovel-hero {
+  height: 160px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #24425f, var(--navy));
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+  color: #fff;
+}
+.detail-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gray-500);
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+.detail-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  color: var(--gray-700);
+  font-size: 0.92rem;
+}
+.detail-grid b {
+  color: var(--navy);
+}
+
 /* Hero: profundidade e brilho sutil */
 .hero {
   box-shadow: 0 26px 60px -28px rgba(16, 24, 40, 0.55);

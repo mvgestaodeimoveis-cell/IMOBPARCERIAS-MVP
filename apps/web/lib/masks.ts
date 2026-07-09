@@ -15,3 +15,15 @@ export function maskCreci(value: string): string {
     .replace(/[^A-Z0-9-]/g, '')
     .slice(0, 12);
 }
+
+/** Máscara de CEP BR: XXXXX-XXX. */
+export function maskCep(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
+/** Formata número em Real (R$ 1.234,56). */
+export function formatBRL(value: number): string {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
