@@ -5,13 +5,24 @@ import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { badRequest, unauthorized } from '../../lib/errors';
 import { assinarUpload, isCloudinaryConfigured } from '../../lib/cloudinary';
-import { atualizarImovelSchema, criarImovelSchema } from './imoveis.schemas';
-import type { AtualizarImovelInput, CriarImovelInput } from './imoveis.schemas';
+import { importarDeUrl } from '../../lib/importer';
+import { atualizarImovelSchema, criarImovelSchema, importarImovelSchema } from './imoveis.schemas';
+import type { AtualizarImovelInput, CriarImovelInput, ImportarImovelInput } from './imoveis.schemas';
 import * as imoveis from './imoveis.service';
 
 export const imoveisRoutes = Router();
 
 imoveisRoutes.use(authenticate, authorize('corretor'));
+
+imoveisRoutes.post(
+  '/importar',
+  validate(importarImovelSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    const draft = await importarDeUrl((req.body as ImportarImovelInput).url);
+    res.json(draft);
+  }),
+);
 
 imoveisRoutes.post(
   '/upload-assinatura',

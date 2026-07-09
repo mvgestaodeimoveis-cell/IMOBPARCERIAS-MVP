@@ -88,8 +88,9 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
     const { rows } = await query<ImovelRow>(
       `INSERT INTO imovel
          (corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro, numero,
-          complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, chave_dedupe)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+          complemento, area_m2, quartos, suites, banheiros, vagas, descricao, fotos, chave_dedupe,
+          origem, link_origem)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING ${COLUNAS}`,
       [
         corretorId,
@@ -110,6 +111,8 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
         input.descricao,
         JSON.stringify(input.fotos ?? []),
         chave,
+        input.link_origem ? 'importado' : 'manual',
+        input.link_origem ?? null,
       ],
     );
     return mapImovel(rows[0]);

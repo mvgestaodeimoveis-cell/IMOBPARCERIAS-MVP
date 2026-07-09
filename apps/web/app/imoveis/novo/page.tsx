@@ -9,6 +9,24 @@ import { getAccessToken } from '@/lib/auth';
 import { Brandmark } from '@/components/Brandmark';
 import { PhotoUploader } from '@/components/PhotoUploader';
 
+interface Draft {
+  titulo?: string;
+  descricao?: string;
+  preco?: number;
+  fotos: string[];
+  cidade?: string;
+  bairro?: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  tipo?: Tipo;
+  finalidade?: Finalidade;
+  area_m2?: number;
+  quartos?: number;
+  banheiros?: number;
+  vagas?: number;
+}
+
 type Finalidade = 'venda' | 'aluguel';
 type Tipo = 'apartamento' | 'casa' | 'terreno' | 'comercial';
 
@@ -48,6 +66,57 @@ export default function NovoImovelPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [importUrl, setImportUrl] = useState('');
+  const [importando, setImportando] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [linkOrigem, setLinkOrigem] = useState<string | null>(null);
+
+  const str = (v: number | undefined) => (v == null ? '' : String(v));
+
+  async function importar() {
+    if (!importUrl.trim()) return;
+    const token = getAccessToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setImportMsg(null);
+    setErro(null);
+    setImportando(true);
+    try {
+      const d = await apiFetch<Draft>('/imoveis/importar', {
+        method: 'POST',
+        token,
+        body: { url: importUrl.trim() },
+      });
+      setForm((f) => ({
+        ...f,
+        finalidade: d.finalidade ?? f.finalidade,
+        tipo: d.tipo ?? f.tipo,
+        preco: d.preco != null ? String(d.preco) : f.preco,
+        cep: d.cep ? maskCep(d.cep) : f.cep,
+        logradouro: d.logradouro ?? f.logradouro,
+        numero: d.numero ?? f.numero,
+        bairro: d.bairro ?? f.bairro,
+        cidade: d.cidade ?? f.cidade,
+        area_m2: str(d.area_m2) || f.area_m2,
+        quartos: str(d.quartos) || f.quartos,
+        banheiros: str(d.banheiros) || f.banheiros,
+        vagas: str(d.vagas) || f.vagas,
+        descricao: d.descricao ?? d.titulo ?? f.descricao,
+      }));
+      if (d.fotos && d.fotos.length > 0) setFotos((atuais) => [...atuais, ...d.fotos].slice(0, 10));
+      setLinkOrigem(importUrl.trim());
+      setImportMsg('Dados importados. Revise e complete antes de cadastrar.');
+    } catch (err) {
+      setImportMsg(
+        err instanceof ApiRequestError ? err.message : 'Não foi possível importar deste link.',
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
@@ -80,6 +149,7 @@ export default function NovoImovelPage() {
       vagas: inteiro(form.vagas),
       descricao: form.descricao || undefined,
       fotos,
+      link_origem: linkOrigem ?? undefined,
     };
 
     setLoading(true);
@@ -114,6 +184,32 @@ export default function NovoImovelPage() {
         </p>
 
         {erro && <div className="banner banner-error">{erro}</div>}
+
+        <div className="card import-box">
+          <h3 className="import-title">Importar de um link</h3>
+          <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.88rem' }}>
+            Cole o link do anúncio (OLX, VivaReal, ZAP, site próprio…). Tentamos preencher os dados
+            automaticamente para você revisar.
+          </p>
+          <div className="import-row">
+            <input
+              className="input"
+              type="url"
+              placeholder="https://…"
+              value={importUrl}
+              onChange={(e) => setImportUrl(e.target.value)}
+            />
+            <button
+              type="button"
+              className="btn btn-navy"
+              disabled={importando || !importUrl.trim()}
+              onClick={importar}
+            >
+              {importando ? 'Importando…' : 'Importar'}
+            </button>
+          </div>
+          {importMsg && <div className="import-msg">{importMsg}</div>}
+        </div>
 
         <form className="card" onSubmit={onSubmit}>
           <div className="grid-2">

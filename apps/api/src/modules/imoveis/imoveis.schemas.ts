@@ -32,6 +32,11 @@ export const criarImovelSchema = z.object({
   vagas: inteiroOpcional,
   descricao: z.string().trim().max(4000).optional().transform((v) => v || null),
   fotos: z.array(z.string().url()).max(20).optional().default([]),
+  link_origem: z.string().url().max(500).optional(),
+});
+
+export const importarImovelSchema = z.object({
+  url: z.string().url('Informe um link válido.').max(500),
 });
 
 export const atualizarImovelSchema = criarImovelSchema.partial().extend({
@@ -40,3 +45,4 @@ export const atualizarImovelSchema = criarImovelSchema.partial().extend({
 
 export type CriarImovelInput = z.infer<typeof criarImovelSchema>;
 export type AtualizarImovelInput = z.infer<typeof atualizarImovelSchema>;
+export type ImportarImovelInput = z.infer<typeof importarImovelSchema>;

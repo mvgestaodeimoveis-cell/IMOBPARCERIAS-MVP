@@ -1262,6 +1262,38 @@ th {
   flex-shrink: 0;
 }
 
+/* Importação por link */
+.import-box {
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #fbfcfd, #fff);
+}
+.import-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin: 0 0 0.35rem;
+  color: var(--navy);
+}
+.import-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.import-row .input {
+  flex: 1;
+}
+.import-row .btn {
+  width: auto;
+  min-height: auto;
+  padding: 0 1.1rem;
+  white-space: nowrap;
+}
+.import-msg {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--emerald-600);
+  font-weight: 600;
+}
+
 /* Hero: profundidade e brilho sutil */
 .hero {
   box-shadow: 0 26px 60px -28px rgba(16, 24, 40, 0.55);
