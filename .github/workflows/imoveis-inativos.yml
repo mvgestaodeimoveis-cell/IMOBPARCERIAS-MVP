@@ -1,0 +1,26 @@
+name: Imóveis inativos (mensal)
+
+# Marca como INATIVO os imóveis DISPONÍVEIS sem atualização há N dias.
+# Roda de graça no GitHub Actions (não depende do plano do Render/Vercel).
+#
+# Configure em Settings > Secrets and variables > Actions:
+#   API_BASE_URL  ex.: https://imobparcerias-api.onrender.com
+#   CRON_SECRET   o mesmo valor definido na variável de ambiente da API
+
+on:
+  schedule:
+    - cron: '0 6 1 * *' # dia 1 de cada mês, 06:00 UTC (~03:00 BRT)
+  workflow_dispatch: {}
+
+jobs:
+  inativar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar endpoint de inatividade
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$API_BASE_URL/api/v1/jobs/imoveis-inativos" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            --max-time 120 -w '\nHTTP %{http_code}\n'

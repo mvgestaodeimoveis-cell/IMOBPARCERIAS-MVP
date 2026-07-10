@@ -255,8 +255,8 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
 export async function listarMeusImoveis(corretorId: string): Promise<Imovel[]> {
   const { rows } = await query<ImovelRow>(
     `SELECT ${COLUNAS} FROM imovel
-     WHERE corretor_id = $1 AND status <> 'inativo'
-     ORDER BY criado_em DESC`,
+     WHERE corretor_id = $1
+     ORDER BY (status = 'inativo'), (status = 'vendido'), criado_em DESC`,
     [corretorId],
   );
   return rows.map(mapImovel);
@@ -265,7 +265,7 @@ export async function listarMeusImoveis(corretorId: string): Promise<Imovel[]> {
 export async function obterImovelDoDono(id: string, corretorId: string): Promise<Imovel> {
   const { rows } = await query<ImovelRow>(`SELECT ${COLUNAS} FROM imovel WHERE id = $1`, [id]);
   const imovel = rows[0];
-  if (!imovel || imovel.status === 'inativo') throw notFound('Imóvel não encontrado.');
+  if (!imovel) throw notFound('Imóvel não encontrado.');
   if (imovel.corretor_id !== corretorId) throw forbidden('Você não tem acesso a este imóvel.');
   return mapImovel(imovel);
 }
@@ -360,6 +360,18 @@ export async function removerImovel(id: string, corretorId: string): Promise<voi
     `UPDATE imovel SET status = 'inativo', atualizado_em = now() WHERE id = $1`,
     [id],
   );
+}
+
+/** Job mensal (Fase 3): inativa imóveis disponíveis sem atualização há N dias. */
+export async function marcarImoveisInativos(dias: number): Promise<number> {
+  const { rowCount } = await query(
+    `UPDATE imovel
+     SET status = 'inativo', atualizado_em = now()
+     WHERE status = 'ativo'
+       AND atualizado_em < now() - ($1 || ' days')::interval`,
+    [String(dias)],
+  );
+  return rowCount ?? 0;
 }
 
 // ============================================================

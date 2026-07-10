@@ -36,6 +36,13 @@ const TIPO_LABEL: Record<string, string> = {
   comercial: 'Comercial',
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  ativo: 'Disponível',
+  em_negociacao: 'Em negociação',
+  vendido: 'Vendido',
+  inativo: 'Inativo',
+};
+
 export default function AppHomePage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
@@ -124,6 +131,13 @@ export default function AppHomePage() {
                     <span className={`badge ${im.finalidade === 'venda' ? 'badge-emerald' : 'badge-orange'}`}>
                       {im.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
                     </span>
+                    {im.status !== 'ativo' && (
+                      <span
+                        className={`badge ${im.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}
+                      >
+                        {STATUS_LABEL[im.status] ?? im.status}
+                      </span>
+                    )}
                   </div>
                   <p className="imovel-sub">
                     {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
@@ -136,7 +150,6 @@ export default function AppHomePage() {
                     ]
                       .filter(Boolean)
                       .join(' · ') || 'Sem detalhes adicionais'}
-                    {im.status === 'vendido' ? ' · Vendido' : ''}
                   </p>
                 </div>
               </Link>

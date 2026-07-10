@@ -8,6 +8,7 @@ import { imoveisRoutes } from './modules/imoveis/imoveis.routes';
 import { vitrineRoutes } from './modules/vitrine/vitrine.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { termoRoutes } from './modules/termo/termo.routes';
+import { jobsRoutes } from './modules/jobs/jobs.routes';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 export function createApp() {
@@ -29,6 +30,7 @@ export function createApp() {
   api.use('/vitrine', vitrineRoutes);
   api.use('/admin', adminRoutes);
   api.use('/termo', termoRoutes);
+  api.use('/jobs', jobsRoutes);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

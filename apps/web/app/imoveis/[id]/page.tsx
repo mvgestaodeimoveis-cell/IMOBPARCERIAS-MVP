@@ -36,6 +36,13 @@ const TIPO_LABEL: Record<string, string> = {
   comercial: 'Comercial',
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  ativo: 'Disponível',
+  em_negociacao: 'Em negociação',
+  vendido: 'Vendido',
+  inativo: 'Inativo',
+};
+
 export default function ImovelDetalhePage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
@@ -58,7 +65,7 @@ export default function ImovelDetalhePage() {
       });
   }, [id, router]);
 
-  async function mudarStatus(status: 'ativo' | 'vendido') {
+  async function mudarStatus(status: 'ativo' | 'vendido' | 'em_negociacao') {
     const token = getAccessToken();
     if (!token) return;
     setAcao(true);
@@ -131,8 +138,13 @@ export default function ImovelDetalhePage() {
             </div>
             <p className="muted" style={{ marginTop: '0.25rem' }}>
               {TIPO_LABEL[imovel.tipo] ?? imovel.tipo}
-              {imovel.status === 'vendido' && (
-                <span className="badge badge-gray" style={{ marginLeft: '0.5rem' }}>Vendido</span>
+              {imovel.status !== 'ativo' && (
+                <span
+                  className={`badge ${imovel.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}
+                  style={{ marginLeft: '0.5rem' }}
+                >
+                  {STATUS_LABEL[imovel.status] ?? imovel.status}
+                </span>
               )}
             </p>
 
@@ -161,18 +173,36 @@ export default function ImovelDetalhePage() {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.25rem' }}>
-              {imovel.status === 'vendido' ? (
+              {imovel.status === 'ativo' && (
+                <>
+                  <button className="btn btn-orange" disabled={acao} onClick={() => mudarStatus('em_negociacao')}>
+                    Marcar em negociação
+                  </button>
+                  <button className="btn btn-emerald" disabled={acao} onClick={() => mudarStatus('vendido')}>
+                    Marcar como vendido
+                  </button>
+                </>
+              )}
+              {imovel.status === 'em_negociacao' && (
+                <>
+                  <button className="btn btn-emerald" disabled={acao} onClick={() => mudarStatus('ativo')}>
+                    Voltar para disponível
+                  </button>
+                  <button className="btn btn-orange" disabled={acao} onClick={() => mudarStatus('vendido')}>
+                    Marcar como vendido
+                  </button>
+                </>
+              )}
+              {(imovel.status === 'vendido' || imovel.status === 'inativo') && (
                 <button className="btn btn-emerald" disabled={acao} onClick={() => mudarStatus('ativo')}>
                   Reativar imóvel
                 </button>
-              ) : (
-                <button className="btn btn-orange" disabled={acao} onClick={() => mudarStatus('vendido')}>
-                  Marcar como vendido
+              )}
+              {imovel.status !== 'inativo' && (
+                <button className="btn btn-ghost" disabled={acao} onClick={excluir}>
+                  Remover da carteira
                 </button>
               )}
-              <button className="btn btn-ghost" disabled={acao} onClick={excluir}>
-                Remover da carteira
-              </button>
             </div>
           </>
         )}

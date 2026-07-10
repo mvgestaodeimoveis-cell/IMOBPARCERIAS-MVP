@@ -111,7 +111,7 @@ export const vitrineQuerySchema = z.object({
 });
 
 export const atualizarImovelSchema = imovelBase.partial().extend({
-  status: z.enum(['ativo', 'inativo', 'vendido']).optional(),
+  status: z.enum(['ativo', 'em_negociacao', 'inativo', 'vendido']).optional(),
 });
 
 export type CriarImovelInput = z.infer<typeof criarImovelSchema>;
