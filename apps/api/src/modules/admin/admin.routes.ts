@@ -13,6 +13,13 @@ export const adminRoutes = Router();
 adminRoutes.use(authenticate, authorize('equipe'));
 
 adminRoutes.get(
+  '/metricas',
+  asyncHandler(async (_req: Request, res: Response) => {
+    res.json(await adminService.metricas());
+  }),
+);
+
+adminRoutes.get(
   '/corretores',
   validate(listCorretoresQuery, 'query'),
   asyncHandler(async (req: Request, res: Response) => {

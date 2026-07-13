@@ -44,6 +44,77 @@ export async function listCorretores(q: ListCorretoresQuery) {
 }
 
 // ============================================================
+// Painel de métricas (KPIs — Seção 1.6 do escopo)
+// ============================================================
+
+export async function metricas() {
+  const [corretores, imoveis, parcerias] = await Promise.all([
+    query<{ total: string; ativos: string; pendentes: string }>(
+      `SELECT count(*)::text AS total,
+              count(*) FILTER (WHERE status = 'ativo')::text AS ativos,
+              count(*) FILTER (WHERE status = 'verificacao_pendente')::text AS pendentes
+       FROM corretor`,
+    ),
+    query<{ total: string; na_vitrine: string; em_negociacao: string; vendidos: string }>(
+      `SELECT count(*)::text AS total,
+              count(*) FILTER (
+                WHERE status = 'ativo' AND jsonb_array_length(fotos) >= 5
+                  AND jsonb_array_length(diferenciais) >= 1
+                  AND quartos IS NOT NULL AND banheiros IS NOT NULL AND vagas IS NOT NULL
+              )::text AS na_vitrine,
+              count(*) FILTER (WHERE status = 'em_negociacao')::text AS em_negociacao,
+              count(*) FILTER (WHERE status = 'vendido')::text AS vendidos
+       FROM imovel`,
+    ),
+    query<{
+      total: string;
+      iniciadas: string;
+      confirmacoes: string;
+      vendas: string;
+      volume: string;
+      taxa_total: string;
+      taxa_recebida: string;
+      taxa_pendente: string;
+    }>(
+      `SELECT count(*)::text AS total,
+              count(*) FILTER (WHERE status IN ('aceita','em_negociacao','vendida','encerrada'))::text AS iniciadas,
+              count(*) FILTER (WHERE confirmada_em IS NOT NULL)::text AS confirmacoes,
+              count(*) FILTER (WHERE venda_declarada_em IS NOT NULL)::text AS vendas,
+              coalesce(sum(venda_valor), 0)::text AS volume,
+              coalesce(sum(taxa_plataforma), 0)::text AS taxa_total,
+              coalesce(sum(taxa_plataforma) FILTER (WHERE pagamento_status = 'confirmado'), 0)::text AS taxa_recebida,
+              coalesce(sum(taxa_plataforma) FILTER (WHERE pagamento_status = 'pendente'), 0)::text AS taxa_pendente
+       FROM parceria`,
+    ),
+  ]);
+
+  const c = corretores.rows[0];
+  const i = imoveis.rows[0];
+  const p = parcerias.rows[0];
+  const n = (v: string) => Number(v);
+
+  return {
+    corretores: { total: n(c.total), ativos: n(c.ativos), pendentes: n(c.pendentes) },
+    imoveis: {
+      total: n(i.total),
+      na_vitrine: n(i.na_vitrine),
+      em_negociacao: n(i.em_negociacao),
+      vendidos: n(i.vendidos),
+    },
+    parcerias: {
+      total: n(p.total),
+      iniciadas: n(p.iniciadas),
+      confirmacoes_bilaterais: n(p.confirmacoes),
+      vendas: n(p.vendas),
+      volume_vendas: n(p.volume),
+      taxa_total: n(p.taxa_total),
+      taxa_recebida: n(p.taxa_recebida),
+      taxa_pendente: n(p.taxa_pendente),
+    },
+  };
+}
+
+// ============================================================
 // Gestão de administradores (usuario_equipe)
 // ============================================================
 
