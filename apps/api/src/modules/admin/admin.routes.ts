@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
-import { listCorretoresQuery, rejeitarSchema, type ListCorretoresQuery, type RejeitarInput } from './admin.schemas';
+import { listCorretoresQuery, rejeitarSchema, criarAdminSchema, type ListCorretoresQuery, type RejeitarInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
 
 export const adminRoutes = Router();
@@ -63,5 +63,22 @@ adminRoutes.post(
     if (!req.user) throw unauthorized();
     const result = await adminService.rejeitarExclusividade(req.params.id);
     res.json(result);
+  }),
+);
+
+adminRoutes.get(
+  '/equipe',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const result = await adminService.listarAdmins();
+    res.json(result);
+  }),
+);
+
+adminRoutes.post(
+  '/equipe',
+  validate(criarAdminSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const result = await adminService.criarAdmin(req.body as CriarAdminInput);
+    res.status(201).json(result);
   }),
 );

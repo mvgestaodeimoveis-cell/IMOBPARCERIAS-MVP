@@ -13,6 +13,7 @@ import { sendEmail } from '../../lib/email';
 import {
   emailBoasVindas,
   emailConfirmacao,
+  emailNovoCadastroPendente,
   emailRecuperacaoSenha,
 } from '../../lib/email-templates';
 import type { UserRole } from '../../types/express';
@@ -140,9 +141,10 @@ export async function completarCadastro(
   ip: string,
   userAgent: string,
 ) {
-  const atual = await query<{ status: string }>('SELECT status FROM corretor WHERE id = $1', [
-    corretorId,
-  ]);
+  const atual = await query<{ status: string; nome: string }>(
+    'SELECT status, nome FROM corretor WHERE id = $1',
+    [corretorId],
+  );
   if (!atual.rows[0]) throw notFound('Corretor não encontrado.');
   if (atual.rows[0].status !== 'cadastro_incompleto') {
     throw conflict('Cadastro já concluído.');
@@ -179,7 +181,21 @@ export async function completarCadastro(
     client.release();
   }
 
+  await notificarEquipeNovoCadastro(atual.rows[0].nome, input.creci, input.cidade);
+
   return { id: corretorId, status: 'verificacao_pendente' as const };
+}
+
+/** Avisa a equipe (por e-mail) que há um novo cadastro aguardando verificação de CRECI. */
+async function notificarEquipeNovoCadastro(
+  nome: string,
+  creci: string,
+  cidade: string,
+): Promise<void> {
+  if (!env.EQUIPE_NOTIFICACAO_EMAIL) return;
+  const url = `${env.APP_WEB_URL}/admin/corretores`;
+  const { subject, html } = emailNovoCadastroPendente(nome, creci, cidade, url);
+  await sendEmail({ to: env.EQUIPE_NOTIFICACAO_EMAIL, subject, html });
 }
 
 export async function loginCorretor(input: LoginInput) {

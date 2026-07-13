@@ -45,6 +45,7 @@ O frontend (`apps/web`) vai na **Vercel** e a API (`apps/api`) no **Render**.
    | `APP_WEB_URL` | idem (ajusta no passo C) |
    | `RESEND_API_KEY` | sua chave do Resend (ou deixe vazio → e-mails vão para o log) |
    | `EMAIL_FROM` | `Imob Parcerias <no-reply@imobparcerias.com.br>` |
+   | `EQUIPE_NOTIFICACAO_EMAIL` | e-mail que recebe o aviso de novo cadastro pendente (vazio → não notifica) |
 
    > **Não defina `PORT`** — o Render injeta a porta automaticamente e a API já lê `process.env.PORT`.
 6. **Health Check Path:** `/health` (em Settings, se quiser habilitar).

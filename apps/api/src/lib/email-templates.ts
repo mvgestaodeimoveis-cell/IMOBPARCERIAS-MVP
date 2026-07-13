@@ -126,6 +126,29 @@ export function emailConfirmacao(nome: string, url: string): EmailContent {
   };
 }
 
+export function emailNovoCadastroPendente(
+  corretorNome: string,
+  creci: string,
+  cidade: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Novo cadastro aguardando verificação — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Um corretor concluiu o cadastro e aguarda verificação de CRECI.',
+      heading: 'Novo corretor para verificar',
+      paragraphs: [
+        'Um corretor concluiu o cadastro na <strong>Imob Parcerias</strong> e está aguardando a verificação do CRECI pela equipe.',
+        `<strong>Nome:</strong> ${escapeHtml(corretorNome)}<br /><strong>CRECI:</strong> ${escapeHtml(
+          creci,
+        )}<br /><strong>Cidade:</strong> ${escapeHtml(cidade)}`,
+      ],
+      cta: { label: 'Abrir fila de verificação', url },
+      footerNote: 'Prazo de análise: até 48h úteis.',
+    }),
+  };
+}
+
 export function emailBoasVindas(nome: string, url: string): EmailContent {
   return {
     subject: 'Bem-vindo à Imob Parcerias',

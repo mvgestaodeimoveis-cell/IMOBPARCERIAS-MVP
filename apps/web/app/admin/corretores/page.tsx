@@ -102,8 +102,9 @@ export default function AdminCorretoresPage() {
       <div className="screen">
         <h1 style={{ fontSize: '1.5rem' }}>Verificação de CRECI</h1>
         <p className="muted" style={{ marginBottom: '0.75rem' }}>Corretores aguardando aprovação.</p>
-        <p style={{ marginBottom: '1.25rem' }}>
+        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <a href="/admin/exclusividades">Ver fila de exclusividades →</a>
+          <a href="/admin/equipe">Gerenciar administradores →</a>
         </p>
 
         {erro && <div className="banner banner-error">{erro}</div>}

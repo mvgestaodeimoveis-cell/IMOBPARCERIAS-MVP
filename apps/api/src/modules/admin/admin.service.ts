@@ -1,9 +1,10 @@
 import { query } from '../../db/pool';
 import { env } from '../../config/env';
 import { conflict, notFound } from '../../lib/errors';
+import { hashPassword } from '../../lib/password';
 import { sendEmail } from '../../lib/email';
 import { emailCreciAprovado, emailCreciRejeitado } from '../../lib/email-templates';
-import type { ListCorretoresQuery } from './admin.schemas';
+import type { CriarAdminInput, ListCorretoresQuery } from './admin.schemas';
 
 interface CorretorListRow {
   id: string;
@@ -40,6 +41,42 @@ export async function listCorretores(q: ListCorretoresQuery) {
   );
 
   return { data: dataRes.rows, page: q.page, page_size: q.page_size, total };
+}
+
+// ============================================================
+// Gestão de administradores (usuario_equipe)
+// ============================================================
+
+interface AdminRow {
+  id: string;
+  nome: string;
+  email: string;
+  criado_em: string;
+}
+
+export async function listarAdmins() {
+  const { rows } = await query<AdminRow>(
+    'SELECT id, nome, email, criado_em FROM usuario_equipe ORDER BY criado_em ASC',
+  );
+  return { data: rows };
+}
+
+export async function criarAdmin(input: CriarAdminInput) {
+  const dupe = await query<{ id: string }>('SELECT id FROM usuario_equipe WHERE email = $1', [
+    input.email,
+  ]);
+  if (dupe.rowCount) {
+    throw conflict('E-mail já cadastrado.', { email: 'Este e-mail já está cadastrado.' });
+  }
+
+  const senhaHash = await hashPassword(input.senha);
+  const { rows } = await query<AdminRow>(
+    `INSERT INTO usuario_equipe (nome, email, senha_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id, nome, email, criado_em`,
+    [input.nome, input.email, senhaHash],
+  );
+  return rows[0];
 }
 
 async function fetchStatus(id: string): Promise<{ status: string; email: string; nome: string }> {

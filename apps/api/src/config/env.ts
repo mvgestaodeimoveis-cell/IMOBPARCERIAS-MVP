@@ -14,6 +14,7 @@ const envSchema = z.object({
   RESET_TOKEN_EXPIRES_IN: z.string().default('1h'),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Imob Parcerias <no-reply@imobparcerias.com.br>'),
+  EQUIPE_NOTIFICACAO_EMAIL: z.string().optional(),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
