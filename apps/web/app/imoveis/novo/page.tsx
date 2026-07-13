@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { apiFetch, ApiRequestError } from '@/lib/api';
-import { formatMilhar, maskCep, parseNumero } from '@/lib/masks';
+import { apiFetch, ApiRequestError } from '@/lib/api';import { formatMilhar, maskCep, parseNumero } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
 import { Brandmark } from '@/components/Brandmark';
 import { PhotoUploader } from '@/components/PhotoUploader';
@@ -137,6 +136,14 @@ export default function NovoImovelPage() {
   const [importando, setImportando] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [linkOrigem, setLinkOrigem] = useState<string | null>(null);
+
+  // Funil (KPI): registra o início do cadastro uma vez, ao abrir o formulário.
+  useEffect(() => {
+    const token = getAccessToken();
+    if (token) {
+      apiFetch('/imoveis/cadastro-sessao', { method: 'POST', token }).catch(() => {});
+    }
+  }, []);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));

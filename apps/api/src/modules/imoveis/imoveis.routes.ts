@@ -24,6 +24,15 @@ imoveisRoutes.post(
   }),
 );
 
+// Funil (KPI): registra o início do cadastro de imóvel.
+imoveisRoutes.post(
+  '/cadastro-sessao',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.status(201).json(await imoveis.iniciarSessaoCadastro(req.user.id));
+  }),
+);
+
 imoveisRoutes.post(
   '/upload-assinatura',
   asyncHandler(async (req: Request, res: Response) => {

@@ -21,6 +21,7 @@ interface Metricas {
     taxa_recebida: number;
     taxa_pendente: number;
   };
+  funil_cadastro: { iniciados: number; concluidos: number; taxa_abandono: number };
 }
 
 function Card({ label, valor, meta, sub }: { label: string; valor: string | number; meta?: string; sub?: string }) {
@@ -118,6 +119,13 @@ export default function AdminDashboardPage() {
               <Card label="Volume de vendas" valor={formatBRL(m.parcerias.volume_vendas)} />
               <Card label="Taxa recebida" valor={formatBRL(m.parcerias.taxa_recebida)} />
               <Card label="Taxa a receber" valor={formatBRL(m.parcerias.taxa_pendente)} />
+            </div>
+
+            <h2 style={{ fontSize: '1.05rem', marginTop: '1.5rem' }}>Cadastro de imóvel</h2>
+            <div className="metricas-grid">
+              <Card label="Taxa de abandono" valor={`${m.funil_cadastro.taxa_abandono}%`} meta="< 30%" />
+              <Card label="Cadastros iniciados" valor={m.funil_cadastro.iniciados} />
+              <Card label="Cadastros concluídos" valor={m.funil_cadastro.concluidos} />
             </div>
           </>
         )}

@@ -285,6 +285,7 @@ export async function criarImovel(
       ],
     );
     await client.query('COMMIT');
+    await marcarSessaoCadastroConcluida(corretorId, imovel.id);
     return mapImovel(imovel);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -296,6 +297,29 @@ export async function criarImovel(
   } finally {
     client.release();
   }
+}
+
+/** Funil (KPI): abre uma sessão de cadastro quando o corretor inicia o formulário. */
+export async function iniciarSessaoCadastro(corretorId: string): Promise<{ id: string }> {
+  const { rows } = await query<{ id: string }>(
+    'INSERT INTO cadastro_imovel_sessao (corretor_id) VALUES ($1) RETURNING id',
+    [corretorId],
+  );
+  return { id: rows[0].id };
+}
+
+/** Marca a sessão aberta mais recente do corretor como concluída (best-effort). */
+async function marcarSessaoCadastroConcluida(corretorId: string, imovelId: string): Promise<void> {
+  await query(
+    `UPDATE cadastro_imovel_sessao
+     SET concluido_em = now(), imovel_id = $2
+     WHERE id = (
+       SELECT id FROM cadastro_imovel_sessao
+       WHERE corretor_id = $1 AND concluido_em IS NULL
+       ORDER BY iniciado_em DESC LIMIT 1
+     )`,
+    [corretorId, imovelId],
+  );
 }
 
 export async function listarMeusImoveis(corretorId: string): Promise<Imovel[]> {

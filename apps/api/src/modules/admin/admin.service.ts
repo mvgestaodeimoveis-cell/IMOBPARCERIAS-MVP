@@ -48,7 +48,7 @@ export async function listCorretores(q: ListCorretoresQuery) {
 // ============================================================
 
 export async function metricas() {
-  const [corretores, imoveis, parcerias] = await Promise.all([
+  const [corretores, imoveis, parcerias, funil] = await Promise.all([
     query<{ total: string; ativos: string; pendentes: string }>(
       `SELECT count(*)::text AS total,
               count(*) FILTER (WHERE status = 'ativo')::text AS ativos,
@@ -86,12 +86,21 @@ export async function metricas() {
               coalesce(sum(taxa_plataforma) FILTER (WHERE pagamento_status = 'pendente'), 0)::text AS taxa_pendente
        FROM parceria`,
     ),
+    query<{ iniciados: string; concluidos: string }>(
+      `SELECT count(*)::text AS iniciados,
+              count(*) FILTER (WHERE concluido_em IS NOT NULL)::text AS concluidos
+       FROM cadastro_imovel_sessao`,
+    ),
   ]);
 
   const c = corretores.rows[0];
   const i = imoveis.rows[0];
   const p = parcerias.rows[0];
+  const f = funil.rows[0];
   const n = (v: string) => Number(v);
+  const iniciados = n(f.iniciados);
+  const concluidos = n(f.concluidos);
+  const taxaAbandono = iniciados > 0 ? Math.round(((iniciados - concluidos) / iniciados) * 100) : 0;
 
   return {
     corretores: { total: n(c.total), ativos: n(c.ativos), pendentes: n(c.pendentes) },
@@ -110,6 +119,11 @@ export async function metricas() {
       taxa_total: n(p.taxa_total),
       taxa_recebida: n(p.taxa_recebida),
       taxa_pendente: n(p.taxa_pendente),
+    },
+    funil_cadastro: {
+      iniciados,
+      concluidos,
+      taxa_abandono: taxaAbandono,
     },
   };
 }
