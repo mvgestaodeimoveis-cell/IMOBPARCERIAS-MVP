@@ -35,9 +35,16 @@ const STATUS_LABEL: Record<string, string> = {
   aceita: 'Aceita',
   recusada: 'Recusada',
   em_negociacao: 'Em negociação',
+  vendida: 'Vendida',
   encerrada: 'Encerrada',
   cancelada: 'Cancelada',
 };
+
+function statusBadgeClass(status: string): string {
+  if (status === 'aceita' || status === 'vendida') return 'badge badge-emerald';
+  if (status === 'solicitada' || status === 'em_negociacao') return 'badge badge-orange';
+  return 'badge';
+}
 
 export default function ParceriasPage() {
   const router = useRouter();
@@ -119,7 +126,7 @@ export default function ParceriasPage() {
           <strong>
             {TIPO_LABEL[p.imovel_tipo] ?? p.imovel_tipo} · {p.imovel_bairro}, {p.imovel_cidade}
           </strong>
-          <span className="badge">{STATUS_LABEL[p.status] ?? p.status}</span>
+          <span className={statusBadgeClass(p.status)}>{STATUS_LABEL[p.status] ?? p.status}</span>
         </div>
         <p className="muted" style={{ margin: '0.35rem 0', fontSize: '0.88rem' }}>
           {formatBRL(p.imovel_preco)} · Cliente: {p.cliente_nome}
@@ -190,7 +197,14 @@ export default function ParceriasPage() {
           <p className="muted">Carregando…</p>
         ) : (
           <>
-            <h2 style={{ fontSize: '1.1rem' }}>Recebidas (meus imóveis)</h2>
+            <h2 style={{ fontSize: '1.1rem' }}>
+              Recebidas (meus imóveis)
+              {recebidas.filter((p) => p.status === 'solicitada').length > 0 && (
+                <span className="badge badge-orange" style={{ marginLeft: '0.5rem' }}>
+                  {recebidas.filter((p) => p.status === 'solicitada').length} aguardando
+                </span>
+              )}
+            </h2>
             {recebidas.length === 0 ? (
               <div className="card"><p className="muted" style={{ margin: 0 }}>Nenhuma solicitação recebida.</p></div>
             ) : (

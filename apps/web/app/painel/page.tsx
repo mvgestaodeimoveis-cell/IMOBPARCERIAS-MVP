@@ -47,6 +47,7 @@ export default function AppHomePage() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
   const [imoveis, setImoveis] = useState<Imovel[] | null>(null);
+  const [pendentes, setPendentes] = useState(0);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -61,6 +62,9 @@ export default function AppHomePage() {
           return;
         }
         setMe(data);
+        apiFetch<{ data: { status: string }[] }>('/parcerias/recebidas', { token })
+          .then((res) => setPendentes(res.data.filter((p) => p.status === 'solicitada').length))
+          .catch(() => setPendentes(0));
         return apiFetch<{ data: Imovel[] }>('/imoveis/me', { token })
           .then((res) => setImoveis(res.data))
           .catch(() => setImoveis([]));
@@ -80,7 +84,7 @@ export default function AppHomePage() {
         <nav className="desktop-nav">
           <Link href="/painel" className="active">Início</Link>
           <Link href="/vitrine">Vitrine</Link>
-          <Link href="/parcerias">Parcerias</Link>
+          <Link href="/parcerias">Parcerias{pendentes > 0 ? ` (${pendentes})` : ''}</Link>
         </nav>
         <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
           Sair
@@ -91,9 +95,12 @@ export default function AppHomePage() {
         <h1 style={{ fontSize: '1.5rem' }}>Olá{me ? `, ${me.nome.split(' ')[0]}` : ''}!</h1>
         <p className="muted" style={{ marginBottom: '1.25rem' }}>Seu perfil está ativo e verificado.</p>
 
-        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <Link href="/vitrine">Ver vitrine →</Link>
           <Link href="/parcerias">Minhas parcerias →</Link>
+          {pendentes > 0 && (
+            <span className="badge badge-orange">{pendentes} solicitação(ões) aguardando</span>
+          )}
         </p>
 
         <div className="carteira-head">
