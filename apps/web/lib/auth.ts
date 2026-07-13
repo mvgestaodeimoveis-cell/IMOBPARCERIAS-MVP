@@ -33,6 +33,31 @@ export function getRole(): Role | null {
   return localStorage.getItem(ROLE_KEY) as Role | null;
 }
 
+function decodeJwt(token: string): { exp?: number } | null {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(json) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sessão real: exige um access token não expirado OU um refresh token para renová-lo.
+ * Ao contrário de getAccessToken(), NÃO considera logado um token vencido e órfão.
+ */
+export function isAuthenticated(): boolean {
+  if (typeof window === 'undefined') return false;
+  const token = getAccessToken();
+  if (!token) return false;
+  const payload = decodeJwt(token);
+  if (payload?.exp && payload.exp * 1000 > Date.now()) return true;
+  // Access token expirado: só continua logado se houver refresh token para renovar.
+  return !!getRefreshToken();
+}
+
 export function clearSession(): void {
   localStorage.removeItem(ACCESS_KEY);
   localStorage.removeItem(REFRESH_KEY);

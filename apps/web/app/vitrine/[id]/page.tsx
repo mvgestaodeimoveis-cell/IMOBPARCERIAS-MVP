@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { getAccessToken } from '@/lib/auth';
+import { getAccessToken, isAuthenticated } from '@/lib/auth';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 
@@ -53,7 +53,7 @@ export default function VitrineDetalhePage() {
   }, [params.id]);
 
   function iniciarSolicitacao() {
-    if (!getAccessToken()) {
+    if (!isAuthenticated()) {
       router.push('/login');
       return;
     }
@@ -64,7 +64,7 @@ export default function VitrineDetalhePage() {
     e.preventDefault();
     setParceriaErro(null);
     const token = getAccessToken();
-    if (!token) {
+    if (!isAuthenticated() || !token) {
       router.push('/login');
       return;
     }

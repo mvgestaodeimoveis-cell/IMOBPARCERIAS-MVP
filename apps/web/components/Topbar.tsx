@@ -1,11 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Brandmark } from './Brandmark';
+import { isAuthenticated, getRole } from '../lib/auth';
 
 export function Topbar() {
   const [open, setOpen] = useState(false);
+  const [logado, setLogado] = useState(false);
+  const [painelHref, setPainelHref] = useState('/painel');
+
+  useEffect(() => {
+    const auth = isAuthenticated();
+    setLogado(auth);
+    if (auth) setPainelHref(getRole() === 'equipe' ? '/admin/dashboard' : '/painel');
+  }, []);
 
   return (
     <header className="site-header">
@@ -17,10 +26,18 @@ export function Topbar() {
         <nav className="nav-desktop" aria-label="Principal">
           <Link href="/vitrine">Vitrine</Link>
           <Link href="/como-funciona">Como funciona</Link>
-          <Link href="/login">Entrar</Link>
-          <Link href="/cadastro" className="btn btn-emerald nav-cta">
-            Cadastrar
-          </Link>
+          {logado ? (
+            <Link href={painelHref} className="btn btn-emerald nav-cta">
+              Meu painel
+            </Link>
+          ) : (
+            <>
+              <Link href="/login">Entrar</Link>
+              <Link href="/cadastro" className="btn btn-emerald nav-cta">
+                Cadastrar
+              </Link>
+            </>
+          )}
         </nav>
 
         <button
@@ -51,12 +68,20 @@ export function Topbar() {
             <Link href="/como-funciona" onClick={() => setOpen(false)}>
               Como funciona
             </Link>
-            <Link href="/login" onClick={() => setOpen(false)}>
-              Entrar
-            </Link>
-            <Link href="/cadastro" className="btn btn-emerald" onClick={() => setOpen(false)}>
-              Cadastrar
-            </Link>
+            {logado ? (
+              <Link href={painelHref} className="btn btn-emerald" onClick={() => setOpen(false)}>
+                Meu painel
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setOpen(false)}>
+                  Entrar
+                </Link>
+                <Link href="/cadastro" className="btn btn-emerald" onClick={() => setOpen(false)}>
+                  Cadastrar
+                </Link>
+              </>
+            )}
           </div>
         )}
       </div>
