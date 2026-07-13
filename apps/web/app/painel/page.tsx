@@ -27,6 +27,8 @@ interface Imovel {
   vagas: number | null;
   area_m2: number | null;
   fotos: string[];
+  exclusividade: boolean;
+  exclusividade_status: string;
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -48,6 +50,7 @@ export default function AppHomePage() {
   const [me, setMe] = useState<Me | null>(null);
   const [imoveis, setImoveis] = useState<Imovel[] | null>(null);
   const [pendentes, setPendentes] = useState(0);
+  const [acaoId, setAcaoId] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -72,10 +75,35 @@ export default function AppHomePage() {
       .catch(() => router.replace('/login'));
   }, [router]);
 
+  async function marcarVendido(id: string) {
+    if (!window.confirm('Confirmar que este imóvel foi vendido? Ele sairá da vitrine.')) return;
+    const token = getAccessToken();
+    if (!token) return;
+    setAcaoId(id);
+    try {
+      const atualizado = await apiFetch<Imovel>(`/imoveis/${id}`, {
+        method: 'PATCH',
+        token,
+        body: { status: 'vendido' },
+      });
+      setImoveis((atual) =>
+        atual ? atual.map((im) => (im.id === id ? { ...im, status: atualizado.status } : im)) : atual,
+      );
+    } catch {
+      window.alert('Não foi possível atualizar o imóvel. Tente novamente.');
+    } finally {
+      setAcaoId(null);
+    }
+  }
+
   function sair() {
     clearSession();
     router.replace('/login');
   }
+
+  const total = imoveis?.length ?? 0;
+  const disponiveis = imoveis?.filter((im) => im.status === 'ativo').length ?? 0;
+  const emNegociacao = imoveis?.filter((im) => im.status === 'em_negociacao').length ?? 0;
 
   return (
     <div className="frame frame-app">
@@ -93,14 +121,34 @@ export default function AppHomePage() {
 
       <div className="screen has-bottomnav">
         <h1 style={{ fontSize: '1.5rem' }}>Olá{me ? `, ${me.nome.split(' ')[0]}` : ''}!</h1>
-        <p className="muted" style={{ marginBottom: '1.25rem' }}>Seu perfil está ativo e verificado.</p>
+        <p className="muted" style={{ marginBottom: '1.1rem' }}>Seu perfil está ativo e verificado.</p>
 
-        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        {imoveis !== null && (
+          <div className="painel-stats">
+            <Link href="/painel" className="stat-chip">
+              <span className="stat-num">{total}</span>
+              <span className="stat-label">imóvel(is)</span>
+            </Link>
+            <div className="stat-chip">
+              <span className="stat-num" style={{ color: 'var(--emerald-600)' }}>{disponiveis}</span>
+              <span className="stat-label">na vitrine</span>
+            </div>
+            {emNegociacao > 0 && (
+              <div className="stat-chip">
+                <span className="stat-num" style={{ color: 'var(--orange-600)' }}>{emNegociacao}</span>
+                <span className="stat-label">em negociação</span>
+              </div>
+            )}
+            <Link href="/parcerias" className="stat-chip">
+              <span className="stat-num" style={{ color: pendentes > 0 ? 'var(--orange-600)' : undefined }}>{pendentes}</span>
+              <span className="stat-label">parceria(s) pendente(s)</span>
+            </Link>
+          </div>
+        )}
+
+        <p style={{ margin: '1.1rem 0 1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <Link href="/vitrine">Ver vitrine →</Link>
           <Link href="/parcerias">Minhas parcerias →</Link>
-          {pendentes > 0 && (
-            <span className="badge badge-orange">{pendentes} solicitação(ões) aguardando</span>
-          )}
         </p>
 
         <div className="carteira-head">
@@ -115,54 +163,80 @@ export default function AppHomePage() {
         ) : imoveis.length === 0 ? (
           <div className="card empty-state">
             <span className="empty-ico">🏠</span>
-            <h3 style={{ textTransform: 'uppercase', fontWeight: 800 }}>Sua carteira está vazia</h3>
-            <p className="muted" style={{ margin: '0.35rem 0 1rem' }}>
-              Cadastre seu primeiro imóvel para começar a fechar parcerias.
+            <h3 style={{ textTransform: 'uppercase', fontWeight: 800 }}>Comece a fechar parcerias</h3>
+            <p className="muted" style={{ margin: '0.35rem auto 1rem', maxWidth: '32ch' }}>
+              Cadastre seu primeiro imóvel para aparecer na vitrine e receber solicitações de outros corretores.
             </p>
             <Link href="/imoveis/novo" className="btn btn-emerald" style={{ width: 'auto' }}>
-              Cadastrar imóvel
+              Cadastrar meu primeiro imóvel
             </Link>
+            <p style={{ marginTop: '0.9rem' }}>
+              <Link href="/vitrine" className="muted">Ou explore a vitrine de parceiros →</Link>
+            </p>
           </div>
         ) : (
           <div className="imovel-list">
             {imoveis.map((im) => (
-              <Link key={im.id} href={`/imoveis/${im.id}`} className="imovel-card">
-                <div className="imovel-thumb" aria-hidden>
-                  {im.fotos && im.fotos.length > 0 ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={im.fotos[0]} alt="" />
-                  ) : (
-                    '🏠'
-                  )}
-                </div>
-                <div className="imovel-info">
-                  <div className="imovel-top">
-                    <strong>{formatBRL(im.preco)}</strong>
-                    <span className={`badge ${im.finalidade === 'venda' ? 'badge-emerald' : 'badge-orange'}`}>
-                      {im.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
-                    </span>
-                    {im.status !== 'ativo' && (
-                      <span
-                        className={`badge ${im.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}
-                      >
-                        {STATUS_LABEL[im.status] ?? im.status}
-                      </span>
+              <div key={im.id} className="imovel-card">
+                <Link href={`/imoveis/${im.id}`} className="imovel-card-body">
+                  <div className="imovel-thumb" aria-hidden>
+                    {im.fotos && im.fotos.length > 0 ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={im.fotos[0]} alt="" />
+                    ) : (
+                      '🏠'
                     )}
                   </div>
-                  <p className="imovel-sub">
-                    {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
-                  </p>
-                  <p className="imovel-meta">
-                    {[
-                      im.area_m2 ? `${im.area_m2} m²` : null,
-                      im.quartos != null ? `${im.quartos} quarto(s)` : null,
-                      im.vagas != null ? `${im.vagas} vaga(s)` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ') || 'Sem detalhes adicionais'}
-                  </p>
+                  <div className="imovel-info">
+                    <div className="imovel-top">
+                      <strong>{formatBRL(im.preco)}</strong>
+                      <span className={`badge ${im.finalidade === 'venda' ? 'badge-emerald' : 'badge-orange'}`}>
+                        {im.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
+                      </span>
+                    </div>
+                    <div className="imovel-tags">
+                      {im.status !== 'ativo' && (
+                        <span className={`badge ${im.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}>
+                          {STATUS_LABEL[im.status] ?? im.status}
+                        </span>
+                      )}
+                      {im.exclusividade && im.exclusividade_status === 'verificada' && (
+                        <span className="badge badge-emerald">★ Exclusivo</span>
+                      )}
+                      {im.exclusividade && im.exclusividade_status !== 'verificada' && (
+                        <span className="badge badge-gray">Exclusiv. em análise</span>
+                      )}
+                    </div>
+                    <p className="imovel-sub">
+                      {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
+                    </p>
+                    <p className="imovel-meta">
+                      {[
+                        im.area_m2 ? `${im.area_m2} m²` : null,
+                        im.quartos != null ? `${im.quartos} quarto(s)` : null,
+                        im.vagas != null ? `${im.vagas} vaga(s)` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || 'Sem detalhes adicionais'}
+                    </p>
+                  </div>
+                </Link>
+                <div className="imovel-actions">
+                  <Link href={`/imoveis/${im.id}`} className="imovel-action">
+                    Editar
+                  </Link>
+                  {im.status !== 'vendido' && (
+                    <button
+                      type="button"
+                      className="imovel-action imovel-action-emerald"
+                      disabled={acaoId === im.id}
+                      onClick={() => marcarVendido(im.id)}
+                    >
+                      {acaoId === im.id ? '…' : 'Marcar vendido'}
+                    </button>
+                  )}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
