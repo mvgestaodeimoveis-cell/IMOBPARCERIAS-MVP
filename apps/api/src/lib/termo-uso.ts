@@ -63,4 +63,4 @@ Este Termo é regido pelas leis da República Federativa do Brasil. Fica eleito 
 14.2. Sem o registro técnico do item 14.1 funcionando corretamente, o aceite não tem valor probatório pleno — este é um requisito técnico obrigatório, não apenas de interface.
 
 15. Contato
-Dúvidas sobre este Termo: contato@imobparcerias.com.br.`;
+Dúvidas sobre este Termo: mvgestaodeimoveis@gmail.com ou WhatsApp (71) 99154-1269.`;

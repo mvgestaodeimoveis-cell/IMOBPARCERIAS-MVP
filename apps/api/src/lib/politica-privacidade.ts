@@ -14,7 +14,7 @@ export const POLITICA_PRIVACIDADE_TEXTO = `POLÍTICA DE PRIVACIDADE — PLATAFOR
 Última atualização: 13/07/2026
 
 1. Quem é o controlador dos dados
-MVCLICK INOVA SIMPLES, CNPJ 67.872.231/0001-66, sediada em Lauro de Freitas/BA, operadora da plataforma ImobParcerias (www.imobparcerias.com.br), é a controladora dos dados pessoais tratados nesta Política. Canal de contato para assuntos de privacidade: contato@imobparcerias.com.br.
+MVCLICK INOVA SIMPLES, CNPJ 67.872.231/0001-66, sediada em Lauro de Freitas/BA, operadora da plataforma ImobParcerias (www.imobparcerias.com.br), é a controladora dos dados pessoais tratados nesta Política. Canal de contato para assuntos de privacidade: mvgestaodeimoveis@gmail.com ou WhatsApp (71) 99154-1269.
 
 2. Quais dados coletamos
 2.1. Dados fornecidos pelo próprio Corretor Parceiro no cadastro: nome completo, CPF ou CNPJ, número de registro no CRECI, e-mail, telefone/WhatsApp, dados de conta para recebimento (chave PIX).
@@ -49,4 +49,4 @@ A Plataforma utiliza apenas armazenamento local (localStorage) no navegador para
 Esta Política pode ser atualizada para refletir mudanças na Plataforma ou na legislação. A data da última atualização estará sempre indicada no topo do documento. Alterações relevantes serão comunicadas aos Usuários.
 
 11. Contato do titular / reclamações
-Dúvidas ou solicitações sobre seus dados: contato@imobparcerias.com.br. Caso não fique satisfeito com a resposta, você pode registrar reclamação junto à Autoridade Nacional de Proteção de Dados (ANPD) — www.gov.br/anpd.`;
+Dúvidas ou solicitações sobre seus dados: mvgestaodeimoveis@gmail.com ou WhatsApp (71) 99154-1269. Caso não fique satisfeito com a resposta, você pode registrar reclamação junto à Autoridade Nacional de Proteção de Dados (ANPD) — www.gov.br/anpd.`;
