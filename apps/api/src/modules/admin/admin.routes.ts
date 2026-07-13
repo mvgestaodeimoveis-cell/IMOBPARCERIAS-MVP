@@ -62,6 +62,13 @@ adminRoutes.post(
   }),
 );
 
+adminRoutes.get(
+  '/corretores/:id/aceites',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.listarAceitesTermo(req.params.id));
+  }),
+);
+
 // Moderação de imóveis (equipe).
 adminRoutes.get(
   '/imoveis',

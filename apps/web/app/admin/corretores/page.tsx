@@ -20,6 +20,27 @@ interface ListResponse {
   total: number;
 }
 
+interface AceiteTermo {
+  id: string;
+  imovel_id: string | null;
+  versao: string;
+  documento_hash: string;
+  ip: string;
+  user_agent: string;
+  creci: string | null;
+  aceito_em: string;
+  imovel_tipo: string | null;
+  imovel_bairro: string | null;
+  imovel_cidade: string | null;
+  imovel_preco: string | null;
+  imovel_status: string | null;
+}
+
+interface AceitesResponse {
+  corretor: { id: string; nome: string; email: string; creci: string };
+  data: AceiteTermo[];
+}
+
 const STATUS_LABEL: Record<string, string> = {
   verificacao_pendente: 'Pendente',
   ativo: 'Ativo',
@@ -37,6 +58,8 @@ export default function AdminCorretoresPage() {
   const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [aceites, setAceites] = useState<AceitesResponse | null>(null);
+  const [aceitesLoading, setAceitesLoading] = useState(false);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -91,6 +114,20 @@ export default function AdminCorretoresPage() {
       carregar();
     } catch (err) {
       alert(err instanceof ApiRequestError ? err.message : 'Erro na operação.');
+    }
+  }
+
+  async function verAceites(id: string) {
+    const token = getAccessToken();
+    setAceites(null);
+    setAceitesLoading(true);
+    try {
+      const res = await apiFetch<AceitesResponse>(`/admin/corretores/${id}/aceites`, { token });
+      setAceites(res);
+    } catch (err) {
+      alert(err instanceof ApiRequestError ? err.message : 'Erro ao carregar os aceites.');
+    } finally {
+      setAceitesLoading(false);
     }
   }
 
@@ -182,6 +219,7 @@ export default function AdminCorretoresPage() {
                       {c.status === 'suspenso' && (
                         <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => moderar(c.id, 'reativar')}>Reativar</button>
                       )}
+                      <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => verAceites(c.id)}>Termos</button>
                     </div>
                   </td>
                 </tr>
@@ -190,6 +228,55 @@ export default function AdminCorretoresPage() {
           </table>
         )}
       </div>
+
+      {(aceites || aceitesLoading) && (
+        <div className="modal-overlay" onClick={() => { setAceites(null); }}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.15rem', margin: 0 }}>Aceites do Termo de Parceria</h2>
+                {aceites && (
+                  <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.86rem' }}>
+                    {aceites.corretor.nome} · CRECI {aceites.corretor.creci} · {aceites.corretor.email}
+                  </p>
+                )}
+              </div>
+              <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.3rem 0.7rem' }} onClick={() => setAceites(null)}>Fechar</button>
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              {aceitesLoading ? (
+                <p className="muted">Carregando…</p>
+              ) : !aceites || aceites.data.length === 0 ? (
+                <p className="muted">Este corretor ainda não aceitou o Termo de Parceria (nenhum imóvel cadastrado).</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {aceites.data.map((a) => (
+                    <div key={a.id} className="card" style={{ padding: '0.85rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <strong style={{ fontSize: '0.92rem' }}>
+                          {a.imovel_tipo
+                            ? `${a.imovel_tipo} · ${a.imovel_bairro ?? ''}${a.imovel_cidade ? `, ${a.imovel_cidade}` : ''}`
+                            : 'Imóvel removido'}
+                        </strong>
+                        <span className="badge badge-emerald">Versão {a.versao}</span>
+                      </div>
+                      <dl className="aceite-grid">
+                        <div><dt>Data/hora</dt><dd>{new Date(a.aceito_em).toLocaleString('pt-BR')}</dd></div>
+                        <div><dt>IP</dt><dd>{a.ip}</dd></div>
+                        <div><dt>CRECI</dt><dd>{a.creci ?? '—'}</dd></div>
+                        <div><dt>Imóvel (ID)</dt><dd>{a.imovel_id ?? '—'}</dd></div>
+                        <div style={{ gridColumn: '1 / -1' }}><dt>Hash do documento (SHA-256)</dt><dd style={{ wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.76rem' }}>{a.documento_hash}</dd></div>
+                        <div style={{ gridColumn: '1 / -1' }}><dt>Navegador (user-agent)</dt><dd style={{ wordBreak: 'break-word', fontSize: '0.78rem' }}>{a.user_agent}</dd></div>
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

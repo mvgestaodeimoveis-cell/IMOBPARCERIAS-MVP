@@ -1378,6 +1378,46 @@ a.stat-chip:hover {
   opacity: 1;
   border-color: var(--emerald);
 }
+
+/* Modal (admin) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 28, 46, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  overflow-y: auto;
+  z-index: 100;
+}
+.modal-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 1.25rem;
+  width: 100%;
+  max-width: 640px;
+  box-shadow: var(--shadow-md);
+  margin: auto 0;
+}
+.aceite-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0.6rem 0 0;
+}
+.aceite-grid dt {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--gray-700);
+}
+.aceite-grid dd {
+  margin: 0.1rem 0 0;
+  font-size: 0.86rem;
+  color: var(--navy);
+}
 .gallery-thumb img {
   width: 72px;
   height: 72px;

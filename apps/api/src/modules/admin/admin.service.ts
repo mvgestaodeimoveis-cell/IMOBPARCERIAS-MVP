@@ -69,6 +69,48 @@ export async function reativarCorretor(id: string) {
   return { id, status: 'ativo' as const };
 }
 
+interface AceiteTermoRow {
+  id: string;
+  imovel_id: string | null;
+  versao: string;
+  documento_hash: string;
+  ip: string;
+  user_agent: string;
+  creci: string | null;
+  aceito_em: string;
+  imovel_tipo: string | null;
+  imovel_bairro: string | null;
+  imovel_cidade: string | null;
+  imovel_preco: string | null;
+  imovel_status: string | null;
+}
+
+/**
+ * Aceites do Termo de Parceria de um corretor — prova jurídica por imóvel:
+ * data/hora, IP, CRECI, versão e hash do documento aceito.
+ */
+export async function listarAceitesTermo(corretorId: string) {
+  const corretorRes = await query<{ id: string; nome: string; email: string; creci: string }>(
+    'SELECT id, nome, email, creci FROM corretor WHERE id = $1',
+    [corretorId],
+  );
+  if (!corretorRes.rows[0]) throw notFound('Corretor não encontrado.');
+
+  const { rows } = await query<AceiteTermoRow>(
+    `SELECT a.id, a.imovel_id, a.versao, a.documento_hash, host(a.ip) AS ip,
+            a.user_agent, a.creci, a.aceito_em,
+            i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+            i.preco::text AS imovel_preco, i.status AS imovel_status
+     FROM termo_parceria_aceite a
+     LEFT JOIN imovel i ON i.id = a.imovel_id
+     WHERE a.corretor_id = $1
+     ORDER BY a.aceito_em DESC`,
+    [corretorId],
+  );
+
+  return { corretor: corretorRes.rows[0], data: rows };
+}
+
 // ============================================================
 // Moderação de imóveis (equipe)
 // ============================================================
