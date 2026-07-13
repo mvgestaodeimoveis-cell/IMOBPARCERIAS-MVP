@@ -1,6 +1,7 @@
-name: Imóveis inativos (mensal)
+name: Manutenção de imóveis (diária)
 
-# Marca como INATIVO os imóveis DISPONÍVEIS sem atualização há N dias.
+# Fase 3 — fluxo escalonado: 1º aviso (30 dias sem atualização) → 2º aviso (+7 dias)
+# → INATIVO (+5 dias). Precisa rodar TODO DIA para respeitar os prazos.
 # Roda de graça no GitHub Actions (não depende do plano do Render/Vercel).
 #
 # Configure em Settings > Secrets and variables > Actions:
@@ -9,14 +10,14 @@ name: Imóveis inativos (mensal)
 
 on:
   schedule:
-    - cron: '0 6 1 * *' # dia 1 de cada mês, 06:00 UTC (~03:00 BRT)
+    - cron: '0 6 * * *' # todo dia, 06:00 UTC (~03:00 BRT)
   workflow_dispatch: {}
 
 jobs:
   inativar:
     runs-on: ubuntu-latest
     steps:
-      - name: Chamar endpoint de inatividade
+      - name: Rodar manutenção de imóveis (avisos + inativação)
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

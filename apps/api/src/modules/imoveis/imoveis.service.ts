@@ -2,7 +2,7 @@ import { pool, query } from '../../db/pool';
 import { env } from '../../config/env';
 import { conflict, duplicataPossivel, forbidden, notFound } from '../../lib/errors';
 import { sendEmail } from '../../lib/email';
-import { emailExclusividadeVencendo } from '../../lib/email-templates';
+import { emailExclusividadeVencendo, emailManutencaoImovel } from '../../lib/email-templates';
 import { TERMO_PARCERIA_HASH, TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
 import type {
   AtualizarImovelInput,
@@ -400,6 +400,85 @@ export async function marcarImoveisInativos(dias: number): Promise<number> {
     [String(dias)],
   );
   return rowCount ?? 0;
+}
+
+// Manutenção mensal escalonada (Fase 3): 1º aviso 30d → 2º aviso +7d → INATIVO +5d.
+const DIAS_AVISO1 = 30;
+const DIAS_AVISO2 = 7; // após o 1º aviso
+const DIAS_INATIVAR = 5; // após o 2º aviso
+
+interface ManutencaoRow {
+  id: string;
+  tipo: string;
+  bairro: string;
+  cidade: string;
+  nome: string;
+  email: string;
+}
+
+export async function executarManutencaoImoveis(): Promise<{
+  aviso1: number;
+  aviso2: number;
+  inativados: number;
+}> {
+  // 0) Reset: imóvel atualizado depois do aviso reinicia o ciclo (confirmação).
+  await query(
+    `UPDATE imovel
+     SET manutencao_aviso1_em = NULL, manutencao_aviso2_em = NULL
+     WHERE manutencao_aviso1_em IS NOT NULL AND atualizado_em > manutencao_aviso1_em`,
+  );
+
+  // 1) Inativa quem não confirmou após o 2º aviso.
+  const inativadosRes = await query(
+    `UPDATE imovel
+     SET status = 'inativo', atualizado_em = now()
+     WHERE status = 'ativo'
+       AND manutencao_aviso2_em IS NOT NULL
+       AND manutencao_aviso2_em < now() - ($1 || ' days')::interval`,
+    [String(DIAS_INATIVAR)],
+  );
+
+  // 2) 2º aviso: passou o prazo do 1º aviso sem confirmação.
+  const aviso2Rows = await query<ManutencaoRow>(
+    `SELECT i.id, i.tipo, i.bairro, i.cidade, c.nome, c.email
+     FROM imovel i JOIN corretor c ON c.id = i.corretor_id
+     WHERE i.status = 'ativo'
+       AND i.manutencao_aviso1_em IS NOT NULL
+       AND i.manutencao_aviso2_em IS NULL
+       AND i.manutencao_aviso1_em < now() - ($1 || ' days')::interval`,
+    [String(DIAS_AVISO2)],
+  );
+  for (const r of aviso2Rows.rows) {
+    await notificarManutencao(r, true);
+    await query('UPDATE imovel SET manutencao_aviso2_em = now() WHERE id = $1', [r.id]);
+  }
+
+  // 3) 1º aviso: sem atualização há mais de 30 dias.
+  const aviso1Rows = await query<ManutencaoRow>(
+    `SELECT i.id, i.tipo, i.bairro, i.cidade, c.nome, c.email
+     FROM imovel i JOIN corretor c ON c.id = i.corretor_id
+     WHERE i.status = 'ativo'
+       AND i.manutencao_aviso1_em IS NULL
+       AND i.atualizado_em < now() - ($1 || ' days')::interval`,
+    [String(DIAS_AVISO1)],
+  );
+  for (const r of aviso1Rows.rows) {
+    await notificarManutencao(r, false);
+    await query('UPDATE imovel SET manutencao_aviso1_em = now() WHERE id = $1', [r.id]);
+  }
+
+  return {
+    aviso1: aviso1Rows.rowCount ?? 0,
+    aviso2: aviso2Rows.rowCount ?? 0,
+    inativados: inativadosRes.rowCount ?? 0,
+  };
+}
+
+async function notificarManutencao(r: ManutencaoRow, segundoAviso: boolean): Promise<void> {
+  await sendEmail({
+    to: r.email,
+    ...emailManutencaoImovel(r.nome, r.tipo, r.bairro, r.cidade, `${env.APP_WEB_URL}/imoveis/${r.id}`, segundoAviso),
+  });
 }
 
 /** Alerta de vencimento de exclusividade (15 dias antes) — envia e-mail uma vez. */

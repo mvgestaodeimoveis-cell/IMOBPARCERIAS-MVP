@@ -171,6 +171,32 @@ export function emailExclusividadeVencendo(
   };
 }
 
+export function emailManutencaoImovel(
+  nome: string,
+  tipo: string,
+  bairro: string,
+  cidade: string,
+  url: string,
+  segundoAviso: boolean,
+): EmailContent {
+  return {
+    subject: segundoAviso
+      ? 'Último aviso: confirme seu imóvel para não ficar inativo — Imob Parcerias'
+      : 'Confirme se seu imóvel ainda está disponível — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Mantenha seu imóvel atualizado na vitrine.',
+      heading: `Olá, ${primeiroNome(nome)}`,
+      paragraphs: [
+        `Seu imóvel <strong>${escapeHtml(tipo)}</strong> em ${escapeHtml(bairro)}, ${escapeHtml(cidade)} está há mais de 30 dias sem atualização.`,
+        segundoAviso
+          ? 'Este é o <strong>segundo e último aviso</strong>: sem confirmação nos próximos dias, o imóvel será marcado como INATIVO e sairá da vitrine.'
+          : 'Confirme que ele continua disponível (basta abrir e salvar o anúncio) para mantê-lo ativo na vitrine.',
+      ],
+      cta: { label: 'Revisar meu imóvel', url },
+    }),
+  };
+}
+
 export function emailImovelDisponivel(
   nome: string,
   tipo: string,

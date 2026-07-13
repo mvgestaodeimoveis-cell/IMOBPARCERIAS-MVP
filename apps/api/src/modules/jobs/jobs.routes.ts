@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { asyncHandler } from '../../lib/async-handler';
 import { env } from '../../config/env';
 import { forbidden } from '../../lib/errors';
-import { marcarImoveisInativos, alertarExclusividadeVencendo } from '../imoveis/imoveis.service';
+import { executarManutencaoImoveis, alertarExclusividadeVencendo } from '../imoveis/imoveis.service';
 import { suspenderInadimplentes } from '../parcerias/parcerias.service';
 
 export const jobsRoutes = Router();
@@ -16,14 +16,13 @@ function autorizarCron(req: Request) {
   }
 }
 
-// Marca como INATIVO os imóveis DISPONÍVEIS sem atualização há N dias.
+// Manutenção dos imóveis (Fase 3): 1º aviso (30d) → 2º aviso (+7d) → INATIVO (+5d). Rodar diário.
 jobsRoutes.post(
   '/imoveis-inativos',
   asyncHandler(async (req: Request, res: Response) => {
     autorizarCron(req);
-    const dias = env.INATIVIDADE_DIAS;
-    const inativados = await marcarImoveisInativos(dias);
-    res.json({ inativados, dias });
+    const resultado = await executarManutencaoImoveis();
+    res.json(resultado);
   }),
 );
 
