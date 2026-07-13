@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: imob
+          POSTGRES_PASSWORD: imob
+          POSTGRES_DB: imob_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U imob"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://imob:imob@localhost:5432/imob_test
+      JWT_SECRET: ci-secret-para-testes-com-no-minimo-32-chars
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Typecheck (API)
+        run: npm run typecheck --workspace apps/api
+
+      - name: Testes unitários (API)
+        run: npm test --workspace apps/api
+
+      - name: Migrations (banco de teste)
+        run: npm run migrate --workspace apps/api
+
+      - name: Testes de integração (ciclo de parceria)
+        run: npm run test:db --workspace apps/api
+
+      - name: Build (API)
+        run: npm run build:api
+
+      - name: Build (Web)
+        run: npm run build:web
+        env:
+          BACKEND_URL: http://localhost:4000
