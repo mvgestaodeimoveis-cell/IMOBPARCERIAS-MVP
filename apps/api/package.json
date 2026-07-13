@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
     "seed:admin": "tsx src/db/seed-admin.ts",
+    "seed:demo": "tsx src/db/seed-demo.ts",
     "test": "node --import tsx --test src/lib/comissao.test.ts src/lib/contrato-parceria.test.ts src/lib/password.test.ts src/lib/termo-parceria.test.ts src/modules/auth/auth.schemas.test.ts src/modules/imoveis/imoveis.schemas.test.ts src/modules/parcerias/parcerias.schemas.test.ts",
     "test:db": "node --import tsx --test src/modules/parcerias/parceria-flow.test.ts",
     "typecheck": "tsc --noEmit"
