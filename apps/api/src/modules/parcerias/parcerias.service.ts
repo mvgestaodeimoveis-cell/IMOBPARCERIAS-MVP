@@ -213,9 +213,13 @@ export async function obterContrato(parceriaId: string, corretorId: string) {
     imovel_bairro: string;
     imovel_cidade: string;
     imovel_preco: string;
+    visita_em: string | null;
+    confirmada_em: string | null;
+    janela_ativada_em: string | null;
   }>(
     `SELECT p.status, p.cliente_nome, p.janela_dias, p.criado_em,
             p.captador_id, p.comprador_id,
+            p.visita_em, p.confirmada_em, p.janela_ativada_em,
             cap.nome AS captador_nome, cap.creci AS captador_creci,
             comp.nome AS comprador_nome, comp.creci AS comprador_creci,
             i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
@@ -245,6 +249,9 @@ export async function obterContrato(parceriaId: string, corretorId: string) {
     janelaDias: p.janela_dias,
     status: p.status,
     criadoEm: p.criado_em,
+    visitaEm: p.visita_em,
+    confirmadaEm: p.confirmada_em,
+    janelaAtivadaEm: p.janela_ativada_em,
   });
   return { versao: TERMO_PARCERIA_VERSAO, texto };
 }

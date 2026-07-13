@@ -32,3 +32,18 @@ test('contrato não expõe número de CPF nem endereço completo', () => {
   assert.doesNotMatch(texto, /\d{3}\.?\d{3}\.?\d{3}-?\d{2}/);
   assert.doesNotMatch(texto, /logradouro/i);
 });
+
+test('versão final aparece após a confirmação bilateral', () => {
+  const inicial = gerarContratoParceria(base);
+  assert.match(inicial, /Versão inicial/);
+
+  const finalizado = gerarContratoParceria({
+    ...base,
+    status: 'em_negociacao',
+    visitaEm: '2026-08-01',
+    confirmadaEm: '2026-08-02T10:00:00Z',
+    janelaAtivadaEm: '2026-08-02T10:00:00Z',
+  });
+  assert.match(finalizado, /Versão final/);
+  assert.match(finalizado, /CONFIRMAÇÃO BILATERAL/);
+});

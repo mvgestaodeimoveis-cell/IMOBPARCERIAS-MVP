@@ -174,6 +174,24 @@ async function checarDuplicata(
     );
   }
 
+  // INATIVO com exclusividade verificada e ainda vigente: bloqueado até o vencimento (Fase 3).
+  const pIn: unknown[] = [chave];
+  let sqlIn = `SELECT id FROM imovel
+     WHERE chave_dedupe = $1 AND status = 'inativo'
+       AND exclusividade_status = 'verificada'
+       AND exclusividade_vencimento IS NOT NULL
+       AND exclusividade_vencimento >= current_date`;
+  if (ignorarId) {
+    pIn.push(ignorarId);
+    sqlIn += ` AND id <> $${pIn.length}`;
+  }
+  const bloqueado = await query<{ id: string }>(sqlIn, pIn);
+  if (bloqueado.rows[0]) {
+    throw conflict(
+      'Este imóvel está com exclusividade verificada e vigente; fica bloqueado para novo cadastro até o vencimento do contrato.',
+    );
+  }
+
   if ((c.tipo === 'apartamento' || c.tipo === 'comercial') && !confirmarDistinto) {
     const p2: unknown[] = [predio];
     let sql2 = `SELECT id FROM imovel WHERE chave_predio = $1 AND status = 'ativo'`;
