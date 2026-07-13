@@ -44,6 +44,7 @@ export default function VitrineDetalhePage() {
   const [enviando, setEnviando] = useState(false);
   const [parceriaErro, setParceriaErro] = useState<string | null>(null);
   const [solicitada, setSolicitada] = useState(false);
+  const [fotoAtiva, setFotoAtiva] = useState(0);
 
   useEffect(() => {
     apiFetch<ImovelVitrine>(`/vitrine/${params.id}`)
@@ -108,12 +109,25 @@ export default function VitrineDetalhePage() {
                 {imovel.fotos.length > 0 ? (
                   <div className="gallery">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="gallery-main" src={imovel.fotos[0]} alt="Foto do imóvel" />
+                    <img
+                      className="gallery-main"
+                      src={imovel.fotos[fotoAtiva] ?? imovel.fotos[0]}
+                      alt={`Foto ${fotoAtiva + 1} do imóvel`}
+                    />
                     {imovel.fotos.length > 1 && (
                       <div className="gallery-thumbs">
-                        {imovel.fotos.slice(1).map((url, i) => (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img key={url} src={url} alt={`Foto ${i + 2}`} />
+                        {imovel.fotos.map((url, i) => (
+                          <button
+                            key={url}
+                            type="button"
+                            className={`gallery-thumb${i === fotoAtiva ? ' is-active' : ''}`}
+                            onClick={() => setFotoAtiva(i)}
+                            aria-label={`Ver foto ${i + 1}`}
+                            aria-pressed={i === fotoAtiva}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt={`Foto ${i + 1}`} />
+                          </button>
                         ))}
                       </div>
                     )}
