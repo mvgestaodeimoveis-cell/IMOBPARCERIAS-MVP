@@ -218,6 +218,25 @@ export function emailImovelDisponivel(
   };
 }
 
+export function emailParceriaCancelada(
+  captadorNome: string,
+  imovelResumo: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Uma solicitação de parceria foi cancelada — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'O corretor comprador cancelou a solicitação.',
+      heading: `Olá, ${primeiroNome(captadorNome)}`,
+      paragraphs: [
+        `O corretor comprador <strong>cancelou</strong> a solicitação de parceria no seu imóvel <strong>${escapeHtml(imovelResumo)}</strong>.`,
+        'Seu imóvel continua disponível na vitrine para novas parcerias.',
+      ],
+      cta: { label: 'Ver minhas parcerias', url },
+    }),
+  };
+}
+
 export function emailParceriaSolicitada(
   captadorNome: string,
   imovelResumo: string,

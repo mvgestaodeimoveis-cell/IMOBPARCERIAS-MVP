@@ -104,6 +104,17 @@ export default function ParceriasPage() {
     }
   }
 
+  async function cancelar(id: string) {
+    if (!window.confirm('Cancelar esta solicitação de parceria?')) return;
+    const token = getAccessToken();
+    try {
+      await apiFetch(`/parcerias/${id}/cancelar`, { method: 'POST', token });
+      carregar();
+    } catch (err) {
+      alert(err instanceof ApiRequestError ? err.message : 'Erro ao cancelar.');
+    }
+  }
+
   async function verContrato(id: string) {
     const token = getAccessToken();
     try {
@@ -155,6 +166,11 @@ export default function ParceriasPage() {
                 Recusar
               </button>
             </>
+          )}
+          {!comoCaptador && ['solicitada', 'aceita'].includes(p.status) && (
+            <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem', color: 'var(--error)' }} onClick={() => cancelar(p.id)}>
+              Cancelar
+            </button>
           )}
         </div>
         {contrato?.id === p.id && (

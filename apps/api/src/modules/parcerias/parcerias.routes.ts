@@ -72,6 +72,14 @@ parceriasRoutes.post(
   }),
 );
 
+parceriasRoutes.post(
+  '/:id/cancelar',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.json(await parcerias.cancelarParceria(req.params.id, req.user.id));
+  }),
+);
+
 parceriasRoutes.get(
   '/:id/contrato',
   asyncHandler(async (req: Request, res: Response) => {

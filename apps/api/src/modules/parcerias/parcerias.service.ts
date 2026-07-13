@@ -8,6 +8,7 @@ import {
   emailImovelDisponivel,
   emailPagamentoConfirmado,
   emailParceriaAceita,
+  emailParceriaCancelada,
   emailParceriaRecusada,
   emailParceriaSolicitada,
   emailVendaDeclarada,
@@ -194,6 +195,28 @@ export async function recusarParceria(parceriaId: string, captadorId: string, mo
     message: `Imob Parcerias: sua solicitação de parceria (${resumoImovel(p)}) não foi aceita.${motivo ? ` Motivo: ${motivo}` : ''}`,
   });
   return { id: parceriaId, status: 'recusada' as const };
+}
+
+/** Comprador cancela a própria solicitação (antes da confirmação bilateral). */
+export async function cancelarParceria(parceriaId: string, compradorId: string) {
+  const p = await buscarParceriaFull(parceriaId);
+  if (p.comprador_id !== compradorId) throw forbidden('Acesso negado.');
+  if (!['solicitada', 'aceita'].includes(p.status)) {
+    throw conflict('Esta parceria não pode mais ser cancelada.');
+  }
+  await query(
+    `UPDATE parceria SET status = 'cancelada', atualizado_em = now() WHERE id = $1`,
+    [parceriaId],
+  );
+  await sendEmail({
+    to: p.captador_email,
+    ...emailParceriaCancelada(p.captador_nome, resumoImovel(p), `${env.APP_WEB_URL}/parcerias`),
+  });
+  await sendWhatsapp({
+    to: p.captador_whatsapp,
+    message: `Imob Parcerias: o corretor comprador cancelou a solicitação de parceria (${resumoImovel(p)}).`,
+  });
+  return { id: parceriaId, status: 'cancelada' as const };
 }
 
 /** Contrato de Parceria Digital (versão inicial). Acessível às duas partes. */
