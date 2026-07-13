@@ -461,6 +461,15 @@ async function finalizarSeBilateral(
       `UPDATE imovel SET status = 'em_negociacao', atualizado_em = now() WHERE id = $1`,
       [imovelId],
     );
+    // Fila de espera: registra os compradores com solicitação pendente no momento em que
+    // o imóvel sai da vitrine (serão avisados se ele voltar a DISPONÍVEL — Fase 9).
+    await client.query(
+      `INSERT INTO fila_espera (imovel_id, comprador_id)
+       SELECT imovel_id, comprador_id FROM parceria
+       WHERE imovel_id = $1 AND status = 'solicitada' AND id <> $2
+       ON CONFLICT (imovel_id, comprador_id) DO NOTHING`,
+      [imovelId, parceriaId],
+    );
     return 'em_negociacao';
   }
   return 'aceita';
@@ -621,10 +630,15 @@ async function notificarFilaEspera(
   bairro: string,
   cidade: string,
 ): Promise<void> {
+  // Compradores na fila de espera + solicitações ainda pendentes (união, sem duplicar).
   const { rows } = await query<{ nome: string; email: string }>(
-    `SELECT c.nome, c.email
-     FROM parceria p JOIN corretor c ON c.id = p.comprador_id
-     WHERE p.imovel_id = $1 AND p.id <> $2 AND p.status = 'solicitada'`,
+    `SELECT DISTINCT c.nome, c.email FROM corretor c
+     WHERE c.id IN (
+       SELECT comprador_id FROM fila_espera WHERE imovel_id = $1
+       UNION
+       SELECT comprador_id FROM parceria
+         WHERE imovel_id = $1 AND id <> $2 AND status = 'solicitada'
+     )`,
     [imovelId, parceriaAtual],
   );
   for (const dest of rows) {
@@ -633,6 +647,7 @@ async function notificarFilaEspera(
       ...emailImovelDisponivel(dest.nome, tipo, bairro, cidade, `${env.APP_WEB_URL}/vitrine/${imovelId}`),
     });
   }
+  await query('DELETE FROM fila_espera WHERE imovel_id = $1', [imovelId]);
 }
 
 /** Confirmação manual do pagamento (equipe) — libera a avaliação mútua. */
