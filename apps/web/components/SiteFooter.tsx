@@ -13,6 +13,7 @@ export function SiteFooter() {
           <Link href="/login">Entrar</Link>
           <Link href="/cadastro">Cadastrar</Link>
           <Link href="/termo">Termo de Uso</Link>
+          <Link href="/politica-privacidade">Política de Privacidade</Link>
         </nav>
         <p className="foot-copy">
           © {new Date().getFullYear()} Imob Parcerias — Salvador, Região Metropolitana e Linha Verde.

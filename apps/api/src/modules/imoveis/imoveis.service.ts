@@ -1,5 +1,9 @@
 import { pool, query } from '../../db/pool';
+import { env } from '../../config/env';
 import { conflict, duplicataPossivel, forbidden, notFound } from '../../lib/errors';
+import { sendEmail } from '../../lib/email';
+import { emailExclusividadeVencendo } from '../../lib/email-templates';
+import { TERMO_PARCERIA_HASH, TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
 import type {
   AtualizarImovelInput,
   CriarImovelInput,
@@ -189,7 +193,11 @@ async function checarDuplicata(
   return { chave, predio };
 }
 
-export async function criarImovel(corretorId: string, input: CriarImovelInput): Promise<Imovel> {
+export async function criarImovel(
+  corretorId: string,
+  input: CriarImovelInput,
+  contexto: { ip: string; userAgent: string },
+): Promise<Imovel> {
   await garantirCorretorAtivo(corretorId);
   const campos = camposDe({ ...input, area_m2: input.area_m2 ?? null });
   const { chave, predio } = await checarDuplicata(
@@ -198,8 +206,10 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
     input.confirmar_distinto ?? false,
   );
 
+  const client = await pool.connect();
   try {
-    const { rows } = await query<ImovelRow>(
+    await client.query('BEGIN');
+    const { rows } = await client.query<ImovelRow>(
       `INSERT INTO imovel
          (corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro, numero,
           complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
@@ -242,13 +252,31 @@ export async function criarImovel(corretorId: string, input: CriarImovelInput): 
         input.exclusividade ? 'pendente' : 'nao',
       ],
     );
-    return mapImovel(rows[0]);
+    const imovel = rows[0];
+    await client.query(
+      `INSERT INTO termo_parceria_aceite
+         (imovel_id, corretor_id, creci, versao, documento_hash, ip, user_agent)
+       VALUES ($1, $2, (SELECT creci FROM corretor WHERE id = $2), $3, $4, $5, $6)`,
+      [
+        imovel.id,
+        corretorId,
+        TERMO_PARCERIA_VERSAO,
+        TERMO_PARCERIA_HASH,
+        contexto.ip,
+        contexto.userAgent,
+      ],
+    );
+    await client.query('COMMIT');
+    return mapImovel(imovel);
   } catch (err) {
+    await client.query('ROLLBACK');
     // Corrida no índice único parcial de exclusividade.
     if (err && typeof err === 'object' && (err as { code?: string }).code === '23505') {
       throw conflict('Este imóvel já foi cadastrado por outro corretor (exclusividade verificada).');
     }
     throw err;
+  } finally {
+    client.release();
   }
 }
 
@@ -372,6 +400,44 @@ export async function marcarImoveisInativos(dias: number): Promise<number> {
     [String(dias)],
   );
   return rowCount ?? 0;
+}
+
+/** Alerta de vencimento de exclusividade (15 dias antes) — envia e-mail uma vez. */
+export async function alertarExclusividadeVencendo(): Promise<number> {
+  const { rows } = await query<{
+    id: string;
+    tipo: string;
+    bairro: string;
+    cidade: string;
+    vencimento: string;
+    nome: string;
+    email: string;
+  }>(
+    `SELECT i.id, i.tipo, i.bairro, i.cidade,
+            i.exclusividade_vencimento::text AS vencimento,
+            c.nome, c.email
+     FROM imovel i JOIN corretor c ON c.id = i.corretor_id
+     WHERE i.exclusividade_status = 'verificada'
+       AND i.exclusividade_vencimento IS NOT NULL
+       AND i.exclusividade_alerta_em IS NULL
+       AND i.exclusividade_vencimento >= current_date
+       AND i.exclusividade_vencimento <= current_date + 15`,
+  );
+  for (const r of rows) {
+    await sendEmail({
+      to: r.email,
+      ...emailExclusividadeVencendo(
+        r.nome,
+        r.tipo,
+        r.bairro,
+        r.cidade,
+        new Date(r.vencimento).toLocaleDateString('pt-BR'),
+        `${env.APP_WEB_URL}/imoveis/${r.id}`,
+      ),
+    });
+    await query('UPDATE imovel SET exclusividade_alerta_em = now() WHERE id = $1', [r.id]);
+  }
+  return rows.length;
 }
 
 // ============================================================

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { validateEmail, validateNome, validateSenha } from '@/lib/validation';
 import { saveSession } from '@/lib/auth';
+import { googleLoginEnabled, startGoogleLogin } from '@/lib/googleLogin';
 import { AuthShell } from '@/components/AuthShell';
 import { AuthTabs } from '@/components/AuthTabs';
 import { GoogleButton } from '@/components/GoogleButton';
@@ -116,7 +117,13 @@ export default function CadastroPage() {
         {erro && <div className="banner banner-error">{erro}</div>}
         {info && <div className="banner banner-info">{info}</div>}
 
-        <GoogleButton onClick={() => setInfo('Cadastro com Google estará disponível em breve.')} />
+        <GoogleButton
+          onClick={() =>
+            googleLoginEnabled
+              ? startGoogleLogin('cadastro')
+              : setInfo('Cadastro com Google estará disponível em breve.')
+          }
+        />
         <div className="divider">ou</div>
 
         <div className="field">

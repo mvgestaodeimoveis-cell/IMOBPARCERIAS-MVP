@@ -6,6 +6,7 @@ import { authRoutes } from './modules/auth/auth.routes';
 import { corretoresRoutes } from './modules/corretores/corretores.routes';
 import { imoveisRoutes } from './modules/imoveis/imoveis.routes';
 import { vitrineRoutes } from './modules/vitrine/vitrine.routes';
+import { parceriasRoutes } from './modules/parcerias/parcerias.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { termoRoutes } from './modules/termo/termo.routes';
 import { jobsRoutes } from './modules/jobs/jobs.routes';
@@ -28,6 +29,7 @@ export function createApp() {
   api.use('/corretores', corretoresRoutes);
   api.use('/imoveis', imoveisRoutes);
   api.use('/vitrine', vitrineRoutes);
+  api.use('/parcerias', parceriasRoutes);
   api.use('/admin', adminRoutes);
   api.use('/termo', termoRoutes);
   api.use('/jobs', jobsRoutes);

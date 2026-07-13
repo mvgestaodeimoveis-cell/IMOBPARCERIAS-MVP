@@ -38,6 +38,9 @@ export default function CompletarCadastroPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [emailVerificado, setEmailVerificado] = useState(true);
+  const [reenviando, setReenviando] = useState(false);
+  const [reenvioMsg, setReenvioMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -45,13 +48,14 @@ export default function CompletarCadastroPage() {
       router.replace('/login');
       return;
     }
-    apiFetch<{ nome: string; status: string }>('/corretores/me', { token })
+    apiFetch<{ nome: string; status: string; email_verificado_em: string | null }>('/corretores/me', { token })
       .then((me) => {
         if (me.status !== 'cadastro_incompleto') {
           router.replace(routeForStatus(me.status));
           return;
         }
         setNome(me.nome);
+        setEmailVerificado(Boolean(me.email_verificado_em));
         setCarregando(false);
       })
       .catch(() => router.replace('/login'));
@@ -146,6 +150,28 @@ export default function CompletarCadastroPage() {
     router.replace('/login');
   }
 
+  async function reenviarConfirmacao() {
+    setReenvioMsg(null);
+    setReenviando(true);
+    const token = getAccessToken();
+    try {
+      const res = await apiFetch<{ enviado: boolean; ja_verificado: boolean }>(
+        '/auth/reenviar-confirmacao',
+        { method: 'POST', token },
+      );
+      if (res.ja_verificado) {
+        setEmailVerificado(true);
+        setReenvioMsg('Seu e-mail já está confirmado.');
+      } else {
+        setReenvioMsg('Enviamos um novo e-mail de confirmação. Verifique sua caixa de entrada.');
+      }
+    } catch {
+      setReenvioMsg('Não foi possível reenviar agora. Tente novamente em instantes.');
+    } finally {
+      setReenviando(false);
+    }
+  }
+
   if (carregando) {
     return (
       <AuthShell>
@@ -176,6 +202,31 @@ export default function CompletarCadastroPage() {
         </p>
 
         {erro && <div className="banner banner-error">{erro}</div>}
+
+        {!emailVerificado && (
+          <div className="banner banner-warning">
+            Confirme seu e-mail para garantir o acesso à conta.{' '}
+            <button
+              type="button"
+              onClick={reenviarConfirmacao}
+              disabled={reenviando}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                margin: 0,
+                color: 'inherit',
+                font: 'inherit',
+                fontWeight: 700,
+                textDecoration: 'underline',
+                cursor: reenviando ? 'default' : 'pointer',
+              }}
+            >
+              {reenviando ? 'Enviando...' : 'Reenviar e-mail'}
+            </button>
+          </div>
+        )}
+        {reenvioMsg && <div className="banner banner-success">{reenvioMsg}</div>}
 
         <div className="field">
           <label htmlFor="whatsapp">Telefone / WhatsApp</label>
@@ -256,7 +307,11 @@ export default function CompletarCadastroPage() {
               <Link href="/termo" target="_blank">
                 Termo de Uso
               </Link>
-              {termo?.versao ? ` (versão ${termo.versao})` : ''}.
+              {termo?.versao ? ` (versão ${termo.versao})` : ''} e a{' '}
+              <Link href="/politica-privacidade" target="_blank">
+                Política de Privacidade
+              </Link>
+              .
             </span>
           </label>
         </div>

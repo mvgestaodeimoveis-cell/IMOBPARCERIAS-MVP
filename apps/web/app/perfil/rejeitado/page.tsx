@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { clearSession, getAccessToken } from '@/lib/auth';
+import { contatoEmail, whatsappLink } from '@/lib/contato';
 import { Brandmark } from '@/components/Brandmark';
 
 interface Me {
@@ -12,9 +13,6 @@ interface Me {
   status: string;
   motivo_rejeicao: string | null;
 }
-
-// TODO: substituir pelo contato oficial da equipe (definição pendente C4).
-const CONTATO_EQUIPE = 'contato@imobparcerias.com.br';
 
 export default function PerfilRejeitadoPage() {
   const router = useRouter();
@@ -71,9 +69,23 @@ export default function PerfilRejeitadoPage() {
             {me?.motivo_rejeicao ?? 'Seu cadastro não pôde ser aprovado no momento.'}
           </div>
           <p className="muted">
-            Se acredita que houve um engano, entre em contato com a equipe pelo e-mail{' '}
-            <a href={`mailto:${CONTATO_EQUIPE}`}>{CONTATO_EQUIPE}</a>.
+            Se acredita que houve um engano, fale com a nossa equipe pelo e-mail{' '}
+            <a href={`mailto:${contatoEmail}`}>{contatoEmail}</a>.
           </p>
+          {(() => {
+            const wpp = whatsappLink('Olá! Preciso de ajuda com meu cadastro na Imob Parcerias.');
+            return wpp ? (
+              <a
+                className="btn btn-emerald"
+                style={{ marginTop: '0.5rem' }}
+                href={wpp}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Falar no WhatsApp
+              </a>
+            ) : null;
+          })()}
           <button className="btn btn-ghost" style={{ marginTop: '1rem' }} onClick={sair}>
             Sair
           </button>

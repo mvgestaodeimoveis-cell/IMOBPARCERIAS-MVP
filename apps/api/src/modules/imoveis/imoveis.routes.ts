@@ -41,7 +41,12 @@ imoveisRoutes.post(
   validate(criarImovelSchema),
   asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw unauthorized();
-    const imovel = await imoveis.criarImovel(req.user.id, req.body as CriarImovelInput);
+    const ip = req.ip || req.socket.remoteAddress || '0.0.0.0';
+    const userAgent = req.get('user-agent') ?? 'desconhecido';
+    const imovel = await imoveis.criarImovel(req.user.id, req.body as CriarImovelInput, {
+      ip,
+      userAgent,
+    });
     res.status(201).json(imovel);
   }),
 );

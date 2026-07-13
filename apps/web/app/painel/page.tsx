@@ -80,9 +80,7 @@ export default function AppHomePage() {
         <nav className="desktop-nav">
           <Link href="/painel" className="active">Início</Link>
           <Link href="/vitrine">Vitrine</Link>
-          <Link href="/painel">Demandas</Link>
-          <Link href="/painel">Matches</Link>
-          <Link href="/painel">Agenda</Link>
+          <Link href="/parcerias">Parcerias</Link>
         </nav>
         <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
           Sair
@@ -92,6 +90,11 @@ export default function AppHomePage() {
       <div className="screen has-bottomnav">
         <h1 style={{ fontSize: '1.5rem' }}>Olá{me ? `, ${me.nome.split(' ')[0]}` : ''}!</h1>
         <p className="muted" style={{ marginBottom: '1.25rem' }}>Seu perfil está ativo e verificado.</p>
+
+        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link href="/vitrine">Ver vitrine →</Link>
+          <Link href="/parcerias">Minhas parcerias →</Link>
+        </p>
 
         <div className="carteira-head">
           <h2 className="carteira-title">Meus imóveis</h2>

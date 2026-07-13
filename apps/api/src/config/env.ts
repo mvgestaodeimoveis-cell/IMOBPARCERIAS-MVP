@@ -15,11 +15,23 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Imob Parcerias <no-reply@imobparcerias.com.br>'),
   EQUIPE_NOTIFICACAO_EMAIL: z.string().optional(),
+  // Double opt-in (B4): quando 'true', exige e-mail confirmado para concluir o cadastro.
+  EXIGIR_EMAIL_VERIFICADO: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
   CRON_SECRET: z.string().optional(),
   INATIVIDADE_DIAS: z.coerce.number().int().positive().default(60),
+  // Login com Google (OAuth 2.0) — opcional. Sem as três, o fluxo fica desativado.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional(),
+  // Notificações por WhatsApp — opcional. Sem as duas, cai no log (desativado).
+  WHATSAPP_API_URL: z.string().url().optional(),
+  WHATSAPP_API_TOKEN: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -51,6 +51,10 @@ const imovelBase = z.object({
     .optional(),
   // Confirmação manual em caso de DUPLICATA POSSÍVEL (mesmo prédio, unidade distinta).
   confirmar_distinto: z.boolean().optional().default(false),
+  // Aceite do Termo de Parceria (obrigatório para publicar — Nota 17 do escopo).
+  aceite_termo_parceria: z.literal(true, {
+    errorMap: () => ({ message: 'É necessário aceitar o Termo de Parceria.' }),
+  }),
 });
 
 // Campos obrigatórios da chave por tipo (Seção 5): apto/comercial exigem unidade.

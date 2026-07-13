@@ -126,6 +126,7 @@ export default function NovoImovelPage() {
   const [contratoUrl, setContratoUrl] = useState<string | null>(null);
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [contratoErro, setContratoErro] = useState<string | null>(null);
+  const [aceiteTermo, setAceiteTermo] = useState(false);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [erro, setErro] = useState<string | null>(null);
@@ -310,6 +311,10 @@ export default function NovoImovelPage() {
       setErro('Para exclusividade, envie o contrato e informe o vencimento.');
       return;
     }
+    if (!aceiteTermo) {
+      setErro('É necessário aceitar o Termo de Parceria para publicar.');
+      return;
+    }
     const payload = {
       finalidade: form.finalidade,
       tipo: form.tipo,
@@ -338,6 +343,7 @@ export default function NovoImovelPage() {
       exclusividade_vencimento: exclusividade ? exclusividadeVencimento || undefined : undefined,
       link_origem: linkOrigem ?? undefined,
       confirmar_distinto: confirmarDistinto,
+      aceite_termo_parceria: true,
     };
     setLoading(true);
     try {
@@ -800,6 +806,57 @@ export default function NovoImovelPage() {
               <div className="review-row"><span>Exclusividade</span><b>{exclusividade ? 'Sim (a verificar)' : 'Não'}</b></div>
               <div className="review-row"><span>Fotos</span><b>{fotos.length} {fotos.length < 5 ? '(mín. 5 p/ vitrine)' : ''}</b></div>
             </div>
+
+            <div className="card" style={{ marginTop: '1rem' }}>
+              <h3 style={{ margin: '0 0 0.75rem', fontSize: '1rem' }}>
+                Antes de continuar, os pontos principais:
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div className="termo-ponto">
+                  <strong>📍 Responsabilidade pelo imóvel</strong>
+                  <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.86rem' }}>
+                    O imóvel cadastrado é captação do Corretor Parceiro, que possui autorização e
+                    ciência do proprietário para intermediação. O Corretor assume total
+                    responsabilidade por qualquer irregularidade, inclusive civil e penal.
+                  </p>
+                </div>
+                <div className="termo-ponto">
+                  <strong>💰 Comissão da Plataforma — 10%</strong>
+                  <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.86rem' }}>
+                    Se a Plataforma conectar você a outro corretor parceiro e o negócio for fechado
+                    (venda, locação ou permuta), você paga 10% da comissão total à Plataforma, via
+                    PIX, em até 3 dias úteis após receber sua comissão.
+                  </p>
+                </div>
+                <div className="termo-ponto">
+                  <strong>🔒 Proteção contra desvio da parceria</strong>
+                  <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.86rem' }}>
+                    Se o negócio for fechado por fora para evitar essa comissão, você continua
+                    devendo o valor integral + multa equivalente — mesmo que o negócio só seja
+                    formalizado até 6 meses depois da conexão feita pela Plataforma.
+                  </p>
+                </div>
+              </div>
+
+              <p style={{ margin: '1rem 0 0.75rem' }}>
+                <a href="/termo-parceria" target="_blank" rel="noopener noreferrer">
+                  📄 Ler o Termo de Parceria completo
+                </a>
+              </p>
+
+              <label
+                style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', cursor: 'pointer' }}
+              >
+                <input
+                  type="checkbox"
+                  checked={aceiteTermo}
+                  onChange={(e) => setAceiteTermo(e.target.checked)}
+                  style={{ width: 18, height: 18, marginTop: 2 }}
+                />
+                <span style={{ fontWeight: 600 }}>EU ACEITO OS TERMOS ACIMA</span>
+              </label>
+            </div>
           </>
         )}
       </div>
@@ -813,7 +870,7 @@ export default function NovoImovelPage() {
             Continuar
           </button>
         ) : (
-          <button type="button" className="btn btn-emerald" onClick={() => publicar()} disabled={loading}>
+          <button type="button" className="btn btn-emerald" onClick={() => publicar()} disabled={loading || !aceiteTermo}>
             {loading ? 'Publicando…' : 'Publicar imóvel'}
           </button>
         )}

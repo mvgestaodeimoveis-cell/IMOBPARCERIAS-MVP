@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '../../lib/async-handler';
 import { validate } from '../../middleware/validate';
+import { authenticate } from '../../middleware/authenticate';
 import { authRateLimit } from '../../middleware/rate-limit';
 import {
   confirmarEmailSchema,
@@ -59,3 +60,14 @@ authRoutes.post(
   validate(confirmarEmailSchema),
   asyncHandler(authController.confirmarEmail),
 );
+
+authRoutes.post(
+  '/reenviar-confirmacao',
+  authRateLimit,
+  authenticate,
+  asyncHandler(authController.reenviarConfirmacao),
+);
+
+// Login com Google (OAuth 2.0) — navegação do navegador (não fetch).
+authRoutes.get('/google', asyncHandler(authController.googleStart));
+authRoutes.get('/google/callback', asyncHandler(authController.googleCallback));

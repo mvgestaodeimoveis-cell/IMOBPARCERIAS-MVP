@@ -149,6 +149,147 @@ export function emailNovoCadastroPendente(
   };
 }
 
+export function emailExclusividadeVencendo(
+  nome: string,
+  tipo: string,
+  bairro: string,
+  cidade: string,
+  vencimento: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Sua exclusividade está próxima do vencimento — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Renove a exclusividade antes do vencimento.',
+      heading: `Atenção, ${primeiroNome(nome)}`,
+      paragraphs: [
+        `A exclusividade do imóvel <strong>${escapeHtml(tipo)}</strong> em ${escapeHtml(bairro)}, ${escapeHtml(cidade)} vence em <strong>${escapeHtml(vencimento)}</strong> (em até 15 dias).`,
+        'Renove o contrato com o proprietário e atualize o vencimento para manter o selo de exclusividade verificada.',
+      ],
+      cta: { label: 'Ver o imóvel', url },
+    }),
+  };
+}
+
+export function emailImovelDisponivel(
+  nome: string,
+  tipo: string,
+  bairro: string,
+  cidade: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Um imóvel da sua fila voltou a ficar disponível — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Um imóvel que você acompanhava voltou para a vitrine.',
+      heading: `Boa notícia, ${primeiroNome(nome)}!`,
+      paragraphs: [
+        `O imóvel <strong>${escapeHtml(tipo)}</strong> em ${escapeHtml(bairro)}, ${escapeHtml(cidade)} voltou a ficar <strong>disponível</strong> na vitrine.`,
+        'Se ainda tiver interesse, você já pode solicitar a parceria novamente.',
+      ],
+      cta: { label: 'Ver o imóvel', url },
+    }),
+  };
+}
+
+export function emailParceriaSolicitada(
+  captadorNome: string,
+  imovelResumo: string,
+  clienteNome: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Nova solicitação de parceria — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Um corretor quer levar um cliente ao seu imóvel.',
+      heading: `Nova parceria, ${primeiroNome(captadorNome)}!`,
+      paragraphs: [
+        `O corretor comprador solicitou parceria no seu imóvel <strong>${escapeHtml(imovelResumo)}</strong> para o cliente ${escapeHtml(clienteNome)}.`,
+        'Aceite para liberar o chat interno e combinar a visita.',
+      ],
+      cta: { label: 'Ver solicitação', url },
+    }),
+  };
+}
+
+export function emailParceriaAceita(
+  compradorNome: string,
+  imovelResumo: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Sua parceria foi aceita — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'O chat foi liberado para combinar a visita.',
+      heading: `Boa notícia, ${primeiroNome(compradorNome)}!`,
+      paragraphs: [
+        `O captador aceitou sua parceria no imóvel <strong>${escapeHtml(imovelResumo)}</strong>.`,
+        'O chat interno está liberado. Combine a visita e faça a confirmação bilateral para liberar o contato direto.',
+      ],
+      cta: { label: 'Abrir conversa', url },
+    }),
+  };
+}
+
+export function emailParceriaRecusada(
+  compradorNome: string,
+  imovelResumo: string,
+  motivo: string | null,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Sobre a sua solicitação de parceria — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Sua solicitação não pôde ser aceita.',
+      heading: `Olá, ${primeiroNome(compradorNome)}`,
+      paragraphs: [
+        `A solicitação de parceria no imóvel <strong>${escapeHtml(imovelResumo)}</strong> não pôde ser aceita no momento.`,
+        motivo ? `<strong>Motivo:</strong> ${escapeHtml(motivo)}` : 'Você pode continuar buscando outros imóveis na vitrine.',
+      ],
+      cta: { label: 'Ver a vitrine', url },
+    }),
+  };
+}
+
+export function emailVendaDeclarada(
+  nome: string,
+  imovelResumo: string,
+  valor: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Venda declarada na parceria — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'A venda foi registrada na plataforma.',
+      heading: `Parabéns, ${primeiroNome(nome)}!`,
+      paragraphs: [
+        `A venda do imóvel <strong>${escapeHtml(imovelResumo)}</strong> foi declarada por ${valor}.`,
+        'Após a confirmação do pagamento da taxa da plataforma, a avaliação mútua será liberada.',
+      ],
+      cta: { label: 'Ver a parceria', url },
+    }),
+  };
+}
+
+export function emailPagamentoConfirmado(
+  nome: string,
+  imovelResumo: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Pagamento confirmado — avalie a parceria',
+    html: baseLayout({
+      preheader: 'A avaliação mútua está liberada.',
+      heading: `Tudo certo, ${primeiroNome(nome)}!`,
+      paragraphs: [
+        `O pagamento referente à parceria do imóvel <strong>${escapeHtml(imovelResumo)}</strong> foi confirmado.`,
+        'Que tal avaliar o corretor parceiro? Sua avaliação ajuda a manter a rede confiável.',
+      ],
+      cta: { label: 'Avaliar parceria', url },
+    }),
+  };
+}
+
 export function emailBoasVindas(nome: string, url: string): EmailContent {
   return {
     subject: 'Bem-vindo à Imob Parcerias',

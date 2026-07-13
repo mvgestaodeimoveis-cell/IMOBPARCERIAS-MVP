@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
+import { getAccessToken } from '@/lib/auth';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 
@@ -33,14 +34,60 @@ const TIPO_LABEL: Record<string, string> = {
 
 export default function VitrineDetalhePage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [imovel, setImovel] = useState<ImovelVitrine | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  const [mostrarForm, setMostrarForm] = useState(false);
+  const [clienteNome, setClienteNome] = useState('');
+  const [perfilConfirmado, setPerfilConfirmado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [parceriaErro, setParceriaErro] = useState<string | null>(null);
+  const [solicitada, setSolicitada] = useState(false);
 
   useEffect(() => {
     apiFetch<ImovelVitrine>(`/vitrine/${params.id}`)
       .then(setImovel)
       .catch((err) => setErro(err instanceof ApiRequestError ? err.message : 'Imóvel indisponível.'));
   }, [params.id]);
+
+  function iniciarSolicitacao() {
+    if (!getAccessToken()) {
+      router.push('/login');
+      return;
+    }
+    setMostrarForm(true);
+  }
+
+  async function solicitarParceria(e: React.FormEvent) {
+    e.preventDefault();
+    setParceriaErro(null);
+    const token = getAccessToken();
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    setEnviando(true);
+    try {
+      await apiFetch('/parcerias', {
+        method: 'POST',
+        token,
+        body: {
+          imovel_id: params.id,
+          cliente_nome: clienteNome.trim(),
+          perfil_confirmado: true,
+        },
+      });
+      setSolicitada(true);
+      setMostrarForm(false);
+    } catch (err) {
+      setParceriaErro(
+        err instanceof ApiRequestError ? err.message : 'Não foi possível solicitar a parceria.',
+      );
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   return (
     <div className="site">
@@ -116,9 +163,55 @@ export default function VitrineDetalhePage() {
                   </p>
                 </div>
 
-                <Link href="/cadastro" className="btn btn-emerald" style={{ marginTop: '1.25rem' }}>
-                  Solicitar parceria
-                </Link>
+                {solicitada ? (
+                  <div className="banner banner-success" style={{ marginTop: '1.25rem' }}>
+                    Solicitação enviada! Acompanhe em{' '}
+                    <Link href="/parcerias">Minhas parcerias</Link>.
+                  </div>
+                ) : mostrarForm ? (
+                  <form className="card" onSubmit={solicitarParceria} style={{ marginTop: '1.25rem' }}>
+                    <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Solicitar parceria</h3>
+                    {parceriaErro && <div className="banner banner-error">{parceriaErro}</div>}
+                    <div className="field">
+                      <label htmlFor="cliente_nome">Nome do seu cliente</label>
+                      <input
+                        id="cliente_nome"
+                        className="input"
+                        placeholder="Nome do cliente comprador"
+                        maxLength={120}
+                        value={clienteNome}
+                        onChange={(e) => setClienteNome(e.target.value)}
+                      />
+                    </div>
+                    <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', margin: '0.5rem 0 1rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={perfilConfirmado}
+                        onChange={(e) => setPerfilConfirmado(e.target.checked)}
+                        style={{ width: 18, height: 18, marginTop: 2 }}
+                      />
+                      <span className="muted">
+                        Confirmo que meu cliente tem interesse real em visitar este imóvel.
+                      </span>
+                    </label>
+                    <button
+                      type="submit"
+                      className="btn btn-emerald"
+                      disabled={enviando || clienteNome.trim().length < 3 || !perfilConfirmado}
+                    >
+                      {enviando ? 'Enviando…' : 'Enviar solicitação'}
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-emerald"
+                    style={{ marginTop: '1.25rem' }}
+                    onClick={iniciarSolicitacao}
+                  >
+                    Solicitar parceria
+                  </button>
+                )}
               </>
             )}
           </div>

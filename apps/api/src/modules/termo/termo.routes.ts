@@ -1,18 +1,32 @@
 import { Router } from 'express';
-import { env } from '../../config/env';
+import {
+  TERMO_PARCERIA_RESUMO,
+  TERMO_PARCERIA_TEXTO,
+  TERMO_PARCERIA_VERSAO,
+} from '../../lib/termo-parceria';
+import { TERMO_USO_TEXTO, TERMO_USO_VERSAO } from '../../lib/termo-uso';
+import {
+  POLITICA_PRIVACIDADE_TEXTO,
+  POLITICA_PRIVACIDADE_VERSAO,
+} from '../../lib/politica-privacidade';
 
 export const termoRoutes = Router();
 
-/**
- * Texto do Termo de Uso vigente.
- * Placeholder até o cliente enviar o texto oficial (definição pendente D1/D2).
- */
-const TERMO_TEXTO = `TERMO DE USO — IMOB PARCERIAS (VERSÃO PRELIMINAR)
-
-Este é um texto provisório. O conteúdo oficial será fornecido pelo cliente antes do
-lançamento. Ao marcar o aceite, o corretor concorda com os termos aqui apresentados,
-e o aceite é registrado com IP, data/hora e identificação do dispositivo.`;
-
+/** Texto do Termo de Uso vigente (oficial). */
 termoRoutes.get('/atual', (_req, res) => {
-  res.json({ versao: env.TERMO_VERSAO, texto: TERMO_TEXTO });
+  res.json({ versao: TERMO_USO_VERSAO, texto: TERMO_USO_TEXTO });
+});
+
+/** Termo de Parceria vigente (aceito no cadastro de cada imóvel). */
+termoRoutes.get('/parceria', (_req, res) => {
+  res.json({
+    versao: TERMO_PARCERIA_VERSAO,
+    texto: TERMO_PARCERIA_TEXTO,
+    resumo: TERMO_PARCERIA_RESUMO,
+  });
+});
+
+/** Política de Privacidade vigente (LGPD). */
+termoRoutes.get('/privacidade', (_req, res) => {
+  res.json({ versao: POLITICA_PRIVACIDADE_VERSAO, texto: POLITICA_PRIVACIDADE_TEXTO });
 });

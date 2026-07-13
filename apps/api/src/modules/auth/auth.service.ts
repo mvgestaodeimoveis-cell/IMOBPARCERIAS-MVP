@@ -8,7 +8,7 @@ import {
   hashRefreshToken,
   signAccessToken,
 } from '../../lib/jwt';
-import { badRequest, conflict, notFound, unauthorized } from '../../lib/errors';
+import { badRequest, conflict, forbidden, notFound, unauthorized } from '../../lib/errors';
 import { sendEmail } from '../../lib/email';
 import {
   emailBoasVindas,
@@ -17,6 +17,7 @@ import {
   emailRecuperacaoSenha,
 } from '../../lib/email-templates';
 import type { UserRole } from '../../types/express';
+import type { GoogleProfile } from '../../lib/google.oauth';
 import type { CompletarCadastroInput, LoginInput, RegistroInput } from './auth.schemas';
 
 export interface CorretorSafe {
@@ -30,6 +31,7 @@ export interface CorretorSafe {
   papel: string;
   status: string;
   motivo_rejeicao: string | null;
+  email_verificado_em: string | null;
   criado_em: string;
 }
 
@@ -103,6 +105,75 @@ async function enviarConfirmacaoEmail(corretorId: string, nome: string, email: s
   await sendEmail({ to: email, subject, html });
 }
 
+/** Reenvia o e-mail de confirmação para o corretor logado (se ainda não verificado). */
+export async function reenviarConfirmacao(corretorId: string) {
+  const { rows } = await query<{ nome: string; email: string; email_verificado_em: string | null }>(
+    'SELECT nome, email, email_verificado_em FROM corretor WHERE id = $1',
+    [corretorId],
+  );
+  const corretor = rows[0];
+  if (!corretor) throw notFound('Corretor não encontrado.');
+  if (corretor.email_verificado_em) {
+    return { enviado: false, ja_verificado: true };
+  }
+  await enviarConfirmacaoEmail(corretorId, corretor.nome, corretor.email);
+  return { enviado: true, ja_verificado: false };
+}
+
+interface CorretorSessao {
+  id: string;
+  nome: string;
+  email: string;
+  status: string;
+  papel: string;
+}
+
+/**
+ * Login/cadastro via Google (OAuth). Vincula por `google_sub`; se não existir,
+ * tenta casar por e-mail; senão cria um lead (cadastro_incompleto) sem senha local.
+ */
+export async function loginOuCadastrarGoogle(profile: GoogleProfile) {
+  // 1) Já vinculado a este Google.
+  const porSub = await query<CorretorSessao>(
+    'SELECT id, nome, email, status, papel FROM corretor WHERE google_sub = $1',
+    [profile.sub],
+  );
+  if (porSub.rows[0]) {
+    return finalizarSessaoGoogle(porSub.rows[0], false);
+  }
+
+  // 2) Existe um corretor com este e-mail → vincula a conta Google.
+  const porEmail = await query<CorretorSessao>(
+    'SELECT id, nome, email, status, papel FROM corretor WHERE email = $1',
+    [profile.email],
+  );
+  if (porEmail.rows[0]) {
+    await query(
+      `UPDATE corretor
+       SET google_sub = $2,
+           email_verificado_em = COALESCE(email_verificado_em, CASE WHEN $3 THEN now() ELSE NULL END),
+           atualizado_em = now()
+       WHERE id = $1`,
+      [porEmail.rows[0].id, profile.sub, profile.emailVerificado],
+    );
+    return finalizarSessaoGoogle(porEmail.rows[0], false);
+  }
+
+  // 3) Novo lead via Google (sem senha local).
+  const inserted = await query<CorretorSessao>(
+    `INSERT INTO corretor (nome, email, papel, status, google_sub, email_verificado_em)
+     VALUES ($1, $2, 'ambos', 'cadastro_incompleto', $3, CASE WHEN $4 THEN now() ELSE NULL END)
+     RETURNING id, nome, email, status, papel`,
+    [profile.nome, profile.email, profile.sub, profile.emailVerificado],
+  );
+  return finalizarSessaoGoogle(inserted.rows[0], true);
+}
+
+async function finalizarSessaoGoogle(corretor: CorretorSessao, novo: boolean) {
+  const tokens = await issueTokens(corretor.id, 'corretor', corretor.status);
+  return { ...tokens, corretor, novo };
+}
+
 /** Confirma o e-mail do corretor a partir do token e envia o e-mail de boas-vindas. */
 export async function confirmarEmail(token: string) {
   const hash = hashOpaqueToken(token);
@@ -141,13 +212,16 @@ export async function completarCadastro(
   ip: string,
   userAgent: string,
 ) {
-  const atual = await query<{ status: string; nome: string }>(
-    'SELECT status, nome FROM corretor WHERE id = $1',
+  const atual = await query<{ status: string; nome: string; email_verificado_em: string | null }>(
+    'SELECT status, nome, email_verificado_em FROM corretor WHERE id = $1',
     [corretorId],
   );
   if (!atual.rows[0]) throw notFound('Corretor não encontrado.');
   if (atual.rows[0].status !== 'cadastro_incompleto') {
     throw conflict('Cadastro já concluído.');
+  }
+  if (env.EXIGIR_EMAIL_VERIFICADO && !atual.rows[0].email_verificado_em) {
+    throw forbidden('Confirme seu e-mail antes de concluir o cadastro.');
   }
 
   const dupe = await query<{ id: string }>(
@@ -199,12 +273,12 @@ async function notificarEquipeNovoCadastro(
 }
 
 export async function loginCorretor(input: LoginInput) {
-  const { rows } = await query<CorretorSafe & { senha_hash: string }>(
+  const { rows } = await query<CorretorSafe & { senha_hash: string | null }>(
     'SELECT * FROM corretor WHERE email = $1',
     [input.email],
   );
   const corretor = rows[0];
-  if (!corretor || !(await verifyPassword(input.senha, corretor.senha_hash))) {
+  if (!corretor || !corretor.senha_hash || !(await verifyPassword(input.senha, corretor.senha_hash))) {
     throw unauthorized('E-mail ou senha inválidos.');
   }
 
@@ -264,7 +338,7 @@ export async function logout(refreshToken: string): Promise<void> {
 
 export async function getCorretorById(id: string): Promise<CorretorSafe | null> {
   const { rows } = await query<CorretorSafe>(
-    `SELECT id, nome, email, creci, whatsapp, cidade, imobiliaria, papel, status, motivo_rejeicao, criado_em
+    `SELECT id, nome, email, creci, whatsapp, cidade, imobiliaria, papel, status, motivo_rejeicao, email_verificado_em, criado_em
      FROM corretor WHERE id = $1`,
     [id],
   );

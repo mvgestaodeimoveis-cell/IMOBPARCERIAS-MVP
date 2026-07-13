@@ -104,6 +104,7 @@ export default function AdminCorretoresPage() {
         <p className="muted" style={{ marginBottom: '0.75rem' }}>Corretores aguardando aprovação.</p>
         <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <a href="/admin/exclusividades">Ver fila de exclusividades →</a>
+          <a href="/admin/pagamentos">Pagamentos de taxa →</a>
           <a href="/admin/equipe">Gerenciar administradores →</a>
         </p>
 

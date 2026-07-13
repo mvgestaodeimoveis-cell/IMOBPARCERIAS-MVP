@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { routeForStatus, saveSession } from '@/lib/auth';
+import { googleLoginEnabled, startGoogleLogin } from '@/lib/googleLogin';
 import { validateEmail } from '@/lib/validation';
 import { AuthShell } from '@/components/AuthShell';
 import { AuthTabs } from '@/components/AuthTabs';
@@ -85,7 +86,13 @@ export default function LoginPage() {
 
         <AuthTabs active="entrar" />
 
-        <GoogleButton onClick={() => setInfo('Login com Google estará disponível em breve.')} />
+        <GoogleButton
+          onClick={() =>
+            googleLoginEnabled
+              ? startGoogleLogin('login')
+              : setInfo('Login com Google estará disponível em breve.')
+          }
+        />
         <div className="divider">ou</div>
 
         {erro && <div className="banner banner-error">{erro}</div>}

@@ -6,6 +6,7 @@ import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
 import { listCorretoresQuery, rejeitarSchema, criarAdminSchema, type ListCorretoresQuery, type RejeitarInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
+import * as parceriasService from '../parcerias/parcerias.service';
 
 export const adminRoutes = Router();
 
@@ -80,5 +81,20 @@ adminRoutes.post(
   asyncHandler(async (req: Request, res: Response) => {
     const result = await adminService.criarAdmin(req.body as CriarAdminInput);
     res.status(201).json(result);
+  }),
+);
+
+// Cobrança PIX (Fase 8) — confirmação manual pela equipe.
+adminRoutes.get(
+  '/pagamentos',
+  asyncHandler(async (_req: Request, res: Response) => {
+    res.json(await parceriasService.listarPagamentosPendentes());
+  }),
+);
+
+adminRoutes.post(
+  '/parcerias/:id/pagamento',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await parceriasService.confirmarPagamento(req.params.id));
   }),
 );
