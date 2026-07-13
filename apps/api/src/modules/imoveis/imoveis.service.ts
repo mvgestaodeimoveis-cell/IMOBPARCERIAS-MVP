@@ -72,6 +72,7 @@ function mapImovel(row: ImovelRow): Imovel {
 
 interface CamposChave {
   tipo: string;
+  cep: string;
   cidade: string;
   logradouro: string;
   numero: string;
@@ -83,9 +84,19 @@ interface CamposChave {
 }
 
 const norm = (s: string | null | undefined): string => (s ?? '').trim().toLowerCase();
+const soDigitos = (s: string | null | undefined): string => (s ?? '').replace(/\D/g, '');
 
+/**
+ * Endereço-base canônico da deduplicação. Ancorado no CEP (só dígitos) + número:
+ * o CEP identifica a rua/quadra de forma estável, independentemente de como o
+ * logradouro foi digitado (o formulário autopreenche via ViaCEP). Sem CEP válido,
+ * cai no logradouro digitado como último recurso.
+ */
 function baseEndereco(c: CamposChave): string {
-  return `${norm(c.cidade)}|${norm(c.logradouro)}|${norm(c.numero)}`;
+  const cep = soDigitos(c.cep);
+  return cep
+    ? `${cep}|${norm(c.numero)}`
+    : `${norm(c.cidade)}|${norm(c.logradouro)}|${norm(c.numero)}`;
 }
 
 /** Chave única por tipo de imóvel (Seção 5 do escopo). */
@@ -100,7 +111,7 @@ function chaveDedupe(c: CamposChave): string {
       return `ter|${base}|${c.area_m2 ?? ''}`;
     case 'casa':
       return c.nome_condominio
-        ? `casacond|${norm(c.cidade)}|${norm(c.nome_condominio)}|${norm(c.numero)}`
+        ? `casacond|${soDigitos(c.cep) || norm(c.cidade)}|${norm(c.nome_condominio)}|${norm(c.numero)}`
         : `casa|${base}`;
     default:
       return `x|${base}`;
@@ -114,6 +125,7 @@ function chavePredio(c: CamposChave): string {
 
 function camposDe(input: {
   tipo: string;
+  cep: string;
   cidade: string;
   logradouro: string;
   numero: string;
@@ -125,6 +137,7 @@ function camposDe(input: {
 }): CamposChave {
   return {
     tipo: input.tipo,
+    cep: input.cep,
     cidade: input.cidade,
     logradouro: input.logradouro,
     numero: input.numero,
