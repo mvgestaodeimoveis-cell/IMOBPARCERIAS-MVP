@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
+import { isAuthenticated, getRole } from '@/lib/auth';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
+import { BottomNav } from '@/components/BottomNav';
 
 interface ImovelVitrine {
   id: string;
@@ -44,6 +46,11 @@ export default function VitrinePage() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [imoveis, setImoveis] = useState<ImovelVitrine[] | null>(null);
   const [total, setTotal] = useState(0);
+  const [appNav, setAppNav] = useState(false);
+
+  useEffect(() => {
+    setAppNav(isAuthenticated() && getRole() !== 'equipe');
+  }, []);
 
   const buscar = useCallback(async () => {
     const params = new URLSearchParams();
@@ -75,7 +82,7 @@ export default function VitrinePage() {
     <div className="site">
       <Topbar />
 
-      <main>
+      <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
           <div className="section-inner">
             <span className="eyebrow">Vitrine de parceria</span>
@@ -165,7 +172,7 @@ export default function VitrinePage() {
         </section>
       </main>
 
-      <SiteFooter />
+      {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
     </div>
   );
 }

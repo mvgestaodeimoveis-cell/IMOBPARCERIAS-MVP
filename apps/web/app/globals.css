@@ -106,7 +106,8 @@ a {
   padding: 1.25rem;
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
 }
-.screen.has-bottomnav {
+.screen.has-bottomnav,
+main.has-bottomnav {
   padding-bottom: calc(92px + env(safe-area-inset-bottom));
 }
 
@@ -2100,7 +2101,8 @@ a.stat-chip:hover {
   .bottomnav {
     display: none;
   }
-  .screen.has-bottomnav {
+  .screen.has-bottomnav,
+  main.has-bottomnav {
     padding-bottom: 1.5rem;
   }
   .desktop-nav {
