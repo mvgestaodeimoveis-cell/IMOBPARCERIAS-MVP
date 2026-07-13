@@ -45,7 +45,7 @@ O frontend (`apps/web`) vai na **Vercel** e a API (`apps/api`) no **Render**.
    | `APP_WEB_URL` | idem (ajusta no passo C) |
    | `RESEND_API_KEY` | sua chave do Resend (ou deixe vazio → e-mails vão para o log) |
    | `EMAIL_FROM` | `Imob Parcerias <no-reply@imobparcerias.com.br>` |
-   | `EQUIPE_NOTIFICACAO_EMAIL` | e-mail que recebe o aviso de novo cadastro pendente (vazio → não notifica) |
+   | `EQUIPE_NOTIFICACAO_EMAIL` | `mvgestaodeimoveis@gmail.com` (recebe aviso de novo cadastro pendente; vazio → não notifica) |
    | `EXIGIR_EMAIL_VERIFICADO` | `false` (ou `true` para exigir e-mail confirmado antes de concluir o cadastro) |
    | `GOOGLE_CLIENT_ID` | *(opcional)* Client ID do OAuth — só se for ativar login com Google |
    | `GOOGLE_CLIENT_SECRET` | *(opcional)* Client Secret do OAuth |
@@ -86,8 +86,8 @@ npm run seed:admin -w apps/api
    | Chave | Valor |
    |---|---|
    | `BACKEND_URL` | a URL do Render (ex.: `https://imobparcerias-api.onrender.com`) |
-   | `NEXT_PUBLIC_CONTATO_EMAIL` | *(opcional)* e-mail de suporte exibido no perfil rejeitado |
-   | `NEXT_PUBLIC_CONTATO_WHATSAPP` | *(opcional)* WhatsApp de suporte, só dígitos com DDI (ex.: `5571999998888`) |
+   | `NEXT_PUBLIC_CONTATO_EMAIL` | `mvgestaodeimoveis@gmail.com` (e-mail de suporte no perfil rejeitado) |
+   | `NEXT_PUBLIC_CONTATO_WHATSAPP` | `5571991541269` (WhatsApp de suporte, só dígitos com DDI) |
    | `NEXT_PUBLIC_GOOGLE_LOGIN_ENABLED` | *(opcional)* `true` para exibir o login com Google (requer credenciais no Render) |
 
    > `BACKEND_URL` é **server-side** (não `NEXT_PUBLIC_`). O browser chama o próprio
