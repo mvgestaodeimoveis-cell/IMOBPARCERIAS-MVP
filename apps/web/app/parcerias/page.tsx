@@ -7,6 +7,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { clearSession, getAccessToken } from '@/lib/auth';
 import { Brandmark } from '@/components/Brandmark';
+import { BottomNav } from '@/components/BottomNav';
 
 interface Parceria {
   id: string;
@@ -201,7 +202,7 @@ export default function ParceriasPage() {
         </button>
       </header>
 
-      <div className="screen">
+      <div className="screen has-bottomnav">
         <h1 style={{ fontSize: '1.5rem' }}>Minhas parcerias</h1>
         <p className="muted" style={{ marginBottom: '1.25rem' }}>
           <Link href="/painel">← Voltar ao início</Link>
@@ -236,6 +237,8 @@ export default function ParceriasPage() {
           </>
         )}
       </div>
+
+      <BottomNav active="parcerias" />
     </div>
   );
 }
