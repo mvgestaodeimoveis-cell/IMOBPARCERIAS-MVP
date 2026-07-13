@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
-import { listCorretoresQuery, rejeitarSchema, criarAdminSchema, type ListCorretoresQuery, type RejeitarInput, type CriarAdminInput } from './admin.schemas';
+import { listCorretoresQuery, listImoveisQuery, rejeitarSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type RejeitarInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
 import * as parceriasService from '../parcerias/parcerias.service';
 
@@ -45,6 +45,50 @@ adminRoutes.post(
     const { motivo } = req.body as RejeitarInput;
     const result = await adminService.rejeitarCorretor(req.params.id, req.user.id, motivo);
     res.json(result);
+  }),
+);
+
+adminRoutes.post(
+  '/corretores/:id/suspender',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.suspenderCorretor(req.params.id));
+  }),
+);
+
+adminRoutes.post(
+  '/corretores/:id/reativar',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.reativarCorretor(req.params.id));
+  }),
+);
+
+// Moderação de imóveis (equipe).
+adminRoutes.get(
+  '/imoveis',
+  validate(listImoveisQuery, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.listImoveis(req.query as unknown as ListImoveisQuery));
+  }),
+);
+
+adminRoutes.post(
+  '/imoveis/:id/desabilitar',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.desabilitarImovel(req.params.id));
+  }),
+);
+
+adminRoutes.post(
+  '/imoveis/:id/reativar',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.reativarImovel(req.params.id));
+  }),
+);
+
+adminRoutes.delete(
+  '/imoveis/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.excluirImovel(req.params.id));
   }),
 );
 

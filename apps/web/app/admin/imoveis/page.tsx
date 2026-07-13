@@ -1,0 +1,174 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { apiFetch, ApiRequestError } from '@/lib/api';
+import { formatBRL } from '@/lib/masks';
+import { clearSession, getAccessToken, getRole } from '@/lib/auth';
+import { Brandmark } from '@/components/Brandmark';
+
+interface ImovelRow {
+  id: string;
+  tipo: string;
+  finalidade: string;
+  preco: number;
+  cidade: string;
+  bairro: string;
+  status: string;
+  exclusividade_status: string;
+  corretor_nome: string;
+  corretor_creci: string | null;
+  criado_em: string;
+}
+
+const TIPO_LABEL: Record<string, string> = {
+  apartamento: 'Apartamento',
+  casa: 'Casa',
+  terreno: 'Terreno',
+  comercial: 'Comercial',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  ativo: 'Disponível',
+  em_negociacao: 'Em negociação',
+  vendido: 'Vendido',
+  inativo: 'Inativo',
+};
+
+const STATUS = ['', 'ativo', 'em_negociacao', 'vendido', 'inativo'];
+
+export default function AdminImoveisPage() {
+  const router = useRouter();
+  const [rows, setRows] = useState<ImovelRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [status, setStatus] = useState('');
+  const [busca, setBusca] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const carregar = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token || getRole() !== 'equipe') {
+      router.replace('/admin/login');
+      return;
+    }
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (busca.trim()) params.set('busca', busca.trim());
+      const res = await apiFetch<{ data: ImovelRow[]; total: number }>(
+        `/admin/imoveis?${params.toString()}`,
+        { token },
+      );
+      setRows(res.data);
+      setTotal(res.total);
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.code === 'UNAUTHENTICATED') {
+        router.replace('/admin/login');
+        return;
+      }
+      setErro('Não foi possível carregar os imóveis.');
+    } finally {
+      setLoading(false);
+    }
+  }, [router, status, busca]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  async function acao(id: string, op: 'desabilitar' | 'reativar' | 'excluir') {
+    const token = getAccessToken();
+    if (op === 'excluir' && !window.confirm('Excluir definitivamente este imóvel? Esta ação não pode ser desfeita.')) return;
+    try {
+      if (op === 'excluir') {
+        await apiFetch(`/admin/imoveis/${id}`, { method: 'DELETE', token });
+      } else {
+        await apiFetch(`/admin/imoveis/${id}/${op}`, { method: 'POST', token });
+      }
+      carregar();
+    } catch (err) {
+      alert(err instanceof ApiRequestError ? err.message : 'Erro na operação.');
+    }
+  }
+
+  function sair() {
+    clearSession();
+    router.replace('/admin/login');
+  }
+
+  return (
+    <div className="frame frame-app">
+      <header className="topbar">
+        <span className="brand-link"><Brandmark /></span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <span className="muted" style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Equipe</span>
+          <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>Sair</button>
+        </div>
+      </header>
+      <div className="screen">
+        <h1 style={{ fontSize: '1.5rem' }}>Imóveis ({total})</h1>
+        <p style={{ marginBottom: '1rem' }}><Link href="/admin/dashboard">← Painel</Link></p>
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <select className="input" style={{ width: 'auto' }} value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUS.map((s) => (
+              <option key={s} value={s}>{s ? STATUS_LABEL[s] : 'Todos os status'}</option>
+            ))}
+          </select>
+          <input
+            className="input"
+            style={{ flex: 1, minWidth: 180 }}
+            placeholder="Buscar por bairro ou corretor…"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+
+        {erro && <div className="banner banner-error">{erro}</div>}
+        {loading ? (
+          <p className="muted">Carregando…</p>
+        ) : rows.length === 0 ? (
+          <div className="card"><p className="muted" style={{ margin: 0 }}>Nenhum imóvel encontrado.</p></div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Imóvel</th>
+                <th>Corretor</th>
+                <th>Preço</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((im) => (
+                <tr key={im.id}>
+                  <td>
+                    {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
+                    {im.exclusividade_status === 'verificada' && <span className="badge badge-emerald" style={{ marginLeft: '0.4rem' }}>✓ Excl.</span>}
+                  </td>
+                  <td>{im.corretor_nome}</td>
+                  <td>{formatBRL(im.preco)}</td>
+                  <td>{STATUS_LABEL[im.status] ?? im.status}</td>
+                  <td>
+                    <div className="row-actions" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {im.status === 'inativo' ? (
+                        <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => acao(im.id, 'reativar')}>Reativar</button>
+                      ) : (
+                        <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => acao(im.id, 'desabilitar')}>Desabilitar</button>
+                      )}
+                      <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem', color: 'var(--error)' }} onClick={() => acao(im.id, 'excluir')}>Excluir</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}

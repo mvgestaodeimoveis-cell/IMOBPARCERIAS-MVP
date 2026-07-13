@@ -1,7 +1,16 @@
 import { z } from 'zod';
 
 export const listCorretoresQuery = z.object({
-  status: z.enum(['verificacao_pendente', 'ativo', 'rejeitado', 'suspenso']).optional(),
+  status: z.enum(['verificacao_pendente', 'ativo', 'rejeitado', 'suspenso', 'cadastro_incompleto']).optional(),
+  busca: z.string().trim().min(1).max(120).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  page_size: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const listImoveisQuery = z.object({
+  status: z.enum(['ativo', 'em_negociacao', 'vendido', 'inativo']).optional(),
+  cidade: z.string().trim().min(1).max(80).optional(),
+  busca: z.string().trim().min(1).max(80).optional(),
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -21,5 +30,6 @@ export const criarAdminSchema = z.object({
 });
 
 export type ListCorretoresQuery = z.infer<typeof listCorretoresQuery>;
+export type ListImoveisQuery = z.infer<typeof listImoveisQuery>;
 export type RejeitarInput = z.infer<typeof rejeitarSchema>;
 export type CriarAdminInput = z.infer<typeof criarAdminSchema>;

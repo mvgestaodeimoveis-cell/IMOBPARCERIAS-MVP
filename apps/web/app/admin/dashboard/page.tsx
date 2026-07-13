@@ -81,6 +81,7 @@ export default function AdminDashboardPage() {
         <h1 style={{ fontSize: '1.5rem' }}>Painel da equipe</h1>
         <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <Link href="/admin/corretores">Verificação de CRECI →</Link>
+          <Link href="/admin/imoveis">Imóveis →</Link>
           <Link href="/admin/exclusividades">Exclusividades →</Link>
           <Link href="/admin/pagamentos">Pagamentos →</Link>
           <Link href="/admin/equipe">Administradores →</Link>

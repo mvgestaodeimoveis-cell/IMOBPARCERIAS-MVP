@@ -20,9 +20,21 @@ interface ListResponse {
   total: number;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  verificacao_pendente: 'Pendente',
+  ativo: 'Ativo',
+  rejeitado: 'Rejeitado',
+  suspenso: 'Suspenso',
+  cadastro_incompleto: 'Incompleto',
+};
+
+const STATUS_FILTROS = ['verificacao_pendente', 'ativo', 'suspenso', 'rejeitado', ''];
+
 export default function AdminCorretoresPage() {
   const router = useRouter();
   const [rows, setRows] = useState<CorretorRow[]>([]);
+  const [status, setStatus] = useState('verificacao_pendente');
+  const [busca, setBusca] = useState('');
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -34,20 +46,21 @@ export default function AdminCorretoresPage() {
     }
     setLoading(true);
     try {
-      const res = await apiFetch<ListResponse>('/admin/corretores?status=verificacao_pendente', {
-        token,
-      });
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (busca.trim()) params.set('busca', busca.trim());
+      const res = await apiFetch<ListResponse>(`/admin/corretores?${params.toString()}`, { token });
       setRows(res.data);
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === 'UNAUTHENTICATED') {
         router.replace('/admin/login');
         return;
       }
-      setErro('Não foi possível carregar a fila.');
+      setErro('Não foi possível carregar a lista.');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, status, busca]);
 
   useEffect(() => {
     carregar();
@@ -56,7 +69,7 @@ export default function AdminCorretoresPage() {
   async function aprovar(id: string) {
     const token = getAccessToken();
     await apiFetch(`/admin/corretores/${id}/aprovar`, { method: 'POST', token });
-    setRows((r) => r.filter((c) => c.id !== id));
+    carregar();
   }
 
   async function rejeitar(id: string) {
@@ -64,14 +77,20 @@ export default function AdminCorretoresPage() {
     if (!motivo) return;
     const token = getAccessToken();
     try {
-      await apiFetch(`/admin/corretores/${id}/rejeitar`, {
-        method: 'POST',
-        token,
-        body: { motivo },
-      });
-      setRows((r) => r.filter((c) => c.id !== id));
+      await apiFetch(`/admin/corretores/${id}/rejeitar`, { method: 'POST', token, body: { motivo } });
+      carregar();
     } catch (err) {
       alert(err instanceof ApiRequestError ? err.message : 'Erro ao rejeitar.');
+    }
+  }
+
+  async function moderar(id: string, op: 'suspender' | 'reativar') {
+    const token = getAccessToken();
+    try {
+      await apiFetch(`/admin/corretores/${id}/${op}`, { method: 'POST', token });
+      carregar();
+    } catch (err) {
+      alert(err instanceof ApiRequestError ? err.message : 'Erro na operação.');
     }
   }
 
@@ -100,21 +119,36 @@ export default function AdminCorretoresPage() {
         </div>
       </header>
       <div className="screen">
-        <h1 style={{ fontSize: '1.5rem' }}>Verificação de CRECI</h1>
-        <p className="muted" style={{ marginBottom: '0.75rem' }}>Corretores aguardando aprovação.</p>
-        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <a href="/admin/dashboard">Painel de métricas →</a>
-          <a href="/admin/exclusividades">Ver fila de exclusividades →</a>
-          <a href="/admin/pagamentos">Pagamentos de taxa →</a>
-          <a href="/admin/equipe">Gerenciar administradores →</a>
+        <h1 style={{ fontSize: '1.5rem' }}>Corretores</h1>
+        <p style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <a href="/admin/dashboard">Painel →</a>
+          <a href="/admin/imoveis">Imóveis →</a>
+          <a href="/admin/exclusividades">Exclusividades →</a>
+          <a href="/admin/pagamentos">Pagamentos →</a>
+          <a href="/admin/equipe">Administradores →</a>
         </p>
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <select className="input" style={{ width: 'auto' }} value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUS_FILTROS.map((s) => (
+              <option key={s} value={s}>{s ? STATUS_LABEL[s] : 'Todos'}</option>
+            ))}
+          </select>
+          <input
+            className="input"
+            style={{ flex: 1, minWidth: 180 }}
+            placeholder="Buscar por nome, e-mail ou CRECI…"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
 
         {erro && <div className="banner banner-error">{erro}</div>}
         {loading ? (
           <p className="muted">Carregando...</p>
         ) : rows.length === 0 ? (
           <div className="card">
-            <p className="muted" style={{ margin: 0 }}>Nenhum corretor pendente no momento.</p>
+            <p className="muted" style={{ margin: 0 }}>Nenhum corretor encontrado.</p>
           </div>
         ) : (
           <table>
@@ -123,7 +157,7 @@ export default function AdminCorretoresPage() {
                 <th>Nome</th>
                 <th>CRECI</th>
                 <th>Cidade</th>
-                <th>Cadastro</th>
+                <th>Status</th>
                 <th>Ações</th>
               </tr>
             </thead>
@@ -133,15 +167,21 @@ export default function AdminCorretoresPage() {
                   <td>{c.nome}</td>
                   <td>{c.creci}</td>
                   <td>{c.cidade}</td>
-                  <td>{new Date(c.criado_em).toLocaleDateString('pt-BR')}</td>
+                  <td>{STATUS_LABEL[c.status] ?? c.status}</td>
                   <td>
-                    <div className="row-actions">
-                      <button className="btn btn-emerald" onClick={() => aprovar(c.id)}>
-                        Aprovar
-                      </button>
-                      <button className="btn btn-ghost" onClick={() => rejeitar(c.id)}>
-                        Rejeitar
-                      </button>
+                    <div className="row-actions" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      {c.status === 'verificacao_pendente' && (
+                        <>
+                          <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => aprovar(c.id)}>Aprovar</button>
+                          <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => rejeitar(c.id)}>Rejeitar</button>
+                        </>
+                      )}
+                      {c.status === 'ativo' && (
+                        <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem', color: 'var(--error)' }} onClick={() => moderar(c.id, 'suspender')}>Suspender</button>
+                      )}
+                      {c.status === 'suspenso' && (
+                        <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => moderar(c.id, 'reativar')}>Reativar</button>
+                      )}
                     </div>
                   </td>
                 </tr>

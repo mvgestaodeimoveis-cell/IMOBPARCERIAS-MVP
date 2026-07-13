@@ -4,7 +4,7 @@ import { conflict, notFound } from '../../lib/errors';
 import { hashPassword } from '../../lib/password';
 import { sendEmail } from '../../lib/email';
 import { emailCreciAprovado, emailCreciRejeitado } from '../../lib/email-templates';
-import type { CriarAdminInput, ListCorretoresQuery } from './admin.schemas';
+import type { CriarAdminInput, ListCorretoresQuery, ListImoveisQuery } from './admin.schemas';
 
 interface CorretorListRow {
   id: string;
@@ -22,6 +22,10 @@ export async function listCorretores(q: ListCorretoresQuery) {
   if (q.status) {
     params.push(q.status);
     conditions.push(`status = $${params.length}`);
+  }
+  if (q.busca) {
+    params.push(`%${q.busca}%`);
+    conditions.push(`(nome ILIKE $${params.length} OR email ILIKE $${params.length} OR creci ILIKE $${params.length})`);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -41,6 +45,121 @@ export async function listCorretores(q: ListCorretoresQuery) {
   );
 
   return { data: dataRes.rows, page: q.page, page_size: q.page_size, total };
+}
+
+/** Suspende um corretor (ativo/pendente → suspenso). */
+export async function suspenderCorretor(id: string) {
+  const { rowCount } = await query(
+    `UPDATE corretor SET status = 'suspenso', atualizado_em = now()
+     WHERE id = $1 AND status IN ('ativo', 'verificacao_pendente')`,
+    [id],
+  );
+  if (!rowCount) throw conflict('Não é possível suspender este corretor no status atual.');
+  return { id, status: 'suspenso' as const };
+}
+
+/** Reativa um corretor suspenso → ativo. */
+export async function reativarCorretor(id: string) {
+  const { rowCount } = await query(
+    `UPDATE corretor SET status = 'ativo', atualizado_em = now()
+     WHERE id = $1 AND status = 'suspenso'`,
+    [id],
+  );
+  if (!rowCount) throw conflict('Só é possível reativar um corretor suspenso.');
+  return { id, status: 'ativo' as const };
+}
+
+// ============================================================
+// Moderação de imóveis (equipe)
+// ============================================================
+
+interface ImovelModRow {
+  id: string;
+  tipo: string;
+  finalidade: string;
+  preco: string;
+  cidade: string;
+  bairro: string;
+  status: string;
+  exclusividade_status: string;
+  criado_em: string;
+  corretor_nome: string;
+  corretor_creci: string | null;
+}
+
+export async function listImoveis(q: ListImoveisQuery) {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  const add = (sql: string, value: unknown) => {
+    params.push(value);
+    return sql.replace('$?', `$${params.length}`);
+  };
+
+  if (q.status) conditions.push(add('i.status = $?', q.status));
+  if (q.cidade) conditions.push(add('i.cidade ILIKE $?', `%${q.cidade}%`));
+  if (q.busca) {
+    params.push(`%${q.busca}%`);
+    conditions.push(`(i.bairro ILIKE $${params.length} OR c.nome ILIKE $${params.length})`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const totalRes = await query<{ count: string }>(
+    `SELECT count(*)::text AS count FROM imovel i JOIN corretor c ON c.id = i.corretor_id ${where}`,
+    params,
+  );
+  const total = Number(totalRes.rows[0]?.count ?? 0);
+
+  const offset = (q.page - 1) * q.page_size;
+  const dataRes = await query<ImovelModRow>(
+    `SELECT i.id, i.tipo, i.finalidade, i.preco::text AS preco, i.cidade, i.bairro,
+            i.status, i.exclusividade_status, i.criado_em,
+            c.nome AS corretor_nome, c.creci AS corretor_creci
+     FROM imovel i JOIN corretor c ON c.id = i.corretor_id
+     ${where}
+     ORDER BY i.criado_em DESC
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, q.page_size, offset],
+  );
+
+  return {
+    data: dataRes.rows.map((r) => ({ ...r, preco: Number(r.preco) })),
+    page: q.page,
+    page_size: q.page_size,
+    total,
+  };
+}
+
+export async function desabilitarImovel(id: string) {
+  const { rowCount } = await query(
+    `UPDATE imovel SET status = 'inativo', atualizado_em = now()
+     WHERE id = $1 AND status <> 'inativo'`,
+    [id],
+  );
+  if (!rowCount) throw conflict('Imóvel não encontrado ou já inativo.');
+  return { id, status: 'inativo' as const };
+}
+
+export async function reativarImovel(id: string) {
+  try {
+    const { rowCount } = await query(
+      `UPDATE imovel SET status = 'ativo', atualizado_em = now()
+       WHERE id = $1 AND status = 'inativo'`,
+      [id],
+    );
+    if (!rowCount) throw conflict('Só é possível reativar um imóvel inativo.');
+  } catch (err) {
+    if (err && typeof err === 'object' && (err as { code?: string }).code === '23505') {
+      throw conflict('Já existe outro imóvel ativo com o mesmo endereço.');
+    }
+    throw err;
+  }
+  return { id, status: 'ativo' as const };
+}
+
+export async function excluirImovel(id: string) {
+  const { rowCount } = await query('DELETE FROM imovel WHERE id = $1', [id]);
+  if (!rowCount) throw notFound('Imóvel não encontrado.');
+  return { id, excluido: true as const };
 }
 
 // ============================================================
