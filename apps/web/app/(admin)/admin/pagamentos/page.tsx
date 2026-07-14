@@ -2,11 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { clearSession, getAccessToken, getRole } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { getAccessToken, getRole } from '@/lib/auth';
 
 interface Pagamento {
   id: string;
@@ -62,32 +60,10 @@ export default function AdminPagamentosPage() {
     }
   }
 
-  function sair() {
-    clearSession();
-    router.replace('/admin/login');
-  }
-
   return (
-    <div className="frame frame-app">
-      <header className="topbar">
-        <span className="brand-link">
-          <Brandmark />
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span className="muted" style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Equipe
-          </span>
-          <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
-            Sair
-          </button>
-        </div>
-      </header>
-      <div className="screen">
-        <h1 style={{ fontSize: '1.5rem' }}>Pagamentos de taxa (PIX)</h1>
-        <p className="muted" style={{ marginBottom: '0.75rem' }}>Confirme o recebimento da taxa da plataforma.</p>
-        <p style={{ marginBottom: '1.25rem' }}>
-          <Link href="/admin/corretores">← Verificação de CRECI</Link>
-        </p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Pagamentos de taxa (PIX)</h1>
+      <p className="muted" style={{ marginBottom: '1.25rem' }}>Confirme o recebimento da taxa da plataforma.</p>
 
         {erro && <div className="banner banner-error">{erro}</div>}
         {loading ? (
@@ -124,7 +100,6 @@ export default function AdminPagamentosPage() {
             </tbody>
           </table>
         )}
-      </div>
-    </div>
+    </>
   );
 }

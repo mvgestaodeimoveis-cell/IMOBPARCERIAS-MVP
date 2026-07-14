@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
-import { clearSession, getAccessToken, getRole } from '@/lib/auth';
+import { getAccessToken, getRole } from '@/lib/auth';
 import { CORRETOR_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
-import { Brandmark } from '@/components/Brandmark';
 
 interface CorretorRow {
   id: string;
@@ -124,39 +123,9 @@ export default function AdminCorretoresPage() {
     }
   }
 
-  function sair() {
-    clearSession();
-    router.replace('/admin/login');
-  }
-
   return (
-    <div className="frame frame-app">
-      <header className="topbar">
-        <span className="brand-link">
-          <Brandmark />
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span className="muted" style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Equipe
-          </span>
-          <button
-            className="btn btn-ghost"
-            style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }}
-            onClick={sair}
-          >
-            Sair
-          </button>
-        </div>
-      </header>
-      <div className="screen">
-        <h1 style={{ fontSize: '1.5rem' }}>Corretores</h1>
-        <p style={{ marginBottom: '1rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <a href="/admin/dashboard">Painel →</a>
-          <a href="/admin/imoveis">Imóveis →</a>
-          <a href="/admin/exclusividades">Exclusividades →</a>
-          <a href="/admin/pagamentos">Pagamentos →</a>
-          <a href="/admin/equipe">Administradores →</a>
-        </p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Corretores</h1>
 
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <select className="input" style={{ width: 'auto' }} value={status} onChange={(e) => setStatus(e.target.value)}>
@@ -220,7 +189,6 @@ export default function AdminCorretoresPage() {
             </tbody>
           </table>
         )}
-      </div>
 
       {(aceites || aceitesLoading) && (
         <div className="modal-overlay" onClick={() => { setAceites(null); }}>
@@ -270,6 +238,6 @@ export default function AdminCorretoresPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -2,11 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { clearSession, getAccessToken, getRole } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { getAccessToken, getRole } from '@/lib/auth';
 
 interface Metricas {
   corretores: { total: number; ativos: number; pendentes: number };
@@ -61,31 +59,9 @@ export default function AdminDashboardPage() {
     carregar();
   }, [carregar]);
 
-  function sair() {
-    clearSession();
-    router.replace('/admin/login');
-  }
-
   return (
-    <div className="frame frame-app">
-      <header className="topbar">
-        <span className="brand-link">
-          <Brandmark />
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span className="muted" style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Equipe</span>
-          <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>Sair</button>
-        </div>
-      </header>
-      <div className="screen">
-        <h1 style={{ fontSize: '1.5rem' }}>Painel da equipe</h1>
-        <p style={{ marginBottom: '1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          <Link href="/admin/corretores">Verificação de CRECI →</Link>
-          <Link href="/admin/imoveis">Imóveis →</Link>
-          <Link href="/admin/exclusividades">Exclusividades →</Link>
-          <Link href="/admin/pagamentos">Pagamentos →</Link>
-          <Link href="/admin/equipe">Administradores →</Link>
-        </p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Painel da equipe</h1>
 
         {erro && <div className="banner banner-error">{erro}</div>}
         {!m ? (
@@ -130,7 +106,6 @@ export default function AdminDashboardPage() {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </>
   );
 }

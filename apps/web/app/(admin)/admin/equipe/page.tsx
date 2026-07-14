@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
-import { clearSession, getAccessToken, getRole } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { getAccessToken, getRole } from '@/lib/auth';
 
 interface AdminRow {
   id: string;
@@ -86,36 +85,10 @@ export default function AdminEquipePage() {
     }
   }
 
-  function sair() {
-    clearSession();
-    router.replace('/admin/login');
-  }
-
   return (
-    <div className="frame frame-app">
-      <header className="topbar">
-        <span className="brand-link">
-          <Brandmark />
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span className="muted" style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Equipe
-          </span>
-          <button
-            className="btn btn-ghost"
-            style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }}
-            onClick={sair}
-          >
-            Sair
-          </button>
-        </div>
-      </header>
-      <div className="screen">
-        <h1 style={{ fontSize: '1.5rem' }}>Administradores</h1>
-        <p className="muted" style={{ marginBottom: '0.75rem' }}>Equipe com acesso ao painel.</p>
-        <p style={{ marginBottom: '1.25rem' }}>
-          <a href="/admin/corretores">← Voltar para verificação de CRECI</a>
-        </p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Administradores</h1>
+      <p className="muted" style={{ marginBottom: '1.25rem' }}>Equipe com acesso ao painel.</p>
 
         <form className="card" onSubmit={criar} style={{ marginBottom: '1.5rem' }}>
           <h2 style={{ fontSize: '1.1rem', marginTop: 0 }}>Novo administrador</h2>
@@ -189,7 +162,6 @@ export default function AdminEquipePage() {
             </tbody>
           </table>
         )}
-      </div>
-    </div>
+    </>
   );
 }
