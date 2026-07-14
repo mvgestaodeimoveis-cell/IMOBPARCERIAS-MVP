@@ -117,6 +117,7 @@ main.has-bottomnav {
   align-items: center;
   justify-content: space-between;
   padding: 0.9rem 1.25rem;
+  padding-top: calc(0.9rem + env(safe-area-inset-top));
   background: var(--white);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -600,6 +601,15 @@ th {
   background: var(--bg);
   color: var(--gray-700);
 }
+/* No mobile, tabelas (admin) rolam horizontalmente em vez de espremer/cortar as colunas. */
+@media (max-width: 640px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
 .row-actions {
   display: flex;
   gap: 0.5rem;
@@ -753,6 +763,7 @@ th {
   max-width: 1140px;
   margin: 0 auto;
   padding: 0.8rem 1.25rem;
+  padding-top: calc(0.8rem + env(safe-area-inset-top));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1388,7 +1399,7 @@ a.stat-chip:hover {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 1.5rem 1rem;
+  padding: calc(1.5rem + env(safe-area-inset-top)) 1rem calc(1.5rem + env(safe-area-inset-bottom));
   overflow-y: auto;
   z-index: 100;
 }

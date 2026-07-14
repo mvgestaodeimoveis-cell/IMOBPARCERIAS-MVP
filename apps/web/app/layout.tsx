@@ -14,7 +14,15 @@ export const metadata: Metadata = {
   title: 'Imob Parcerias',
   description: 'Rede exclusiva de parcerias entre corretores de imóveis credenciados',
   manifest: '/manifest.webmanifest',
-  icons: { icon: '/logo-mark.png', apple: '/logo-mark.png' },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    title: 'Imob Parcerias',
+    statusBarStyle: 'default',
+  },
 };
 
 export const viewport: Viewport = {
@@ -23,6 +31,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
