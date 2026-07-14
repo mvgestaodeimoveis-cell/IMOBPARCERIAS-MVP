@@ -108,7 +108,7 @@ export default function ConversasPage() {
         ) : (
           <div className="conversa-lista">
             {conversas.map((c) => (
-              <Link key={c.id} href={`/parcerias/${c.id}`} className="conversa-item">
+              <Link key={c.id} href={`/conversas/${c.id}`} className="conversa-item">
                 <div className="conversa-avatar" aria-hidden>
                   {c.imovel.foto ? (
                     // eslint-disable-next-line @next/next/no-img-element

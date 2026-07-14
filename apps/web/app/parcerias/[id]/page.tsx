@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
@@ -89,15 +89,12 @@ export default function ParceriaDetalhePage() {
   const [detalhe, setDetalhe] = useState<Detalhe | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [erro, setErro] = useState<string | null>(null);
-  const [texto, setTexto] = useState('');
-  const [enviando, setEnviando] = useState(false);
   const [dataVisita, setDataVisita] = useState('');
   const [cpf, setCpf] = useState('');
   const [acaoErro, setAcaoErro] = useState<string | null>(null);
   const [valorVenda, setValorVenda] = useState('');
   const [notaAval, setNotaAval] = useState(0);
   const [comentarioAval, setComentarioAval] = useState('');
-  const fimRef = useRef<HTMLDivElement>(null);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -126,30 +123,6 @@ export default function ParceriaDetalhePage() {
     const t = setInterval(carregar, 8000);
     return () => clearInterval(t);
   }, [carregar]);
-
-  useEffect(() => {
-    fimRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mensagens.length]);
-
-  async function enviar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!texto.trim()) return;
-    const token = getAccessToken();
-    setEnviando(true);
-    try {
-      const msg = await apiFetch<Mensagem>(`/parcerias/${params.id}/mensagens`, {
-        method: 'POST',
-        token,
-        body: { corpo: texto.trim() },
-      });
-      setMensagens((m) => [...m, msg]);
-      setTexto('');
-    } catch (err) {
-      setAcaoErro(err instanceof ApiRequestError ? err.message : 'Erro ao enviar mensagem.');
-    } finally {
-      setEnviando(false);
-    }
-  }
 
   async function registrarVisita() {
     if (!dataVisita) return;
@@ -456,64 +429,19 @@ export default function ParceriaDetalhePage() {
               </div>
             )}
 
-            {/* Chat interno */}
-            <div className="card chat-card" style={{ marginTop: '0.85rem' }}>
-              <Link href={`/vitrine/${detalhe.imovel.id}`} className="chat-imovel">
-                <span className="chat-imovel-ico" aria-hidden>🏠</span>
-                <span className="chat-imovel-info">
-                  <strong>
-                    {TIPO_LABEL[detalhe.imovel.tipo] ?? detalhe.imovel.tipo} · {detalhe.imovel.bairro}
-                  </strong>
-                  <span>{formatBRL(detalhe.imovel.preco)} · ver imóvel →</span>
+            {/* Chat — mora na central de conversas */}
+            <Link href={`/conversas/${detalhe.id}`} className="card chat-atalho">
+              <span className="chat-atalho-ico" aria-hidden>💬</span>
+              <span className="chat-atalho-info">
+                <strong>Conversa com {detalhe.outro_nome}</strong>
+                <span className="muted">
+                  {mensagens.length > 0
+                    ? mensagens[mensagens.length - 1].corpo
+                    : 'Combine a visita pelo chat.'}
                 </span>
-              </Link>
-
-              <div className="chat-janela">
-                {mensagens.length === 0 ? (
-                  <p className="chat-vazio">
-                    Nenhuma mensagem ainda. Combine a visita por aqui — o contato direto é liberado
-                    após a confirmação bilateral.
-                  </p>
-                ) : (
-                  mensagens.map((m) => (
-                    <div key={m.id} className={`chat-msg${m.meu ? ' meu' : ''}`}>
-                      <span className="chat-autor">{m.meu ? 'Você' : detalhe.outro_nome}</span>
-                      <span className="chat-bolha">{m.corpo}</span>
-                      <span className="chat-hora">
-                        {new Date(m.criado_em).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  ))
-                )}
-                <div ref={fimRef} />
-              </div>
-
-              {detalhe.status === 'aceita' ? (
-                <form onSubmit={enviar} className="chat-composer">
-                  <input
-                    className="input"
-                    placeholder="Escreva uma mensagem…"
-                    value={texto}
-                    maxLength={2000}
-                    onChange={(e) => setTexto(e.target.value)}
-                  />
-                  <button
-                    className="btn btn-emerald chat-enviar"
-                    disabled={enviando || !texto.trim()}
-                    aria-label="Enviar mensagem"
-                  >
-                    ➤
-                  </button>
-                </form>
-              ) : (
-                <p className="muted" style={{ margin: '0.5rem 0 0', fontSize: '0.82rem' }}>
-                  O chat é encerrado após a confirmação bilateral. O histórico fica registrado.
-                </p>
-              )}
-            </div>
+              </span>
+              <span className="chat-atalho-seta" aria-hidden>→</span>
+            </Link>
           </>
         )}
       </div>
