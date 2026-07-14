@@ -1449,6 +1449,14 @@ a.stat-chip:hover {
   border-radius: 8px;
   display: block;
 }
+/* Rede de segurança: qualquer <img> solto em .gallery-thumbs também fica pequeno. */
+.gallery-thumbs > img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
 
 /* Importação por link */
 .import-box {
