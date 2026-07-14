@@ -9,6 +9,7 @@ import { getAccessToken, isAuthenticated, getRole } from '@/lib/auth';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { BottomNav } from '@/components/BottomNav';
+import { Lightbox } from '@/components/Lightbox';
 
 interface ImovelVitrine {
   id: string;
@@ -46,6 +47,7 @@ export default function VitrineDetalhePage() {
   const [parceriaErro, setParceriaErro] = useState<string | null>(null);
   const [solicitada, setSolicitada] = useState(false);
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const [lightbox, setLightbox] = useState<number | null>(null);
   const [appNav, setAppNav] = useState(false);
 
   useEffect(() => {
@@ -114,12 +116,19 @@ export default function VitrineDetalhePage() {
               <>
                 {imovel.fotos.length > 0 ? (
                   <div className="gallery">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      className="gallery-main"
-                      src={imovel.fotos[fotoAtiva] ?? imovel.fotos[0]}
-                      alt={`Foto ${fotoAtiva + 1} do imóvel`}
-                    />
+                    <button
+                      type="button"
+                      className="gallery-main-btn"
+                      onClick={() => setLightbox(fotoAtiva)}
+                      aria-label="Ampliar foto"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        className="gallery-main"
+                        src={imovel.fotos[fotoAtiva] ?? imovel.fotos[0]}
+                        alt={`Foto ${fotoAtiva + 1} do imóvel`}
+                      />
+                    </button>
                     {imovel.fotos.length > 1 && (
                       <div className="gallery-thumbs">
                         {imovel.fotos.map((url, i) => (
@@ -238,6 +247,9 @@ export default function VitrineDetalhePage() {
         </section>
       </main>
       {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
+      {lightbox !== null && imovel && (
+        <Lightbox fotos={imovel.fotos} index={lightbox} onClose={() => setLightbox(null)} />
+      )}
     </div>
   );
 }

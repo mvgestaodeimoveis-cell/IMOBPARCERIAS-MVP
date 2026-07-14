@@ -7,6 +7,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
 import { Brandmark } from '@/components/Brandmark';
+import { Lightbox } from '@/components/Lightbox';
 
 interface Imovel {
   id: string;
@@ -52,6 +53,7 @@ export default function ImovelDetalhePage() {
   const [erro, setErro] = useState<string | null>(null);
   const [acao, setAcao] = useState(false);
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const [lightbox, setLightbox] = useState<number | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -116,12 +118,19 @@ export default function ImovelDetalhePage() {
           <>
             {imovel.fotos && imovel.fotos.length > 0 ? (
               <div className="gallery">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="gallery-main"
-                  src={imovel.fotos[fotoAtiva] ?? imovel.fotos[0]}
-                  alt={`Foto ${fotoAtiva + 1} do imóvel`}
-                />
+                <button
+                  type="button"
+                  className="gallery-main-btn"
+                  onClick={() => setLightbox(fotoAtiva)}
+                  aria-label="Ampliar foto"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="gallery-main"
+                    src={imovel.fotos[fotoAtiva] ?? imovel.fotos[0]}
+                    alt={`Foto ${fotoAtiva + 1} do imóvel`}
+                  />
+                </button>
                 {imovel.fotos.length > 1 && (
                   <div className="gallery-thumbs">
                     {imovel.fotos.map((url, i) => (
@@ -221,6 +230,9 @@ export default function ImovelDetalhePage() {
           </>
         )}
       </div>
+      {lightbox !== null && imovel && (
+        <Lightbox fotos={imovel.fotos} index={lightbox} onClose={() => setLightbox(null)} />
+      )}
     </div>
   );
 }
