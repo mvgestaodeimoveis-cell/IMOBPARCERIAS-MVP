@@ -49,13 +49,13 @@ export default function SelecaoClientePage() {
     ).then((res) => setImoveis(res.filter((x): x is ImovelVitrine => x !== null)));
   }, [params.token]);
 
-  function gostei(im: ImovelVitrine) {
-    if (!corretorWa) return;
+  function waHref(im: ImovelVitrine): string {
+    if (!corretorWa) return '#';
     const digitos = corretorWa.replace(/\D/g, '');
     const numero = digitos.length <= 11 ? `55${digitos}` : digitos;
     const local = `${TIPO_LABEL[im.tipo] ?? im.tipo} em ${im.bairro}, ${im.cidade}`;
     const msg = `Olá${corretorNome ? ` ${corretorNome.split(' ')[0]}` : ''}! Vi a seleção que você me enviou e gostei deste: ${formatBRL(im.preco)} — ${local}.`;
-    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, '_blank');
+    return `https://wa.me/${numero}?text=${encodeURIComponent(msg)}`;
   }
 
   return (
@@ -137,13 +137,14 @@ export default function SelecaoClientePage() {
                         </div>
                       )}
                       {corretorWa && (
-                        <button
-                          type="button"
+                        <a
                           className="btn btn-emerald cliente-gostei"
-                          onClick={() => gostei(im)}
+                          href={waHref(im)}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
                           💚 Gostei deste — avisar corretor
-                        </button>
+                        </a>
                       )}
                     </div>
                   </article>

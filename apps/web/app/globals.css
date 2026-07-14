@@ -1731,6 +1731,10 @@ a.stat-chip:hover {
 .cliente-gostei {
   width: 100%;
   margin-top: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 /* Modal (admin) */
