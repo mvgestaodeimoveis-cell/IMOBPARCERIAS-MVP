@@ -2854,6 +2854,21 @@ a.stat-chip:hover {
     max-width: 1120px;
     margin: 0 auto;
   }
+  /* Chat: janela de conversa focada e centralizada no desktop */
+  .frame.chat-page {
+    max-width: 860px;
+    margin: 0 auto;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .chat-page .chat-topbar {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  /* Inbox de conversas: coluna confortável no desktop */
+  .conversa-lista {
+    max-width: 640px;
+  }
   .wizard-frame > .topbar,
   .wizard-frame > .wizard-footer {
     padding-left: max(1.25rem, calc((100% - 640px) / 2));
