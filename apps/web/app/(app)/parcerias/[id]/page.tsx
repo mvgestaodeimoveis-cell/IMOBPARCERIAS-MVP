@@ -302,7 +302,7 @@ export default function ParceriaDetalhePage() {
             {/* Confirmação bilateral */}
             <div className="card" style={{ marginTop: '0.85rem' }}>
               <h3 className="detail-label">Confirmação da visita</h3>
-              <p className="muted" style={{ margin: '-0.25rem 0 0.6rem', fontSize: '0.82rem' }}>
+              <p className="muted" style={{ margin: '0 0 0.9rem', fontSize: '0.82rem' }}>
                 Os dois lados confirmam para liberar os contatos.
               </p>
               {acaoErro && <div className="banner banner-error">{acaoErro}</div>}
@@ -369,7 +369,7 @@ export default function ParceriaDetalhePage() {
               )}
 
               {detalhe.status === 'em_negociacao' && (
-                <div className="banner banner-success">
+                <div className="banner banner-success" style={{ marginTop: '0.9rem' }}>
                   Confirmação concluída! Janela de {detalhe.confirmacao.janela_dias} dias ativada. Contato liberado.
                 </div>
               )}
