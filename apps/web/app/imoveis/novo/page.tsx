@@ -67,6 +67,7 @@ const DOCS_SUGERIDOS = [
 
 const TOTAL_ETAPAS = 5;
 const TITULOS = ['Tipo do anúncio', 'Localização', 'Detalhes', 'Fotos', 'Revisão'];
+const RASCUNHO_KEY = 'imob.rascunho_imovel';
 
 function Stepper({
   label,
@@ -137,6 +138,10 @@ export default function NovoImovelPage() {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [linkOrigem, setLinkOrigem] = useState<string | null>(null);
 
+  // Rascunho automático (reduz abandono): salva o progresso no aparelho e permite retomar.
+  const [salvarAtivo, setSalvarAtivo] = useState(false);
+  const [temRascunho, setTemRascunho] = useState(false);
+
   // Funil (KPI): registra o início do cadastro uma vez, ao abrir o formulário.
   useEffect(() => {
     const token = getAccessToken();
@@ -144,6 +149,82 @@ export default function NovoImovelPage() {
       apiFetch('/imoveis/cadastro-sessao', { method: 'POST', token }).catch(() => {});
     }
   }, []);
+
+  // Ao abrir: se há um rascunho com conteúdo, oferece retomar; senão, já começa a salvar.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RASCUNHO_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        const temConteudo =
+          d && (d.form?.cep || d.form?.preco || d.fotos?.length || (d.step ?? 1) > 1);
+        if (temConteudo) {
+          setTemRascunho(true);
+          return;
+        }
+      }
+    } catch {
+      /* ignora rascunho inválido */
+    }
+    setSalvarAtivo(true);
+  }, []);
+
+  // Salva o rascunho a cada mudança (apenas depois de decidir retomar/começar novo).
+  useEffect(() => {
+    if (!salvarAtivo) return;
+    try {
+      localStorage.setItem(
+        RASCUNHO_KEY,
+        JSON.stringify({
+          form,
+          emCondominio,
+          counts,
+          diferenciais,
+          documentacao,
+          fotos,
+          exclusividade,
+          exclusividadeVencimento,
+          contratoUrl,
+          linkOrigem,
+          step,
+          salvoEm: Date.now(),
+        }),
+      );
+    } catch {
+      /* localStorage cheio/indisponível — ignora */
+    }
+  }, [salvarAtivo, form, emCondominio, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);
+
+  function restaurarRascunho() {
+    try {
+      const d = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || '{}');
+      if (d.form) setForm(d.form);
+      if (typeof d.emCondominio === 'boolean') setEmCondominio(d.emCondominio);
+      if (d.counts) setCounts(d.counts);
+      if (Array.isArray(d.diferenciais)) setDiferenciais(d.diferenciais);
+      if (Array.isArray(d.documentacao)) setDocumentacao(d.documentacao);
+      if (Array.isArray(d.fotos)) setFotos(d.fotos);
+      if (typeof d.exclusividade === 'boolean') setExclusividade(d.exclusividade);
+      if (d.exclusividadeVencimento) setExclusividadeVencimento(d.exclusividadeVencimento);
+      if (d.contratoUrl) setContratoUrl(d.contratoUrl);
+      if (d.linkOrigem) setLinkOrigem(d.linkOrigem);
+      if (d.step) setStep(Math.min(TOTAL_ETAPAS, Math.max(1, d.step)));
+    } catch {
+      /* ignora */
+    }
+    setTemRascunho(false);
+    setSalvarAtivo(true);
+  }
+
+  function descartarRascunho() {
+    try {
+      localStorage.removeItem(RASCUNHO_KEY);
+    } catch {
+      /* ignora */
+    }
+    setTemRascunho(false);
+    setSalvarAtivo(true);
+  }
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -355,6 +436,11 @@ export default function NovoImovelPage() {
     setLoading(true);
     try {
       await apiFetch('/imoveis', { method: 'POST', token, body: payload });
+      try {
+        localStorage.removeItem(RASCUNHO_KEY);
+      } catch {
+        /* ignora */
+      }
       router.push('/painel?imovel=ok');
     } catch (err) {
       if (err instanceof ApiRequestError) {
@@ -404,6 +490,22 @@ export default function NovoImovelPage() {
       </div>
 
       <div className="wizard-body">
+        {temRascunho && (
+          <div className="rascunho-banner">
+            <div>
+              <strong>Você tem um cadastro em andamento</strong>
+              <p>Quer continuar de onde parou?</p>
+            </div>
+            <div className="rascunho-acoes">
+              <button type="button" className="btn btn-emerald" onClick={restaurarRascunho}>
+                Continuar
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={descartarRascunho}>
+                Começar novo
+              </button>
+            </div>
+          </div>
+        )}
         {erro && <div className="banner banner-error">{erro}</div>}
 
         {/* ETAPA 1 — Tipo do anúncio */}
@@ -721,6 +823,14 @@ export default function NovoImovelPage() {
               Adicione pelo menos <strong>5 fotos</strong> para o imóvel aparecer na vitrine. A
               primeira é a capa.
             </p>
+            <div className="foto-dicas">
+              <strong>Dicas para fotos que vendem</strong>
+              <ul>
+                <li>📱 Prefira a <strong>horizontal</strong> (deitado) — encaixa melhor na vitrine.</li>
+                <li>☀️ Ambientes <strong>iluminados</strong>, de dia e com luzes acesas.</li>
+                <li>🧹 Ambiente arrumado; capriche na <strong>foto de capa</strong> (a mais bonita).</li>
+              </ul>
+            </div>
             <PhotoUploader value={fotos} onChange={setFotos} />
             {fotos.length > 0 && fotos.length < 5 && (
               <div className="field-hint" style={{ marginTop: '0.75rem' }}>

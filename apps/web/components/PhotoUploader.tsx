@@ -65,6 +65,10 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
     onChange(value.filter((u) => u !== url));
   }
 
+  function tornarCapa(url: string) {
+    onChange([url, ...value.filter((u) => u !== url)]);
+  }
+
   return (
     <div className="uploader">
       <div className="uploader-grid">
@@ -72,8 +76,14 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
           <div key={url} className="uploader-thumb">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt={`Foto ${i + 1}`} />
-            {i === 0 && <span className="uploader-cover">Capa</span>}
-            <button type="button" aria-label="Remover foto" onClick={() => remover(url)}>
+            {i === 0 ? (
+              <span className="uploader-cover">Capa</span>
+            ) : (
+              <button type="button" className="uploader-setcover" onClick={() => tornarCapa(url)}>
+                Tornar capa
+              </button>
+            )}
+            <button type="button" className="uploader-del" aria-label="Remover foto" onClick={() => remover(url)}>
               ×
             </button>
           </div>
