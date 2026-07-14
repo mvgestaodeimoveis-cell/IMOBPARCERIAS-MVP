@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { clearSession, getAccessToken, routeForStatus } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { getAccessToken, routeForStatus } from '@/lib/auth';
+import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 
 interface Me {
@@ -96,28 +96,13 @@ export default function AppHomePage() {
     }
   }
 
-  function sair() {
-    clearSession();
-    router.replace('/login');
-  }
-
   const total = imoveis?.length ?? 0;
   const disponiveis = imoveis?.filter((im) => im.status === 'ativo').length ?? 0;
   const emNegociacao = imoveis?.filter((im) => im.status === 'em_negociacao').length ?? 0;
 
   return (
     <div className="frame frame-app">
-      <header className="topbar">
-        <Brandmark />
-        <nav className="desktop-nav">
-          <Link href="/painel" className="active">Início</Link>
-          <Link href="/vitrine">Vitrine</Link>
-          <Link href="/parcerias">Parcerias{pendentes > 0 ? ` (${pendentes})` : ''}</Link>
-        </nav>
-        <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
-          Sair
-        </button>
-      </header>
+      <AppHeader active="inicio" parceriasBadge={pendentes} />
 
       <div className="screen has-bottomnav">
         <h1 style={{ fontSize: '1.5rem' }}>Olá{me ? `, ${me.nome.split(' ')[0]}` : ''}!</h1>

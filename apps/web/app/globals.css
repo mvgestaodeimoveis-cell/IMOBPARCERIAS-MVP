@@ -2743,6 +2743,11 @@ a.stat-chip:hover {
 .desktop-nav {
   display: none;
 }
+.topbar-sair {
+  width: auto;
+  min-height: auto;
+  padding: 0.45rem 0.9rem;
+}
 
 /* ---- Tablet ---- */
 @media (min-width: 768px) {

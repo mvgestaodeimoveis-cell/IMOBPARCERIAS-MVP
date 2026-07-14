@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { clearSession, getAccessToken } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { getAccessToken } from '@/lib/auth';
+import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 
 interface Parceria {
@@ -126,11 +126,6 @@ export default function ParceriasPage() {
     }
   }
 
-  function sair() {
-    clearSession();
-    router.replace('/login');
-  }
-
   function cardParceria(p: Parceria, comoCaptador: boolean) {
     return (
       <div key={p.id} className="card" style={{ marginBottom: '0.75rem' }}>
@@ -190,17 +185,7 @@ export default function ParceriasPage() {
 
   return (
     <div className="frame frame-app">
-      <header className="topbar">
-        <Brandmark />
-        <nav className="desktop-nav">
-          <Link href="/painel">Início</Link>
-          <Link href="/vitrine">Vitrine</Link>
-          <Link href="/parcerias" className="active">Parcerias</Link>
-        </nav>
-        <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
-          Sair
-        </button>
-      </header>
+      <AppHeader active="parcerias" />
 
       <div className="screen has-bottomnav">
         <h1 style={{ fontSize: '1.5rem' }}>Minhas parcerias</h1>

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { AppHeader } from '@/components/AppHeader';
 
 interface Endereco {
   cep: string;
@@ -225,12 +225,7 @@ export default function ParceriaDetalhePage() {
 
   return (
     <div className="frame frame-app">
-      <header className="topbar">
-        <Brandmark />
-        <Link href="/parcerias" className="auth-back">
-          <span aria-hidden>←</span> Parcerias
-        </Link>
-      </header>
+      <AppHeader back={{ href: '/parcerias', label: 'Parcerias' }} />
 
       <div className="screen">
         {erro && <div className="banner banner-error">{erro}</div>}

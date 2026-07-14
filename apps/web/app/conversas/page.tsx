@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { clearSession, getAccessToken } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { getAccessToken } from '@/lib/auth';
+import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 
 interface Conversa {
@@ -66,25 +66,9 @@ export default function ConversasPage() {
       .catch(() => setConversas([]));
   }, [router]);
 
-  function sair() {
-    clearSession();
-    router.replace('/login');
-  }
-
   return (
     <div className="frame frame-app">
-      <header className="topbar">
-        <Brandmark />
-        <nav className="desktop-nav">
-          <Link href="/painel">Início</Link>
-          <Link href="/vitrine">Vitrine</Link>
-          <Link href="/conversas" className="active">Chat</Link>
-          <Link href="/parcerias">Parcerias</Link>
-        </nav>
-        <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.45rem 0.9rem' }} onClick={sair}>
-          Sair
-        </button>
-      </header>
+      <AppHeader active="conversas" />
 
       <div className="screen has-bottomnav">
         <h1 style={{ fontSize: '1.5rem' }}>Conversas</h1>

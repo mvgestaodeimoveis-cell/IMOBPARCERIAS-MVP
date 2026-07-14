@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
-import { Brandmark } from '@/components/Brandmark';
+import { AppHeader } from '@/components/AppHeader';
 import { Lightbox } from '@/components/Lightbox';
 
 interface Imovel {
@@ -102,12 +101,7 @@ export default function ImovelDetalhePage() {
 
   return (
     <div className="frame frame-app">
-      <header className="topbar">
-        <Brandmark />
-        <Link href="/painel" className="auth-back">
-          <span aria-hidden>←</span> Carteira
-        </Link>
-      </header>
+      <AppHeader back={{ href: '/painel', label: 'Carteira' }} />
 
       <div className="screen">
         {erro && <div className="banner banner-error">{erro}</div>}
