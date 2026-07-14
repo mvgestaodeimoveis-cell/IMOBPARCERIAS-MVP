@@ -1432,6 +1432,99 @@ a.stat-chip:hover {
   background: #e6f5ec;
   color: var(--emerald-600);
 }
+/* Confirmação da visita — itens em cartão + ação inline */
+.confirm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.confirm-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.confirm-item.ok {
+  border-color: #bfe6cf;
+  background: #f3fbf6;
+}
+.confirm-ico {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--gray-500);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.confirm-item.ok .confirm-ico {
+  background: var(--emerald);
+  border-color: var(--emerald);
+  color: #fff;
+}
+.confirm-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.confirm-titulo {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--navy);
+}
+.confirm-sub {
+  font-size: 0.74rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.confirm-status {
+  flex-shrink: 0;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-500);
+}
+.confirm-item.ok .confirm-status {
+  background: #e6f5ec;
+  color: var(--emerald-600);
+}
+.confirm-acao {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+.confirm-acao label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 0.45rem;
+}
+.confirm-acao-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.confirm-acao-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.confirm-acao-row .btn-sm {
+  flex-shrink: 0;
+}
 /* Botão compacto reutilizável */
 .btn-sm {
   width: auto;

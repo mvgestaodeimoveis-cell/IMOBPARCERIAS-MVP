@@ -307,59 +307,64 @@ export default function ParceriaDetalhePage() {
               </p>
               {acaoErro && <div className="banner banner-error">{acaoErro}</div>}
 
-              <ul className="check-list">
-                <li className={detalhe.confirmacao.visita_em ? 'ok' : ''}>
-                  <span className="check-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '○'}</span>
-                  <span className="check-texto">
-                    Data da visita <span className="muted">· captador</span>
-                    {detalhe.confirmacao.visita_em && (
-                      <span className="muted" style={{ display: 'block', fontSize: '0.8rem' }}>
-                        {new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')}
-                      </span>
-                    )}
-                  </span>
-                  <span className="check-status">{detalhe.confirmacao.visita_em ? 'Confirmado' : 'Pendente'}</span>
-                </li>
-                <li className={detalhe.confirmacao.cpf_preenchido ? 'ok' : ''}>
-                  <span className="check-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '○'}</span>
-                  <span className="check-texto">
-                    CPF do cliente <span className="muted">· comprador</span>
-                  </span>
-                  <span className="check-status">{detalhe.confirmacao.cpf_preenchido ? 'Inserido' : 'Pendente'}</span>
-                </li>
-              </ul>
+              <div className="confirm-list">
+                <div className={`confirm-item${detalhe.confirmacao.visita_em ? ' ok' : ''}`}>
+                  <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '1'}</span>
+                  <div className="confirm-body">
+                    <span className="confirm-titulo">Data da visita</span>
+                    <span className="confirm-sub">
+                      {detalhe.confirmacao.visita_em
+                        ? new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')
+                        : 'Captador'}
+                    </span>
+                  </div>
+                  <span className="confirm-status">{detalhe.confirmacao.visita_em ? 'Confirmado' : 'Pendente'}</span>
+                </div>
+                <div className={`confirm-item${detalhe.confirmacao.cpf_preenchido ? ' ok' : ''}`}>
+                  <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '2'}</span>
+                  <div className="confirm-body">
+                    <span className="confirm-titulo">CPF do cliente</span>
+                    <span className="confirm-sub">Comprador</span>
+                  </div>
+                  <span className="confirm-status">{detalhe.confirmacao.cpf_preenchido ? 'Inserido' : 'Pendente'}</span>
+                </div>
+              </div>
 
               {detalhe.status === 'aceita' && detalhe.papel === 'captador' && !detalhe.confirmacao.visita_em && (
-                <div className="field">
-                  <label htmlFor="visita">Registrar data da visita</label>
-                  <input
-                    id="visita"
-                    type="date"
-                    className="input"
-                    value={dataVisita}
-                    onChange={(e) => setDataVisita(e.target.value)}
-                  />
-                  <button className="btn btn-emerald" style={{ marginTop: '0.5rem' }} onClick={registrarVisita} disabled={!dataVisita}>
-                    Registrar visita
-                  </button>
+                <div className="confirm-acao">
+                  <label htmlFor="visita">Informe a data da visita</label>
+                  <div className="confirm-acao-row">
+                    <input
+                      id="visita"
+                      type="date"
+                      className="input"
+                      value={dataVisita}
+                      onChange={(e) => setDataVisita(e.target.value)}
+                    />
+                    <button className="btn btn-emerald btn-sm" onClick={registrarVisita} disabled={!dataVisita}>
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               )}
 
               {detalhe.status === 'aceita' && detalhe.papel === 'comprador' && !detalhe.confirmacao.cpf_preenchido && (
-                <div className="field">
-                  <label htmlFor="cpf">CPF do cliente</label>
-                  <input
-                    id="cpf"
-                    inputMode="numeric"
-                    className="input"
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    maxLength={14}
-                    onChange={(e) => setCpf(maskCpf(e.target.value))}
-                  />
-                  <button className="btn btn-emerald" style={{ marginTop: '0.5rem' }} onClick={inserirCpf} disabled={cpf.replace(/\D/g, '').length !== 11}>
-                    Inserir CPF
-                  </button>
+                <div className="confirm-acao">
+                  <label htmlFor="cpf">Informe o CPF do cliente</label>
+                  <div className="confirm-acao-row">
+                    <input
+                      id="cpf"
+                      inputMode="numeric"
+                      className="input"
+                      placeholder="000.000.000-00"
+                      value={cpf}
+                      maxLength={14}
+                      onChange={(e) => setCpf(maskCpf(e.target.value))}
+                    />
+                    <button className="btn btn-emerald btn-sm" onClick={inserirCpf} disabled={cpf.replace(/\D/g, '').length !== 11}>
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               )}
 
