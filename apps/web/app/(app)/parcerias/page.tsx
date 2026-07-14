@@ -111,43 +111,43 @@ export default function ParceriasPage() {
 
   function cardParceria(p: Parceria, comoCaptador: boolean) {
     return (
-      <div key={p.id} className="card" style={{ marginBottom: '0.75rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-          <strong>
-            {TIPO_LABEL[p.imovel_tipo] ?? p.imovel_tipo} · {p.imovel_bairro}, {p.imovel_cidade}
-          </strong>
+      <div key={p.id} className="card parceria-card">
+        <div className="parceria-card-head">
+          <div className="parceria-card-titulo">
+            <strong>{TIPO_LABEL[p.imovel_tipo] ?? p.imovel_tipo} · {p.imovel_bairro}</strong>
+            <span className="muted">{p.imovel_cidade}</span>
+          </div>
           <span className={statusBadgeClass(p.status)}>{STATUS_LABEL[p.status] ?? p.status}</span>
         </div>
-        <p className="muted" style={{ margin: '0.35rem 0', fontSize: '0.88rem' }}>
-          {formatBRL(p.imovel_preco)} · Cliente: {p.cliente_nome}
-          {comoCaptador ? '' : ` · Captador: ${p.captador_nome}`}
-        </p>
+        <div className="parceria-card-meta">
+          <span className="parceria-preco">{formatBRL(p.imovel_preco)}</span>
+          <span className="muted">Cliente: {p.cliente_nome}</span>
+          {!comoCaptador && <span className="muted">Captador: {p.captador_nome}</span>}
+        </div>
         {p.recusa_motivo && (
-          <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.82rem' }}>
-            Motivo: {p.recusa_motivo}
-          </p>
+          <p className="muted parceria-motivo">Motivo: {p.recusa_motivo}</p>
         )}
-        <div className="row-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem' }} onClick={() => verContrato(p.id)}>
+        <div className="parceria-card-acoes">
+          <button className="btn btn-ghost btn-sm" onClick={() => verContrato(p.id)}>
             Ver contrato
           </button>
           {['aceita', 'em_negociacao', 'encerrada'].includes(p.status) && (
-            <Link className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem' }} href={`/parcerias/${p.id}`}>
+            <Link className="btn btn-emerald btn-sm" href={`/parcerias/${p.id}`}>
               Abrir conversa
             </Link>
           )}
           {comoCaptador && p.status === 'solicitada' && (
             <>
-              <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem' }} onClick={() => aceitar(p.id)}>
+              <button className="btn btn-emerald btn-sm" onClick={() => aceitar(p.id)}>
                 Aceitar
               </button>
-              <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem' }} onClick={() => recusar(p.id)}>
+              <button className="btn btn-ghost btn-sm" onClick={() => recusar(p.id)}>
                 Recusar
               </button>
             </>
           )}
           {!comoCaptador && ['solicitada', 'aceita'].includes(p.status) && (
-            <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem', color: 'var(--error)' }} onClick={() => cancelar(p.id)}>
+            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--error)' }} onClick={() => cancelar(p.id)}>
               Cancelar
             </button>
           )}
@@ -156,7 +156,7 @@ export default function ParceriasPage() {
           <div className="card" style={{ marginTop: '0.75rem', background: 'var(--bg)', whiteSpace: 'pre-wrap', fontSize: '0.82rem', lineHeight: 1.5 }}>
             {contrato.texto}
             <p style={{ marginBottom: 0 }}>
-              <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem', marginTop: '0.5rem' }} onClick={() => setContrato(null)}>
+              <button className="btn btn-ghost btn-sm" style={{ marginTop: '0.5rem' }} onClick={() => setContrato(null)}>
                 Fechar
               </button>
             </p>
@@ -169,8 +169,8 @@ export default function ParceriasPage() {
   return (
     <>
       <h1 style={{ fontSize: '1.5rem' }}>Minhas parcerias</h1>
-      <p className="muted" style={{ marginBottom: '1.25rem' }}>
-        <Link href="/painel">← Voltar ao início</Link>
+      <p className="muted" style={{ marginBottom: '1.5rem' }}>
+        Solicitações que você recebeu e enviou.
       </p>
 
         {erro && <div className="banner banner-error">{erro}</div>}
@@ -179,21 +179,25 @@ export default function ParceriasPage() {
           <p className="muted">Carregando…</p>
         ) : (
           <>
-            <h2 style={{ fontSize: '1.1rem' }}>
-              Recebidas (meus imóveis)
+            <div className="parceria-secao">
+              <h2>Recebidas</h2>
+              <span className="parceria-secao-sub">nos meus imóveis</span>
               {recebidas.filter((p) => p.status === 'solicitada').length > 0 && (
-                <span className="badge badge-orange" style={{ marginLeft: '0.5rem' }}>
+                <span className="badge badge-orange">
                   {recebidas.filter((p) => p.status === 'solicitada').length} aguardando
                 </span>
               )}
-            </h2>
+            </div>
             {recebidas.length === 0 ? (
               <div className="card"><p className="muted" style={{ margin: 0 }}>Nenhuma solicitação recebida.</p></div>
             ) : (
               recebidas.map((p) => cardParceria(p, true))
             )}
 
-            <h2 style={{ fontSize: '1.1rem', marginTop: '1.5rem' }}>Enviadas (meus clientes)</h2>
+            <div className="parceria-secao" style={{ marginTop: '1.75rem' }}>
+              <h2>Enviadas</h2>
+              <span className="parceria-secao-sub">para imóveis de parceiros</span>
+            </div>
             {enviadas.length === 0 ? (
               <div className="card"><p className="muted" style={{ margin: 0 }}>Você ainda não solicitou parcerias.</p></div>
             ) : (

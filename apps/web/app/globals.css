@@ -1313,6 +1313,83 @@ a.stat-chip:hover {
   flex-shrink: 0;
   margin-top: 0.15rem;
 }
+/* Botão compacto reutilizável */
+.btn-sm {
+  width: auto;
+  min-height: auto;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+/* Lista de parcerias */
+.parceria-secao {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.parceria-secao h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.parceria-secao-sub {
+  font-size: 0.8rem;
+  color: var(--gray-500);
+}
+.parceria-secao .badge {
+  margin-left: auto;
+}
+.parceria-card {
+  margin-bottom: 0.75rem;
+}
+.parceria-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.parceria-card-titulo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.parceria-card-titulo strong {
+  font-size: 0.98rem;
+  line-height: 1.3;
+  color: var(--navy);
+}
+.parceria-card-titulo .muted {
+  font-size: 0.8rem;
+}
+.parceria-card-head .badge {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+.parceria-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.75rem;
+  margin: 0.6rem 0 0.85rem;
+}
+.parceria-preco {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--navy);
+}
+.parceria-card-meta .muted {
+  font-size: 0.84rem;
+}
+.parceria-motivo {
+  font-size: 0.82rem;
+  margin: 0 0 0.6rem;
+}
+.parceria-card-acoes {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 .check-list {
   list-style: none;
   margin: 0;
