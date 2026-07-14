@@ -8,6 +8,7 @@ import { isAuthenticated, getRole, getAccessToken } from '@/lib/auth';
 import { encodeSelecao } from '@/lib/selecao';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
+import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 
 interface ImovelVitrine {
@@ -113,7 +114,7 @@ export default function VitrinePage() {
 
   return (
     <div className="site">
-      <Topbar />
+      {appNav ? <AppHeader active="vitrine" /> : <Topbar />}
 
       <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">

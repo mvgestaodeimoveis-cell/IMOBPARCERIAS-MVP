@@ -2854,6 +2854,11 @@ a.stat-chip:hover {
     padding-left: max(2rem, calc((100% - 1120px) / 2));
     padding-right: max(2rem, calc((100% - 1120px) / 2));
   }
+  /* Vitrine logada usa o AppHeader dentro do layout .site */
+  .site > .topbar {
+    padding-left: max(2rem, calc((100% - 1120px) / 2));
+    padding-right: max(2rem, calc((100% - 1120px) / 2));
+  }
   .frame-app > .screen {
     width: 100%;
     max-width: 1120px;
