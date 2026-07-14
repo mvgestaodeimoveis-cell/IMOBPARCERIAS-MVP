@@ -383,26 +383,28 @@ export default function ParceriaDetalhePage() {
                 {detalhe.status === 'em_negociacao' && (
                   <>
                     {detalhe.papel === 'captador' ? (
-                      <div className="field">
+                      <div className="confirm-acao" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
                         <label htmlFor="valor">Declarar venda — valor final (R$)</label>
-                        <input
-                          id="valor"
-                          inputMode="numeric"
-                          className="input"
-                          placeholder="Ex.: 500000"
-                          value={valorVenda}
-                          onChange={(e) => setValorVenda(e.target.value)}
-                        />
-                        <button className="btn btn-emerald" style={{ marginTop: '0.5rem' }} onClick={declararVenda}>
-                          Declarar venda
-                        </button>
+                        <div className="confirm-acao-row">
+                          <input
+                            id="valor"
+                            inputMode="numeric"
+                            className="input"
+                            placeholder="Ex.: 500000"
+                            value={valorVenda}
+                            onChange={(e) => setValorVenda(e.target.value)}
+                          />
+                          <button className="btn btn-emerald btn-sm" onClick={declararVenda}>
+                            Declarar
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <p className="muted" style={{ fontSize: '0.86rem' }}>
+                      <p className="muted" style={{ fontSize: '0.86rem', margin: 0 }}>
                         A declaração da venda é feita pelo corretor captador.
                       </p>
                     )}
-                    <button className="btn btn-ghost" style={{ marginTop: '0.5rem' }} onClick={encerrar}>
+                    <button className="btn btn-ghost btn-sm" style={{ marginTop: '0.75rem' }} onClick={encerrar}>
                       Encerrar sem venda
                     </button>
                   </>
@@ -410,13 +412,22 @@ export default function ParceriaDetalhePage() {
 
                 {detalhe.venda && (
                   <>
-                    <p style={{ margin: '0 0 0.5rem' }}>
-                      <strong>Venda:</strong> {formatBRL(detalhe.venda.valor)}<br />
-                      <strong>Comissão (5%):</strong> {formatBRL(detalhe.venda.comissao)}<br />
-                      <strong>Taxa da plataforma (10% da comissão):</strong> {formatBRL(detalhe.venda.taxa_plataforma)}
-                    </p>
+                    <div className="info-stack">
+                      <div className="info-item">
+                        <span className="info-dt">Valor da venda</span>
+                        <span className="info-dd destaque">{formatBRL(detalhe.venda.valor)}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-dt">Comissão (5%)</span>
+                        <span className="info-dd">{formatBRL(detalhe.venda.comissao)}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-dt">Taxa da plataforma (10% da comissão)</span>
+                        <span className="info-dd">{formatBRL(detalhe.venda.taxa_plataforma)}</span>
+                      </div>
+                    </div>
                     {detalhe.venda.pagamento_status === 'pendente' && (
-                      <div className="banner banner-warning">
+                      <div className="banner banner-warning" style={{ marginTop: '0.75rem' }}>
                         Pagamento da taxa via PIX pendente
                         {detalhe.venda.pagamento_vencimento
                           ? ` — vence em ${new Date(detalhe.venda.pagamento_vencimento).toLocaleDateString('pt-BR')}`
@@ -425,7 +436,7 @@ export default function ParceriaDetalhePage() {
                       </div>
                     )}
                     {detalhe.venda.pagamento_status === 'confirmado' && (
-                      <div className="banner banner-success">Pagamento confirmado pela equipe.</div>
+                      <div className="banner banner-success" style={{ marginTop: '0.75rem' }}>Pagamento confirmado pela equipe.</div>
                     )}
                   </>
                 )}
@@ -478,24 +489,33 @@ export default function ParceriaDetalhePage() {
             {/* Nível 3 — contatos revelados */}
             {detalhe.contatos && (
               <div className="card" style={{ marginTop: '0.85rem' }}>
-                <h3 className="detail-label">Contatos liberados (Nível 3)</h3>
-                <p style={{ margin: 0 }}>
-                  <strong>Captador:</strong> {detalhe.contatos.captador.nome}
-                  {detalhe.contatos.captador.whatsapp && (
-                    <> · <a href={waLink(detalhe.contatos.captador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">{detalhe.contatos.captador.whatsapp}</a></>
-                  )}
-                  <br />
-                  <strong>Comprador:</strong> {detalhe.contatos.comprador.nome}
-                  {detalhe.contatos.comprador.whatsapp && (
-                    <> · <a href={waLink(detalhe.contatos.comprador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">{detalhe.contatos.comprador.whatsapp}</a></>
-                  )}
+                <h3 className="detail-label">Contatos liberados</h3>
+                <div className="info-stack">
+                  <div className="info-item">
+                    <span className="info-dt">Captador</span>
+                    <span className="info-dd">{detalhe.contatos.captador.nome}</span>
+                    {detalhe.contatos.captador.whatsapp && (
+                      <a className="info-wa" href={waLink(detalhe.contatos.captador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">
+                        {detalhe.contatos.captador.whatsapp}
+                      </a>
+                    )}
+                  </div>
+                  <div className="info-item">
+                    <span className="info-dt">Comprador</span>
+                    <span className="info-dd">{detalhe.contatos.comprador.nome}</span>
+                    {detalhe.contatos.comprador.whatsapp && (
+                      <a className="info-wa" href={waLink(detalhe.contatos.comprador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">
+                        {detalhe.contatos.comprador.whatsapp}
+                      </a>
+                    )}
+                  </div>
                   {detalhe.papel === 'captador' && detalhe.confirmacao.cpf_cliente && (
-                    <>
-                      <br />
-                      <strong>CPF do cliente:</strong> {maskCpf(detalhe.confirmacao.cpf_cliente)}
-                    </>
+                    <div className="info-item">
+                      <span className="info-dt">CPF do cliente</span>
+                      <span className="info-dd">{maskCpf(detalhe.confirmacao.cpf_cliente)}</span>
+                    </div>
                   )}
-                </p>
+                </div>
               </div>
             )}
 
