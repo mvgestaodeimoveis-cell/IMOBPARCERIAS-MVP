@@ -7,6 +7,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';import { formatMilhar, mas
 import { getAccessToken } from '@/lib/auth';
 import { Brandmark } from '@/components/Brandmark';
 import { PhotoUploader } from '@/components/PhotoUploader';
+import { BottomNav } from '@/components/BottomNav';
 
 type Finalidade = 'venda' | 'aluguel';
 type Tipo = 'apartamento' | 'casa' | 'terreno' | 'comercial';
@@ -992,6 +993,8 @@ export default function NovoImovelPage() {
           </button>
         )}
       </div>
+
+      <BottomNav active="novo" />
     </div>
   );
 }
