@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { isAuthenticated, getRole } from '@/lib/auth';
+import { encodeSelecao } from '@/lib/selecao';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { BottomNav } from '@/components/BottomNav';
@@ -47,10 +48,33 @@ export default function VitrinePage() {
   const [imoveis, setImoveis] = useState<ImovelVitrine[] | null>(null);
   const [total, setTotal] = useState(0);
   const [appNav, setAppNav] = useState(false);
+  const [selMode, setSelMode] = useState(false);
+  const [sel, setSel] = useState<string[]>([]);
 
   useEffect(() => {
     setAppNav(isAuthenticated() && getRole() !== 'equipe');
   }, []);
+
+  function toggleSel(id: string) {
+    setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  async function compartilharSelecao() {
+    if (sel.length === 0) return;
+    const url = `${window.location.origin}/ver/${encodeSelecao(sel)}`;
+    const texto = `Olá! Separei ${sel.length} imóvel(is) para você. Veja as opções e me diga qual mais gostou:`;
+    const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
+    if (nav.share) {
+      try {
+        await nav.share({ title: 'Imóveis selecionados', text: texto, url });
+        return;
+      } catch {
+        /* usuário cancelou o compartilhamento nativo */
+        return;
+      }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${url}`)}`, '_blank');
+  }
 
   const buscar = useCallback(async () => {
     const params = new URLSearchParams();
@@ -127,50 +151,120 @@ export default function VitrinePage() {
               </div>
             ) : (
               <>
-                <p className="muted" style={{ marginBottom: '1rem' }}>{total} imóvel(is) na vitrine</p>
-                <div className="vitrine-grid">
-                  {imoveis.map((im) => (
-                    <Link key={im.id} href={`/vitrine/${im.id}`} className="vitrine-card">
-                      <div className="vitrine-foto">
-                        {im.fotos[0] ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={im.fotos[0]} alt="" />
-                        ) : (
-                          <span aria-hidden>🏠</span>
-                        )}
-                        {im.exclusividade_verificada && (
-                          <span className="vitrine-excl">✓ Exclusividade</span>
-                        )}
-                      </div>
-                      <div className="vitrine-body">
-                        <div className="imovel-top">
-                          <strong>{formatBRL(im.preco)}</strong>
-                          <span className={`badge ${im.finalidade === 'venda' ? 'badge-emerald' : 'badge-orange'}`}>
-                            {im.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
-                          </span>
+                <div className="vitrine-head">
+                  <p className="muted" style={{ margin: 0 }}>{total} imóvel(is) na vitrine</p>
+                  {appNav &&
+                    (selMode ? (
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem' }}
+                        onClick={() => {
+                          setSelMode(false);
+                          setSel([]);
+                        }}
+                      >
+                        Cancelar
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-emerald"
+                        style={{ width: 'auto', minHeight: 'auto', padding: '0.4rem 0.8rem' }}
+                        onClick={() => setSelMode(true)}
+                      >
+                        Selecionar p/ cliente
+                      </button>
+                    ))}
+                </div>
+                {selMode && (
+                  <p className="muted" style={{ margin: '0.35rem 0 1rem', fontSize: '0.86rem' }}>
+                    Toque nos imóveis que quer enviar ao cliente, depois em “Compartilhar”.
+                  </p>
+                )}
+                {!selMode && <div style={{ height: '1rem' }} />}
+                <div className={`vitrine-grid${selMode ? ' has-selbar' : ''}`}>
+                  {imoveis.map((im) => {
+                    const inner = (
+                      <>
+                        <div className="vitrine-foto">
+                          {im.fotos[0] ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={im.fotos[0]} alt="" />
+                          ) : (
+                            <span aria-hidden>🏠</span>
+                          )}
+                          {im.exclusividade_verificada && (
+                            <span className="vitrine-excl">✓ Exclusividade</span>
+                          )}
                         </div>
-                        <p className="imovel-sub">
-                          {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
-                        </p>
-                        <p className="imovel-meta">
-                          {[
-                            im.area_m2 ? `${im.area_m2} m²` : null,
-                            im.quartos != null ? `${im.quartos} qto` : null,
-                            im.banheiros != null ? `${im.banheiros} banh.` : null,
-                            im.vagas != null ? `${im.vagas} vaga` : null,
-                          ]
-                            .filter(Boolean)
-                            .join(' · ')}
-                        </p>
-                      </div>
-                    </Link>
-                  ))}
+                        <div className="vitrine-body">
+                          <div className="imovel-top">
+                            <strong>{formatBRL(im.preco)}</strong>
+                            <span className={`badge ${im.finalidade === 'venda' ? 'badge-emerald' : 'badge-orange'}`}>
+                              {im.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
+                            </span>
+                          </div>
+                          <p className="imovel-sub">
+                            {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
+                          </p>
+                          <p className="imovel-meta">
+                            {[
+                              im.area_m2 ? `${im.area_m2} m²` : null,
+                              im.quartos != null ? `${im.quartos} qto` : null,
+                              im.banheiros != null ? `${im.banheiros} banh.` : null,
+                              im.vagas != null ? `${im.vagas} vaga` : null,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        </div>
+                      </>
+                    );
+                    if (selMode) {
+                      const on = sel.includes(im.id);
+                      return (
+                        <button
+                          key={im.id}
+                          type="button"
+                          className={`vitrine-card vitrine-selecionavel${on ? ' is-sel' : ''}`}
+                          onClick={() => toggleSel(im.id)}
+                          aria-pressed={on}
+                        >
+                          <span className="vitrine-check">{on ? '✓' : ''}</span>
+                          {inner}
+                        </button>
+                      );
+                    }
+                    return (
+                      <Link key={im.id} href={`/vitrine/${im.id}`} className="vitrine-card">
+                        {inner}
+                      </Link>
+                    );
+                  })}
                 </div>
               </>
             )}
           </div>
         </section>
       </main>
+
+      {selMode && (
+        <div className="sel-bar">
+          <span className="sel-bar-count">
+            {sel.length} imóvel(is) selecionado(s)
+          </span>
+          <button
+            type="button"
+            className="btn btn-emerald"
+            style={{ width: 'auto' }}
+            disabled={sel.length === 0}
+            onClick={compartilharSelecao}
+          >
+            Compartilhar
+          </button>
+        </div>
+      )}
 
       {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
     </div>

@@ -1606,6 +1606,129 @@ a.stat-chip:hover {
   pointer-events: none;
 }
 
+/* Modo cliente (link público de seleção) */
+.cliente-topo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: calc(0.8rem + env(safe-area-inset-top)) 1rem 0.8rem;
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.cliente-logo {
+  width: 26px;
+  height: 26px;
+}
+/* Seleção de imóveis para o cliente (vitrine) */
+.vitrine-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.vitrine-selecionavel {
+  position: relative;
+  text-align: left;
+  padding: 0;
+  border: 2px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+}
+.vitrine-selecionavel.is-sel {
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(23, 163, 103, 0.18);
+}
+.vitrine-check {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+.vitrine-selecionavel.is-sel .vitrine-check {
+  background: var(--emerald);
+}
+.vitrine-grid.has-selbar {
+  padding-bottom: 6rem;
+}
+.sel-bar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px rgba(15, 28, 46, 0.12);
+  z-index: 25;
+}
+.sel-bar-count {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--navy);
+}
+.cliente-lista {
+  display: grid;
+  gap: 1rem;
+}
+.cliente-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.cliente-foto {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 210px;
+  padding: 0;
+  border: none;
+  background: var(--gray-100);
+  cursor: zoom-in;
+}
+.cliente-foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cliente-fotos-badge {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+.cliente-corpo {
+  padding: 0.9rem 1.05rem 1.1rem;
+}
+
 /* Modal (admin) */
 .modal-overlay {
   position: fixed;
@@ -2340,6 +2463,9 @@ a.stat-chip:hover {
     display: none;
   }
   .wizard-frame > .wizard-footer {
+    bottom: 0;
+  }
+  .sel-bar {
     bottom: 0;
   }
   .screen.has-bottomnav,
