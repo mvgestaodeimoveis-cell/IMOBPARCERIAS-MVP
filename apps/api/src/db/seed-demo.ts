@@ -96,6 +96,12 @@ async function run() {
   }
 
   console.log('Limpando dados @demo.com anteriores...');
+  // Ordem de dependência (parceria e imovel têm FK que restringem a exclusão do corretor).
+  const demo = `SELECT id FROM corretor WHERE email LIKE '%@demo.com'`;
+  await query(
+    `DELETE FROM parceria WHERE captador_id IN (${demo}) OR comprador_id IN (${demo})`,
+  );
+  await query(`DELETE FROM imovel WHERE corretor_id IN (${demo})`);
   await query(`DELETE FROM corretor WHERE email LIKE '%@demo.com'`);
 
   console.log('Criando corretores...');
