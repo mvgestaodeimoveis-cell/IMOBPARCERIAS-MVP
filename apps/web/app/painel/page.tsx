@@ -153,7 +153,7 @@ export default function AppHomePage() {
 
         <div className="carteira-head">
           <h2 className="carteira-title">Meus imóveis</h2>
-          <Link href="/imoveis/novo" className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.55rem 1rem' }}>
+          <Link href="/imoveis/novo" className="btn btn-emerald carteira-cta">
             + Cadastrar imóvel
           </Link>
         </div>
