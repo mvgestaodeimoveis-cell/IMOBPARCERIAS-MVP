@@ -125,10 +125,10 @@ export default function AppHomePage() {
 
         {imoveis !== null && (
           <div className="painel-stats">
-            <Link href="/painel" className="stat-chip">
+            <div className="stat-chip">
               <span className="stat-num">{total}</span>
               <span className="stat-label">imóvel(is)</span>
-            </Link>
+            </div>
             <div className="stat-chip">
               <span className="stat-num" style={{ color: 'var(--emerald-600)' }}>{disponiveis}</span>
               <span className="stat-label">na vitrine</span>
@@ -139,19 +139,14 @@ export default function AppHomePage() {
                 <span className="stat-label">em negociação</span>
               </div>
             )}
-            <Link href="/parcerias" className="stat-chip">
+            <div className="stat-chip">
               <span className="stat-num" style={{ color: pendentes > 0 ? 'var(--orange-600)' : undefined }}>{pendentes}</span>
               <span className="stat-label">parceria(s) pendente(s)</span>
-            </Link>
+            </div>
           </div>
         )}
 
-        <p style={{ margin: '1.1rem 0 1.25rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <Link href="/vitrine">Ver vitrine →</Link>
-          <Link href="/parcerias">Minhas parcerias →</Link>
-        </p>
-
-        <div className="carteira-head">
+        <div className="carteira-head" style={{ marginTop: '1.25rem' }}>
           <h2 className="carteira-title">Meus imóveis</h2>
           <Link href="/imoveis/novo" className="btn btn-emerald carteira-cta">
             + Cadastrar imóvel
