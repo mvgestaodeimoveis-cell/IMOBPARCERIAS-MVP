@@ -141,6 +141,7 @@ export default function NovoImovelPage() {
   const [importTexto, setImportTexto] = useState('');
   const [importando, setImportando] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importAberto, setImportAberto] = useState(false);
   const [linkOrigem, setLinkOrigem] = useState<string | null>(null);
 
   // Rascunho automático (reduz abandono): salva o progresso no aparelho e permite retomar.
@@ -566,54 +567,79 @@ export default function NovoImovelPage() {
         {/* ETAPA 1 — Tipo do anúncio */}
         {step === 1 && (
           <>
-            <div className="card import-box">
-              <h3 className="import-title">Agilize o cadastro</h3>
-              <p className="muted" style={{ margin: '0 0 0.85rem', fontSize: '0.88rem' }}>
-                Recebeu o imóvel por link ou por texto no WhatsApp? Cole aqui e a gente pré-preenche —
-                você só revisa e completa.
-              </p>
+            {!importAberto ? (
+              <button
+                type="button"
+                className="import-toggle"
+                onClick={() => setImportAberto(true)}
+              >
+                <span className="import-toggle-ico">✨</span>
+                <span className="import-toggle-txt">
+                  <strong>Agilize o cadastro</strong>
+                  <small>Cole um link ou o texto do WhatsApp e a gente pré-preenche</small>
+                </span>
+                <span className="import-toggle-seta">＋</span>
+              </button>
+            ) : (
+              <div className="card import-box">
+                <div className="import-head">
+                  <h3 className="import-title">Agilize o cadastro</h3>
+                  <button
+                    type="button"
+                    className="import-fechar"
+                    aria-label="Fechar"
+                    onClick={() => setImportAberto(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="muted" style={{ margin: '0 0 0.85rem', fontSize: '0.88rem' }}>
+                  Recebeu o imóvel por link ou por texto no WhatsApp? Cole aqui e a gente pré-preenche —
+                  você só revisa e completa.
+                </p>
 
-              <label className="import-label">Link do anúncio (OLX, ZAP, Chaves na Mão…)</label>
-              <div className="import-row">
-                <input
+                <label className="import-label">Link do anúncio (OLX, ZAP, Chaves na Mão…)</label>
+                <div className="import-row">
+                  <input
+                    className="input"
+                    type="url"
+                    placeholder="https://…"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-navy"
+                    disabled={importando || !importUrl.trim()}
+                    onClick={importar}
+                  >
+                    {importando ? 'Importando…' : 'Importar'}
+                  </button>
+                </div>
+
+                <div className="import-ou"><span>ou</span></div>
+
+                <label className="import-label">Texto do WhatsApp</label>
+                <textarea
                   className="input"
-                  type="url"
-                  placeholder="https://…"
-                  value={importUrl}
-                  onChange={(e) => setImportUrl(e.target.value)}
+                  rows={4}
+                  placeholder="Cole a mensagem com as informações do imóvel (tipo, preço, quartos, bairro, diferenciais…)"
+                  value={importTexto}
+                  onChange={(e) => setImportTexto(e.target.value)}
                 />
                 <button
                   type="button"
-                  className="btn btn-navy"
-                  disabled={importando || !importUrl.trim()}
-                  onClick={importar}
+                  className="btn btn-navy btn-sm"
+                  style={{ marginTop: '0.5rem' }}
+                  disabled={importando || importTexto.trim().length < 10}
+                  onClick={importarTexto}
                 >
-                  {importando ? 'Importando…' : 'Importar'}
+                  {importando ? 'Lendo…' : 'Preencher pelo texto'}
                 </button>
+
+                {importMsg && <div className="import-msg">{importMsg}</div>}
               </div>
-
-              <div className="import-ou"><span>ou</span></div>
-
-              <label className="import-label">Texto do WhatsApp</label>
-              <textarea
-                className="input"
-                rows={4}
-                placeholder="Cole a mensagem com as informações do imóvel (tipo, preço, quartos, bairro, diferenciais…)"
-                value={importTexto}
-                onChange={(e) => setImportTexto(e.target.value)}
-              />
-              <button
-                type="button"
-                className="btn btn-navy btn-sm"
-                style={{ marginTop: '0.5rem' }}
-                disabled={importando || importTexto.trim().length < 10}
-                onClick={importarTexto}
-              >
-                {importando ? 'Lendo…' : 'Preencher pelo texto'}
-              </button>
-
-              {importMsg && <div className="import-msg">{importMsg}</div>}
-            </div>
+            )}
 
             <h2 className="wizard-q">Qual é a finalidade?</h2>
             <div className="choice-grid">

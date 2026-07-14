@@ -2497,6 +2497,66 @@ a.stat-chip:hover {
   border: 1px solid var(--border);
   background: linear-gradient(180deg, #fbfcfd, #fff);
 }
+.import-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.4rem;
+  border: 1px dashed var(--emerald);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f4fbf7, #fff);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.import-toggle:hover {
+  background: #eef9f2;
+}
+.import-toggle-ico {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.import-toggle-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+.import-toggle-txt strong {
+  font-size: 0.92rem;
+  color: var(--navy);
+}
+.import-toggle-txt small {
+  font-size: 0.8rem;
+  color: var(--gray-600, #6b7280);
+}
+.import-toggle-seta {
+  font-size: 1.3rem;
+  color: var(--emerald);
+  font-weight: 700;
+  line-height: 1;
+}
+.import-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.import-fechar {
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: var(--gray-500);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+}
+.import-fechar:hover {
+  color: var(--gray-700);
+}
 .import-title {
   font-size: 0.95rem;
   font-weight: 800;
