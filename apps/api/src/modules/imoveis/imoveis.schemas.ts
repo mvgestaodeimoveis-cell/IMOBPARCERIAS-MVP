@@ -101,6 +101,10 @@ export const importarImovelSchema = z.object({
   url: z.string().url('Informe um link válido.').max(500),
 });
 
+export const importarTextoSchema = z.object({
+  texto: z.string().trim().min(10, 'Cole um texto com as informações do imóvel.').max(5000),
+});
+
 export const vitrineQuerySchema = z.object({
   tipo: z.enum(['apartamento', 'casa', 'terreno', 'comercial']).optional(),
   finalidade: z.enum(['venda', 'aluguel']).optional(),
@@ -121,4 +125,5 @@ export const atualizarImovelSchema = imovelBase.partial().extend({
 export type CriarImovelInput = z.infer<typeof criarImovelSchema>;
 export type AtualizarImovelInput = z.infer<typeof atualizarImovelSchema>;
 export type ImportarImovelInput = z.infer<typeof importarImovelSchema>;
+export type ImportarTextoInput = z.infer<typeof importarTextoSchema>;
 export type VitrineQuery = z.infer<typeof vitrineQuerySchema>;

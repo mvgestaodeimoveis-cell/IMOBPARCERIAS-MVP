@@ -35,6 +35,7 @@ const FILTROS_INICIAIS = {
   bairro: '',
   preco_min: '',
   preco_max: '',
+  area_min: '',
   quartos_min: '',
 };
 
@@ -46,6 +47,9 @@ export default function VitrinePage() {
   const [selMode, setSelMode] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
   const [me, setMe] = useState<{ whatsapp?: string; nome?: string }>({});
+  const [buscaTexto, setBuscaTexto] = useState('');
+  const [interpretando, setInterpretando] = useState(false);
+  const [buscaMsg, setBuscaMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const logado = isAuthenticated() && getRole() !== 'equipe';
@@ -106,6 +110,34 @@ export default function VitrinePage() {
     setFiltros((f) => ({ ...f, [k]: v }));
   }
 
+  async function interpretarBusca() {
+    if (buscaTexto.trim().length < 10) return;
+    setBuscaMsg(null);
+    setInterpretando(true);
+    try {
+      const res = await apiFetch<{ filtros: Record<string, string>; reconhecidos: string[] }>(
+        '/vitrine/interpretar',
+        { method: 'POST', body: { texto: buscaTexto.trim() } },
+      );
+      setFiltros((f) => {
+        const next: Record<string, string> = { ...f };
+        Object.entries(res.filtros).forEach(([k, v]) => {
+          if (v && k in next) next[k] = v;
+        });
+        return next as typeof f;
+      });
+      setBuscaMsg(
+        res.reconhecidos.length > 0
+          ? `Filtros aplicados: ${res.reconhecidos.join(', ')}.`
+          : 'Não reconhecemos filtros no texto — ajuste manualmente abaixo.',
+      );
+    } catch {
+      setBuscaMsg('Não foi possível interpretar o texto.');
+    } finally {
+      setInterpretando(false);
+    }
+  }
+
   return (
     <div className="site">
       {appNav ? <AppHeader active="vitrine" /> : <Topbar />}
@@ -121,6 +153,30 @@ export default function VitrinePage() {
               Encontre o imóvel ideal para o seu cliente. O endereço completo é revelado apenas no
               chat, após o match.
             </p>
+
+            <div className="card import-box busca-ia">
+              <h3 className="import-title">Busca pelo pedido do cliente</h3>
+              <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.86rem' }}>
+                Cole aqui o que o cliente mandou no WhatsApp e a gente aplica os filtros pra você.
+              </p>
+              <textarea
+                className="input"
+                rows={3}
+                placeholder="Ex.: procuro apartamento 3 quartos na Pituba até 500 mil, com vaga e vista mar"
+                value={buscaTexto}
+                onChange={(e) => setBuscaTexto(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-navy btn-sm"
+                style={{ marginTop: '0.5rem' }}
+                disabled={interpretando || buscaTexto.trim().length < 10}
+                onClick={interpretarBusca}
+              >
+                {interpretando ? 'Lendo…' : 'Aplicar filtros do texto'}
+              </button>
+              {buscaMsg && <div className="import-msg">{buscaMsg}</div>}
+            </div>
 
             <div className="filtros">
               <select className="input" value={filtros.finalidade} onChange={(e) => set('finalidade', e.target.value)}>
@@ -139,6 +195,7 @@ export default function VitrinePage() {
               <input className="input" placeholder="Bairro" value={filtros.bairro} onChange={(e) => set('bairro', e.target.value)} />
               <input className="input" inputMode="numeric" placeholder="Preço mín." value={filtros.preco_min} onChange={(e) => set('preco_min', e.target.value.replace(/\D/g, ''))} />
               <input className="input" inputMode="numeric" placeholder="Preço máx." value={filtros.preco_max} onChange={(e) => set('preco_max', e.target.value.replace(/\D/g, ''))} />
+              <input className="input" inputMode="numeric" placeholder="Metragem mín. (m²)" value={filtros.area_min} onChange={(e) => set('area_min', e.target.value.replace(/\D/g, ''))} />
               <input className="input" inputMode="numeric" placeholder="Quartos mín." value={filtros.quartos_min} onChange={(e) => set('quartos_min', e.target.value.replace(/\D/g, ''))} />
               <button className="btn btn-ghost" type="button" onClick={() => setFiltros(FILTROS_INICIAIS)}>
                 Limpar

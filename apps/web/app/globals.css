@@ -2523,6 +2523,31 @@ a.stat-chip:hover {
   color: var(--emerald-600);
   font-weight: 600;
 }
+.import-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gray-700);
+  margin: 0 0 0.35rem;
+}
+.import-ou {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+  margin: 0.9rem 0 0.7rem;
+  color: var(--gray-500);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.import-ou::before,
+.import-ou::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
 /* Chips (diferenciais) */
 .chips {

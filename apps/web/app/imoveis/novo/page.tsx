@@ -26,8 +26,11 @@ interface Draft {
   finalidade?: Finalidade;
   area_m2?: number;
   quartos?: number;
+  suites?: number;
   banheiros?: number;
   vagas?: number;
+  diferenciais?: string[];
+  reconhecidos?: string[];
 }
 
 const FINALIDADES: { value: Finalidade; label: string; ico: string }[] = [
@@ -135,6 +138,7 @@ export default function NovoImovelPage() {
   const [cepLoading, setCepLoading] = useState(false);
 
   const [importUrl, setImportUrl] = useState('');
+  const [importTexto, setImportTexto] = useState('');
   const [importando, setImportando] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [linkOrigem, setLinkOrigem] = useState<string | null>(null);
@@ -354,6 +358,56 @@ export default function NovoImovelPage() {
     }
   }
 
+  async function importarTexto() {
+    if (importTexto.trim().length < 10) return;
+    const token = getAccessToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setImportMsg(null);
+    setImportando(true);
+    try {
+      const d = await apiFetch<Draft>('/imoveis/importar-texto', {
+        method: 'POST',
+        token,
+        body: { texto: importTexto.trim() },
+      });
+      setForm((f) => ({
+        ...f,
+        finalidade: d.finalidade ?? f.finalidade,
+        tipo: d.tipo ?? f.tipo,
+        preco: d.preco != null ? formatMilhar(String(Math.round(d.preco))) : f.preco,
+        bairro: d.bairro ?? f.bairro,
+        cidade: d.cidade ?? f.cidade,
+        area_m2: d.area_m2 != null ? String(Math.round(d.area_m2)) : f.area_m2,
+        descricao: d.descricao ?? f.descricao,
+      }));
+      setCounts((c) => ({
+        quartos: d.quartos ?? c.quartos,
+        suites: d.suites ?? c.suites,
+        banheiros: d.banheiros ?? c.banheiros,
+        vagas: d.vagas ?? c.vagas,
+      }));
+      if (Array.isArray(d.diferenciais) && d.diferenciais.length > 0) {
+        setDiferenciais((arr) => Array.from(new Set([...arr, ...d.diferenciais!])).slice(0, 20));
+      }
+      const rec = d.reconhecidos ?? [];
+      if (rec.length > 0) {
+        setImportMsg(`Reconhecemos: ${rec.join(', ')}. Revise cada etapa e complete o endereço e as fotos.`);
+        setStep(2);
+      } else {
+        setImportMsg('Não reconhecemos campos automaticamente. Preencha manualmente nas próximas etapas.');
+      }
+    } catch (err) {
+      setImportMsg(
+        err instanceof ApiRequestError ? err.message : 'Não foi possível ler o texto colado.',
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
   function validarEtapa(): boolean {
     const e: Record<string, string> = {};
     if (step === 2) {
@@ -513,11 +567,13 @@ export default function NovoImovelPage() {
         {step === 1 && (
           <>
             <div className="card import-box">
-              <h3 className="import-title">Já anunciou em outro site?</h3>
-              <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.88rem' }}>
-                Cole o link (OLX, VivaReal, ZAP, Chaves na Mão, site próprio…) e preenchemos o que
-                for possível para você revisar.
+              <h3 className="import-title">Agilize o cadastro</h3>
+              <p className="muted" style={{ margin: '0 0 0.85rem', fontSize: '0.88rem' }}>
+                Recebeu o imóvel por link ou por texto no WhatsApp? Cole aqui e a gente pré-preenche —
+                você só revisa e completa.
               </p>
+
+              <label className="import-label">Link do anúncio (OLX, ZAP, Chaves na Mão…)</label>
               <div className="import-row">
                 <input
                   className="input"
@@ -535,6 +591,27 @@ export default function NovoImovelPage() {
                   {importando ? 'Importando…' : 'Importar'}
                 </button>
               </div>
+
+              <div className="import-ou"><span>ou</span></div>
+
+              <label className="import-label">Texto do WhatsApp</label>
+              <textarea
+                className="input"
+                rows={4}
+                placeholder="Cole a mensagem com as informações do imóvel (tipo, preço, quartos, bairro, diferenciais…)"
+                value={importTexto}
+                onChange={(e) => setImportTexto(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-navy btn-sm"
+                style={{ marginTop: '0.5rem' }}
+                disabled={importando || importTexto.trim().length < 10}
+                onClick={importarTexto}
+              >
+                {importando ? 'Lendo…' : 'Preencher pelo texto'}
+              </button>
+
               {importMsg && <div className="import-msg">{importMsg}</div>}
             </div>
 
