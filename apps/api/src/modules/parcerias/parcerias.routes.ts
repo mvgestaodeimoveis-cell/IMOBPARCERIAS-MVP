@@ -54,6 +54,15 @@ parceriasRoutes.get(
   }),
 );
 
+// Central de conversas (parcerias com chat).
+parceriasRoutes.get(
+  '/conversas',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.json(await parcerias.listarConversas(req.user.id));
+  }),
+);
+
 parceriasRoutes.post(
   '/:id/aceitar',
   asyncHandler(async (req: Request, res: Response) => {

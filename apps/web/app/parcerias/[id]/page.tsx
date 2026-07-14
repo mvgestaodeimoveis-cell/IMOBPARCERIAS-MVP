@@ -23,7 +23,9 @@ interface Detalhe {
   status: string;
   papel: 'captador' | 'comprador';
   cliente_nome: string;
+  outro_nome: string;
   imovel: {
+    id: string;
     tipo: string;
     bairro: string;
     cidade: string;
@@ -455,28 +457,34 @@ export default function ParceriaDetalhePage() {
             )}
 
             {/* Chat interno */}
-            <div className="card" style={{ marginTop: '0.85rem' }}>
-              <h3 className="detail-label">Chat interno</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 320, overflowY: 'auto', padding: '0.25rem 0' }}>
+            <div className="card chat-card" style={{ marginTop: '0.85rem' }}>
+              <Link href={`/vitrine/${detalhe.imovel.id}`} className="chat-imovel">
+                <span className="chat-imovel-ico" aria-hidden>🏠</span>
+                <span className="chat-imovel-info">
+                  <strong>
+                    {TIPO_LABEL[detalhe.imovel.tipo] ?? detalhe.imovel.tipo} · {detalhe.imovel.bairro}
+                  </strong>
+                  <span>{formatBRL(detalhe.imovel.preco)} · ver imóvel →</span>
+                </span>
+              </Link>
+
+              <div className="chat-janela">
                 {mensagens.length === 0 ? (
-                  <p className="muted" style={{ margin: 0, fontSize: '0.86rem' }}>
-                    Nenhuma mensagem ainda. Combine a visita por aqui — o contato direto é liberado após a confirmação bilateral.
+                  <p className="chat-vazio">
+                    Nenhuma mensagem ainda. Combine a visita por aqui — o contato direto é liberado
+                    após a confirmação bilateral.
                   </p>
                 ) : (
                   mensagens.map((m) => (
-                    <div
-                      key={m.id}
-                      style={{
-                        alignSelf: m.meu ? 'flex-end' : 'flex-start',
-                        background: m.meu ? 'var(--emerald)' : 'var(--bg)',
-                        color: m.meu ? '#fff' : 'inherit',
-                        borderRadius: 12,
-                        padding: '0.45rem 0.7rem',
-                        maxWidth: '80%',
-                        fontSize: '0.9rem',
-                      }}
-                    >
-                      {m.corpo}
+                    <div key={m.id} className={`chat-msg${m.meu ? ' meu' : ''}`}>
+                      <span className="chat-autor">{m.meu ? 'Você' : detalhe.outro_nome}</span>
+                      <span className="chat-bolha">{m.corpo}</span>
+                      <span className="chat-hora">
+                        {new Date(m.criado_em).toLocaleTimeString('pt-BR', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
                     </div>
                   ))
                 )}
@@ -484,7 +492,7 @@ export default function ParceriaDetalhePage() {
               </div>
 
               {detalhe.status === 'aceita' ? (
-                <form onSubmit={enviar} style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <form onSubmit={enviar} className="chat-composer">
                   <input
                     className="input"
                     placeholder="Escreva uma mensagem…"
@@ -492,8 +500,12 @@ export default function ParceriaDetalhePage() {
                     maxLength={2000}
                     onChange={(e) => setTexto(e.target.value)}
                   />
-                  <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0 1rem' }} disabled={enviando || !texto.trim()}>
-                    Enviar
+                  <button
+                    className="btn btn-emerald chat-enviar"
+                    disabled={enviando || !texto.trim()}
+                    aria-label="Enviar mensagem"
+                  >
+                    ➤
                   </button>
                 </form>
               ) : (

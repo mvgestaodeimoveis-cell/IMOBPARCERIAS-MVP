@@ -157,6 +157,64 @@ export async function listarEnviadas(compradorId: string) {
   return { data: rows.map(mapResumo) };
 }
 
+interface ConversaRow {
+  id: string;
+  status: string;
+  imovel_id: string;
+  imovel_tipo: string;
+  imovel_bairro: string;
+  imovel_cidade: string;
+  imovel_preco: string;
+  imovel_foto: string | null;
+  outro_nome: string;
+  sou_captador: boolean;
+  ultima_msg: string | null;
+  ultima_msg_em: string | null;
+}
+
+/** Central de conversas: parcerias com chat (aceita+), com a última mensagem. */
+export async function listarConversas(corretorId: string) {
+  const { rows } = await query<ConversaRow>(
+    `SELECT p.id, p.status, p.imovel_id,
+       i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+       i.preco::text AS imovel_preco, (i.fotos->>0) AS imovel_foto,
+       CASE WHEN p.captador_id = $1 THEN comp.nome ELSE cap.nome END AS outro_nome,
+       (p.captador_id = $1) AS sou_captador,
+       m.corpo AS ultima_msg, m.criado_em::text AS ultima_msg_em
+     FROM parceria p
+     JOIN imovel i ON i.id = p.imovel_id
+     JOIN corretor cap ON cap.id = p.captador_id
+     JOIN corretor comp ON comp.id = p.comprador_id
+     LEFT JOIN LATERAL (
+       SELECT corpo, criado_em FROM parceria_mensagem
+       WHERE parceria_id = p.id ORDER BY criado_em DESC LIMIT 1
+     ) m ON true
+     WHERE (p.captador_id = $1 OR p.comprador_id = $1)
+       AND p.status IN ('aceita', 'em_negociacao', 'vendida', 'encerrada')
+     ORDER BY COALESCE(m.criado_em, p.criado_em) DESC`,
+    [corretorId],
+  );
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      imovel: {
+        id: r.imovel_id,
+        tipo: r.imovel_tipo,
+        bairro: r.imovel_bairro,
+        cidade: r.imovel_cidade,
+        preco: Number(r.imovel_preco),
+        foto: r.imovel_foto,
+      },
+      outro_nome: r.outro_nome,
+      sou_captador: r.sou_captador,
+      ultima_mensagem: r.ultima_msg
+        ? { corpo: r.ultima_msg, criado_em: r.ultima_msg_em }
+        : null,
+    })),
+  };
+}
+
 /** Captador aceita a parceria → chat liberado (Fase 7). */
 export async function aceitarParceria(parceriaId: string, captadorId: string) {
   const p = await buscarParceriaFull(parceriaId);
@@ -368,6 +426,7 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
     papel,
     cliente_nome: p.cliente_nome,
     criado_em: p.criado_em,
+    outro_nome: (souCaptador ? p.comprador_nome : p.captador_nome).split(' ')[0],
     imovel: {
       id: p.imovel_id,
       tipo: p.imovel_tipo,
