@@ -50,6 +50,8 @@ export default function VitrinePage() {
   const [buscaTexto, setBuscaTexto] = useState('');
   const [interpretando, setInterpretando] = useState(false);
   const [buscaMsg, setBuscaMsg] = useState<string | null>(null);
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false);
 
   useEffect(() => {
     const logado = isAuthenticated() && getRole() !== 'equipe';
@@ -138,6 +140,8 @@ export default function VitrinePage() {
     }
   }
 
+  const filtrosAtivos = Object.values(filtros).filter((v) => v.trim() !== '').length;
+
   return (
     <div className="site">
       {appNav ? <AppHeader active="vitrine" /> : <Topbar />}
@@ -145,62 +149,98 @@ export default function VitrinePage() {
       <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
           <div className="section-inner">
-            <span className="eyebrow">Vitrine de parceria</span>
-            <h1 className="section-title" style={{ marginBottom: '0.5rem' }}>
+            <h1 className="section-title vitrine-titulo">
               Imóveis dos <span className="hl">parceiros</span>
             </h1>
-            <p className="muted center" style={{ margin: '0 auto 1.5rem', maxWidth: 560 }}>
-              Encontre o imóvel ideal para o seu cliente. O endereço completo é revelado apenas no
-              chat, após o match.
+            <p className="muted center vitrine-sub">
+              O endereço completo é revelado apenas no chat, após o match.
             </p>
 
-            <div className="card import-box busca-ia">
-              <h3 className="import-title">Busca pelo pedido do cliente</h3>
-              <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.86rem' }}>
-                Cole aqui o que o cliente mandou no WhatsApp e a gente aplica os filtros pra você.
-              </p>
-              <textarea
-                className="input"
-                rows={3}
-                placeholder="Ex.: procuro apartamento 3 quartos na Pituba até 500 mil, com vaga e vista mar"
-                value={buscaTexto}
-                onChange={(e) => setBuscaTexto(e.target.value)}
-              />
+            {!buscaAberta ? (
+              <button type="button" className="vitrine-colar" onClick={() => setBuscaAberta(true)}>
+                <span aria-hidden>✨</span> Colar o pedido do cliente (WhatsApp)
+              </button>
+            ) : (
+              <div className="card busca-ia">
+                <div className="busca-ia-head">
+                  <strong>Pedido do cliente</strong>
+                  <button
+                    type="button"
+                    className="busca-ia-fechar"
+                    aria-label="Fechar"
+                    onClick={() => setBuscaAberta(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.84rem' }}>
+                  Cole o que o cliente mandou no WhatsApp e a gente aplica os filtros pra você.
+                </p>
+                <textarea
+                  className="input"
+                  rows={3}
+                  placeholder="Ex.: procuro apartamento 3 quartos na Pituba até 500 mil, com vaga e vista mar"
+                  value={buscaTexto}
+                  onChange={(e) => setBuscaTexto(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-navy btn-sm"
+                  style={{ marginTop: '0.5rem' }}
+                  disabled={interpretando || buscaTexto.trim().length < 10}
+                  onClick={interpretarBusca}
+                >
+                  {interpretando ? 'Lendo…' : 'Aplicar filtros do texto'}
+                </button>
+                {buscaMsg && <div className="import-msg">{buscaMsg}</div>}
+              </div>
+            )}
+
+            <div className="vitrine-toolbar">
               <button
                 type="button"
-                className="btn btn-navy btn-sm"
-                style={{ marginTop: '0.5rem' }}
-                disabled={interpretando || buscaTexto.trim().length < 10}
-                onClick={interpretarBusca}
+                className="vitrine-filtros-btn"
+                aria-expanded={filtrosAbertos}
+                onClick={() => setFiltrosAbertos((v) => !v)}
               >
-                {interpretando ? 'Lendo…' : 'Aplicar filtros do texto'}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="7" y1="12" x2="17" y2="12" />
+                  <line x1="10" y1="18" x2="14" y2="18" />
+                </svg>
+                Filtros
+                {filtrosAtivos > 0 && <span className="vitrine-filtros-badge">{filtrosAtivos}</span>}
               </button>
-              {buscaMsg && <div className="import-msg">{buscaMsg}</div>}
+              {imoveis !== null && <span className="muted vitrine-count">{total} imóvel(is)</span>}
+              {filtrosAtivos > 0 && (
+                <button type="button" className="vitrine-limpar" onClick={() => setFiltros(FILTROS_INICIAIS)}>
+                  Limpar
+                </button>
+              )}
             </div>
 
-            <div className="filtros">
-              <select className="input" value={filtros.finalidade} onChange={(e) => set('finalidade', e.target.value)}>
-                <option value="">Finalidade</option>
-                <option value="venda">Venda</option>
-                <option value="aluguel">Aluguel</option>
-              </select>
-              <select className="input" value={filtros.tipo} onChange={(e) => set('tipo', e.target.value)}>
-                <option value="">Tipo</option>
-                <option value="apartamento">Apartamento</option>
-                <option value="casa">Casa</option>
-                <option value="terreno">Terreno</option>
-                <option value="comercial">Comercial</option>
-              </select>
-              <input className="input" placeholder="Cidade" value={filtros.cidade} onChange={(e) => set('cidade', e.target.value)} />
-              <input className="input" placeholder="Bairro" value={filtros.bairro} onChange={(e) => set('bairro', e.target.value)} />
-              <input className="input" inputMode="numeric" placeholder="Preço mín." value={filtros.preco_min} onChange={(e) => set('preco_min', e.target.value.replace(/\D/g, ''))} />
-              <input className="input" inputMode="numeric" placeholder="Preço máx." value={filtros.preco_max} onChange={(e) => set('preco_max', e.target.value.replace(/\D/g, ''))} />
-              <input className="input" inputMode="numeric" placeholder="Metragem mín. (m²)" value={filtros.area_min} onChange={(e) => set('area_min', e.target.value.replace(/\D/g, ''))} />
-              <input className="input" inputMode="numeric" placeholder="Quartos mín." value={filtros.quartos_min} onChange={(e) => set('quartos_min', e.target.value.replace(/\D/g, ''))} />
-              <button className="btn btn-ghost" type="button" onClick={() => setFiltros(FILTROS_INICIAIS)}>
-                Limpar
-              </button>
-            </div>
+            {filtrosAbertos && (
+              <div className="filtros">
+                <select className="input" value={filtros.finalidade} onChange={(e) => set('finalidade', e.target.value)}>
+                  <option value="">Finalidade</option>
+                  <option value="venda">Venda</option>
+                  <option value="aluguel">Aluguel</option>
+                </select>
+                <select className="input" value={filtros.tipo} onChange={(e) => set('tipo', e.target.value)}>
+                  <option value="">Tipo</option>
+                  <option value="apartamento">Apartamento</option>
+                  <option value="casa">Casa</option>
+                  <option value="terreno">Terreno</option>
+                  <option value="comercial">Comercial</option>
+                </select>
+                <input className="input" placeholder="Cidade" value={filtros.cidade} onChange={(e) => set('cidade', e.target.value)} />
+                <input className="input" placeholder="Bairro" value={filtros.bairro} onChange={(e) => set('bairro', e.target.value)} />
+                <input className="input" inputMode="numeric" placeholder="Preço mín." value={filtros.preco_min} onChange={(e) => set('preco_min', e.target.value.replace(/\D/g, ''))} />
+                <input className="input" inputMode="numeric" placeholder="Preço máx." value={filtros.preco_max} onChange={(e) => set('preco_max', e.target.value.replace(/\D/g, ''))} />
+                <input className="input" inputMode="numeric" placeholder="Metragem mín. (m²)" value={filtros.area_min} onChange={(e) => set('area_min', e.target.value.replace(/\D/g, ''))} />
+                <input className="input" inputMode="numeric" placeholder="Quartos mín." value={filtros.quartos_min} onChange={(e) => set('quartos_min', e.target.value.replace(/\D/g, ''))} />
+              </div>
+            )}
 
             {imoveis === null ? (
               <p className="muted center">Carregando vitrine…</p>
@@ -212,8 +252,7 @@ export default function VitrinePage() {
               </div>
             ) : (
               <>
-                <div className="vitrine-head">
-                  <p className="muted" style={{ margin: 0 }}>{total} imóvel(is) na vitrine</p>
+                <div className="vitrine-head vitrine-head-acoes">
                   {appNav &&
                     (selMode ? (
                       <button
