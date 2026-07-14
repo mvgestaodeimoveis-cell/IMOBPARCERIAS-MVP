@@ -223,9 +223,6 @@ export default function ParceriaDetalhePage() {
                 <h1 style={{ fontSize: '1.3rem', margin: 0 }}>
                   {TIPO_LABEL[detalhe.imovel.tipo] ?? detalhe.imovel.tipo} · {detalhe.imovel.bairro}
                 </h1>
-                <p className="muted" style={{ margin: '0.25rem 0 0' }}>
-                  {formatBRL(detalhe.imovel.preco)} · Cliente: {detalhe.cliente_nome}
-                </p>
               </div>
               <span className={`badge ${statusBadge(detalhe.status)}`}>
                 {STATUS_LABEL[detalhe.status] ?? detalhe.status.replace('_', ' ')}
@@ -246,19 +243,59 @@ export default function ParceriaDetalhePage() {
               </ol>
             )}
 
+            <div className="card" style={{ marginTop: '0.85rem' }}>
+              <div className="info-grid">
+                <div className="info-item">
+                  <span className="info-dt">Preço</span>
+                  <span className="info-dd destaque">{formatBRL(detalhe.imovel.preco)}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-dt">Cliente</span>
+                  <span className="info-dd">{detalhe.cliente_nome}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Nível 2 — endereço completo (após match aceito) */}
             {detalhe.imovel.endereco && (
               <div className="card" style={{ marginTop: '0.85rem' }}>
                 <h3 className="detail-label">Endereço do imóvel</h3>
-                <p style={{ margin: 0 }}>
-                  {detalhe.imovel.endereco.logradouro}, {detalhe.imovel.endereco.numero}
-                  {detalhe.imovel.endereco.complemento ? ` — ${detalhe.imovel.endereco.complemento}` : ''}
-                  {detalhe.imovel.endereco.unidade ? ` · Unid. ${detalhe.imovel.endereco.unidade}` : ''}
-                  {detalhe.imovel.endereco.andar ? ` · ${detalhe.imovel.endereco.andar}º andar` : ''}
-                  {detalhe.imovel.endereco.bloco ? ` · Bloco ${detalhe.imovel.endereco.bloco}` : ''}
-                  <br />
-                  {detalhe.imovel.bairro}, {detalhe.imovel.cidade} · CEP {detalhe.imovel.endereco.cep}
-                </p>
+                <div className="info-stack">
+                  <div className="info-item">
+                    <span className="info-dt">Logradouro</span>
+                    <span className="info-dd">
+                      {detalhe.imovel.endereco.logradouro}, {detalhe.imovel.endereco.numero}
+                    </span>
+                  </div>
+                  {(detalhe.imovel.endereco.complemento ||
+                    detalhe.imovel.endereco.unidade ||
+                    detalhe.imovel.endereco.andar ||
+                    detalhe.imovel.endereco.bloco) && (
+                    <div className="info-item">
+                      <span className="info-dt">Complemento</span>
+                      <span className="info-dd">
+                        {[
+                          detalhe.imovel.endereco.complemento,
+                          detalhe.imovel.endereco.unidade ? `Unid. ${detalhe.imovel.endereco.unidade}` : null,
+                          detalhe.imovel.endereco.andar ? `${detalhe.imovel.endereco.andar}º andar` : null,
+                          detalhe.imovel.endereco.bloco ? `Bloco ${detalhe.imovel.endereco.bloco}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="info-item">
+                    <span className="info-dt">Bairro / Cidade</span>
+                    <span className="info-dd">
+                      {detalhe.imovel.bairro}, {detalhe.imovel.cidade}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-dt">CEP</span>
+                    <span className="info-dd">{detalhe.imovel.endereco.cep}</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -273,19 +310,22 @@ export default function ParceriaDetalhePage() {
               <ul className="check-list">
                 <li className={detalhe.confirmacao.visita_em ? 'ok' : ''}>
                   <span className="check-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '○'}</span>
-                  <span>
-                    Data da visita <span className="muted">(captador)</span>
-                    {detalhe.confirmacao.visita_em
-                      ? ` — ${new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')}`
-                      : ' — pendente'}
+                  <span className="check-texto">
+                    Data da visita <span className="muted">· captador</span>
+                    {detalhe.confirmacao.visita_em && (
+                      <span className="muted" style={{ display: 'block', fontSize: '0.8rem' }}>
+                        {new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
                   </span>
+                  <span className="check-status">{detalhe.confirmacao.visita_em ? 'Confirmado' : 'Pendente'}</span>
                 </li>
                 <li className={detalhe.confirmacao.cpf_preenchido ? 'ok' : ''}>
                   <span className="check-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '○'}</span>
-                  <span>
-                    CPF do cliente <span className="muted">(comprador)</span>
-                    {detalhe.confirmacao.cpf_preenchido ? ' — inserido' : ' — pendente'}
+                  <span className="check-texto">
+                    CPF do cliente <span className="muted">· comprador</span>
                   </span>
+                  <span className="check-status">{detalhe.confirmacao.cpf_preenchido ? 'Inserido' : 'Pendente'}</span>
                 </li>
               </ul>
 
