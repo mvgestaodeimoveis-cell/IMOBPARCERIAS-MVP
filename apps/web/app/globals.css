@@ -1313,6 +1313,69 @@ a.stat-chip:hover {
   flex-shrink: 0;
   margin-top: 0.15rem;
 }
+/* Stepper do fluxo da parceria */
+.parceria-steps {
+  display: flex;
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+}
+.parceria-steps li {
+  flex: 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--gray-500);
+  text-align: center;
+}
+.parceria-steps li::before {
+  content: '';
+  position: absolute;
+  top: 11px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+.parceria-steps li:first-child::before {
+  display: none;
+}
+.parceria-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--gray-100);
+  color: var(--gray-500);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+.parceria-steps li.done,
+.parceria-steps li.active {
+  color: var(--navy);
+}
+.parceria-steps li.active {
+  font-weight: 700;
+}
+.parceria-steps li.done .parceria-step-dot {
+  background: #e6f5ec;
+  color: var(--emerald-600);
+}
+.parceria-steps li.active .parceria-step-dot {
+  background: var(--emerald);
+  color: #fff;
+}
+.parceria-steps li.done::before,
+.parceria-steps li.active::before {
+  background: var(--emerald);
+}
 /* Botão compacto reutilizável */
 .btn-sm {
   width: auto;

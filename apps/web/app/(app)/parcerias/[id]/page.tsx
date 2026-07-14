@@ -71,6 +71,16 @@ function statusBadge(status: string): string {
   return 'badge-emerald';
 }
 
+const PASSOS = ['Aceita', 'Visita', 'Negociação', 'Venda'];
+
+/** Índice do passo atual no fluxo (para o stepper). */
+function passoAtual(status: string): number {
+  if (status === 'vendida') return 4;
+  if (status === 'em_negociacao') return 2;
+  if (status === 'aceita') return 1;
+  return 0;
+}
+
 export default function ParceriaDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -222,10 +232,24 @@ export default function ParceriaDetalhePage() {
               </span>
             </div>
 
+            {['aceita', 'em_negociacao', 'vendida'].includes(detalhe.status) && (
+              <ol className="parceria-steps">
+                {PASSOS.map((label, i) => {
+                  const cur = passoAtual(detalhe.status);
+                  return (
+                    <li key={label} className={i < cur ? 'done' : i === cur ? 'active' : ''}>
+                      <span className="parceria-step-dot">{i < cur ? '✓' : i + 1}</span>
+                      <span>{label}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+
             {/* Nível 2 — endereço completo (após match aceito) */}
             {detalhe.imovel.endereco && (
               <div className="card" style={{ marginTop: '0.85rem' }}>
-                <h3 className="detail-label">Endereço (Nível 2)</h3>
+                <h3 className="detail-label">Endereço do imóvel</h3>
                 <p style={{ margin: 0 }}>
                   {detalhe.imovel.endereco.logradouro}, {detalhe.imovel.endereco.numero}
                   {detalhe.imovel.endereco.complemento ? ` — ${detalhe.imovel.endereco.complemento}` : ''}
@@ -240,7 +264,10 @@ export default function ParceriaDetalhePage() {
 
             {/* Confirmação bilateral */}
             <div className="card" style={{ marginTop: '0.85rem' }}>
-              <h3 className="detail-label">Confirmação bilateral da visita</h3>
+              <h3 className="detail-label">Confirmação da visita</h3>
+              <p className="muted" style={{ margin: '-0.25rem 0 0.6rem', fontSize: '0.82rem' }}>
+                Os dois lados confirmam para liberar os contatos.
+              </p>
               {acaoErro && <div className="banner banner-error">{acaoErro}</div>}
 
               <ul className="check-list">
