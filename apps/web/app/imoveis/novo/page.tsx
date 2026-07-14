@@ -823,14 +823,14 @@ export default function NovoImovelPage() {
               Adicione pelo menos <strong>5 fotos</strong> para o imóvel aparecer na vitrine. A
               primeira é a capa.
             </p>
-            <div className="foto-dicas">
-              <strong>Dicas para fotos que vendem</strong>
+            <details className="foto-dicas">
+              <summary>💡 Dicas para fotos que vendem</summary>
               <ul>
                 <li>📱 Prefira a <strong>horizontal</strong> (deitado) — encaixa melhor na vitrine.</li>
                 <li>☀️ Ambientes <strong>iluminados</strong>, de dia e com luzes acesas.</li>
                 <li>🧹 Ambiente arrumado; capriche na <strong>foto de capa</strong> (a mais bonita).</li>
               </ul>
-            </div>
+            </details>
             <PhotoUploader value={fotos} onChange={setFotos} />
             {fotos.length > 0 && fotos.length < 5 && (
               <div className="field-hint" style={{ marginTop: '0.75rem' }}>
