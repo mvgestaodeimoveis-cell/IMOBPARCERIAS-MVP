@@ -5,9 +5,10 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { getAccessToken, isAuthenticated } from '@/lib/auth';
+import { getAccessToken, isAuthenticated, getRole } from '@/lib/auth';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
+import { BottomNav } from '@/components/BottomNav';
 
 interface ImovelVitrine {
   id: string;
@@ -45,6 +46,11 @@ export default function VitrineDetalhePage() {
   const [parceriaErro, setParceriaErro] = useState<string | null>(null);
   const [solicitada, setSolicitada] = useState(false);
   const [fotoAtiva, setFotoAtiva] = useState(0);
+  const [appNav, setAppNav] = useState(false);
+
+  useEffect(() => {
+    setAppNav(isAuthenticated() && getRole() !== 'equipe');
+  }, []);
 
   useEffect(() => {
     apiFetch<ImovelVitrine>(`/vitrine/${params.id}`)
@@ -93,7 +99,7 @@ export default function VitrineDetalhePage() {
   return (
     <div className="site">
       <Topbar />
-      <main>
+      <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
           <div className="section-inner section-narrow">
             <Link href="/vitrine" className="auth-back" style={{ marginBottom: '1rem' }}>
@@ -231,7 +237,7 @@ export default function VitrineDetalhePage() {
           </div>
         </section>
       </main>
-      <SiteFooter />
+      {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
     </div>
   );
 }
