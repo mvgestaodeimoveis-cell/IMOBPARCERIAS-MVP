@@ -33,19 +33,30 @@ export default function SelecaoClientePage() {
   const params = useParams<{ token: string }>();
   const [imoveis, setImoveis] = useState<ImovelVitrine[] | null>(null);
   const [lightbox, setLightbox] = useState<{ fotos: string[]; index: number } | null>(null);
+  const [corretorWa, setCorretorWa] = useState<string | undefined>();
+  const [corretorNome, setCorretorNome] = useState<string | undefined>();
 
   useEffect(() => {
-    const ids = decodeSelecao(params.token);
-    if (ids.length === 0) {
+    const data = decodeSelecao(params.token);
+    setCorretorWa(data.whatsapp);
+    setCorretorNome(data.corretor);
+    if (data.ids.length === 0) {
       setImoveis([]);
       return;
     }
     Promise.all(
-      ids.map((id) =>
-        apiFetch<ImovelVitrine>(`/vitrine/${id}`).catch(() => null),
-      ),
+      data.ids.map((id) => apiFetch<ImovelVitrine>(`/vitrine/${id}`).catch(() => null)),
     ).then((res) => setImoveis(res.filter((x): x is ImovelVitrine => x !== null)));
   }, [params.token]);
+
+  function gostei(im: ImovelVitrine) {
+    if (!corretorWa) return;
+    const digitos = corretorWa.replace(/\D/g, '');
+    const numero = digitos.length <= 11 ? `55${digitos}` : digitos;
+    const local = `${TIPO_LABEL[im.tipo] ?? im.tipo} em ${im.bairro}, ${im.cidade}`;
+    const msg = `Olá${corretorNome ? ` ${corretorNome.split(' ')[0]}` : ''}! Vi a seleção que você me enviou e gostei deste: ${formatBRL(im.preco)} — ${local}.`;
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
 
   return (
     <div className="site cliente-view">
@@ -124,6 +135,15 @@ export default function SelecaoClientePage() {
                             </span>
                           ))}
                         </div>
+                      )}
+                      {corretorWa && (
+                        <button
+                          type="button"
+                          className="btn btn-emerald cliente-gostei"
+                          onClick={() => gostei(im)}
+                        >
+                          💚 Gostei deste — avisar corretor
+                        </button>
                       )}
                     </div>
                   </article>

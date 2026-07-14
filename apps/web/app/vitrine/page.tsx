@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
-import { isAuthenticated, getRole } from '@/lib/auth';
+import { isAuthenticated, getRole, getAccessToken } from '@/lib/auth';
 import { encodeSelecao } from '@/lib/selecao';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -50,9 +50,17 @@ export default function VitrinePage() {
   const [appNav, setAppNav] = useState(false);
   const [selMode, setSelMode] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
+  const [me, setMe] = useState<{ whatsapp?: string; nome?: string }>({});
 
   useEffect(() => {
-    setAppNav(isAuthenticated() && getRole() !== 'equipe');
+    const logado = isAuthenticated() && getRole() !== 'equipe';
+    setAppNav(logado);
+    if (logado) {
+      const token = getAccessToken();
+      apiFetch<{ nome?: string; whatsapp?: string }>('/corretores/me', { token })
+        .then((c) => setMe({ whatsapp: c.whatsapp, nome: c.nome }))
+        .catch(() => setMe({}));
+    }
   }, []);
 
   function toggleSel(id: string) {
@@ -61,7 +69,8 @@ export default function VitrinePage() {
 
   async function compartilharSelecao() {
     if (sel.length === 0) return;
-    const url = `${window.location.origin}/ver/${encodeSelecao(sel)}`;
+    const token = encodeSelecao(sel, { whatsapp: me.whatsapp, corretor: me.nome });
+    const url = `${window.location.origin}/ver/${token}`;
     const texto = `Olá! Separei ${sel.length} imóvel(is) para você. Veja as opções e me diga qual mais gostou:`;
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     if (nav.share) {

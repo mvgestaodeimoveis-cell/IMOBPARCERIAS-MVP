@@ -1728,6 +1728,10 @@ a.stat-chip:hover {
 .cliente-corpo {
   padding: 0.9rem 1.05rem 1.1rem;
 }
+.cliente-gostei {
+  width: 100%;
+  margin-top: 0.9rem;
+}
 
 /* Modal (admin) */
 .modal-overlay {
