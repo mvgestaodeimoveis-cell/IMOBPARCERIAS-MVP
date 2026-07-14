@@ -9,6 +9,7 @@ import { getAccessToken, isAuthenticated, getRole } from '@/lib/auth';
 import { TIPO_LABEL } from '@/lib/labels';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
+import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { Lightbox } from '@/components/Lightbox';
 
@@ -94,7 +95,7 @@ export default function VitrineDetalhePage() {
 
   return (
     <div className="site">
-      <Topbar />
+      {appNav ? <AppHeader active="vitrine" /> : <Topbar />}
       <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
           <div className="section-inner section-narrow">
