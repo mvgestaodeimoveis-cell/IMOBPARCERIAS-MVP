@@ -70,6 +70,19 @@ const TIPO_LABEL: Record<string, string> = {
   comercial: 'Comercial',
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  aceita: 'Aceita',
+  em_negociacao: 'Em negociação',
+  vendida: 'Vendida',
+  encerrada: 'Encerrada',
+};
+
+function statusBadge(status: string): string {
+  if (status === 'em_negociacao') return 'badge-orange';
+  if (status === 'encerrada') return 'badge-gray';
+  return 'badge-emerald';
+}
+
 function maskCpf(v: string): string {
   const d = v.replace(/\D/g, '').slice(0, 11);
   return d
@@ -225,13 +238,19 @@ export default function ParceriaDetalhePage() {
           !erro && <p className="muted">Carregando…</p>
         ) : (
           <>
-            <h1 style={{ fontSize: '1.3rem' }}>
-              {TIPO_LABEL[detalhe.imovel.tipo] ?? detalhe.imovel.tipo} · {detalhe.imovel.bairro}
-            </h1>
-            <p className="muted" style={{ marginTop: '0.2rem' }}>
-              {formatBRL(detalhe.imovel.preco)} · Cliente: {detalhe.cliente_nome} ·{' '}
-              <strong>{detalhe.status.replace('_', ' ')}</strong>
-            </p>
+            <div className="parceria-head">
+              <div className="parceria-head-main">
+                <h1 style={{ fontSize: '1.3rem', margin: 0 }}>
+                  {TIPO_LABEL[detalhe.imovel.tipo] ?? detalhe.imovel.tipo} · {detalhe.imovel.bairro}
+                </h1>
+                <p className="muted" style={{ margin: '0.25rem 0 0' }}>
+                  {formatBRL(detalhe.imovel.preco)} · Cliente: {detalhe.cliente_nome}
+                </p>
+              </div>
+              <span className={`badge ${statusBadge(detalhe.status)}`}>
+                {STATUS_LABEL[detalhe.status] ?? detalhe.status.replace('_', ' ')}
+              </span>
+            </div>
 
             {/* Nível 2 — endereço completo (após match aceito) */}
             {detalhe.imovel.endereco && (
@@ -254,15 +273,24 @@ export default function ParceriaDetalhePage() {
               <h3 className="detail-label">Confirmação bilateral da visita</h3>
               {acaoErro && <div className="banner banner-error">{acaoErro}</div>}
 
-              <p className="muted" style={{ fontSize: '0.86rem' }}>
-                {detalhe.confirmacao.visita_em ? '✅' : '⬜'} Data da visita (captador)
-                {detalhe.confirmacao.visita_em
-                  ? `: ${new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')}`
-                  : ' — pendente'}
-                <br />
-                {detalhe.confirmacao.cpf_preenchido ? '✅' : '⬜'} CPF do cliente (comprador)
-                {detalhe.confirmacao.cpf_preenchido ? ': inserido' : ' — pendente'}
-              </p>
+              <ul className="check-list">
+                <li className={detalhe.confirmacao.visita_em ? 'ok' : ''}>
+                  <span className="check-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '○'}</span>
+                  <span>
+                    Data da visita <span className="muted">(captador)</span>
+                    {detalhe.confirmacao.visita_em
+                      ? ` — ${new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')}`
+                      : ' — pendente'}
+                  </span>
+                </li>
+                <li className={detalhe.confirmacao.cpf_preenchido ? 'ok' : ''}>
+                  <span className="check-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '○'}</span>
+                  <span>
+                    CPF do cliente <span className="muted">(comprador)</span>
+                    {detalhe.confirmacao.cpf_preenchido ? ' — inserido' : ' — pendente'}
+                  </span>
+                </li>
+              </ul>
 
               {detalhe.status === 'aceita' && detalhe.papel === 'captador' && !detalhe.confirmacao.visita_em && (
                 <div className="field">
