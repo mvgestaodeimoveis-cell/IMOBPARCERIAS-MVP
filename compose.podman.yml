@@ -1,0 +1,21 @@
+# Override para rodar a stack via podman rootless NESTE ambiente.
+#
+# Por quê: o encaminhamento de portas por pod do podman-compose não funciona aqui
+# (pasta iniciado com "-t none", sem rootlessport), então as portas publicadas
+# não chegam ao host. Usando a REDE DO HOST cada serviço publica direto na porta
+# do host e os serviços se falam por localhost.
+#
+# Uso (o script scripts/dev-local.sh --docker já faz isso):
+#   systemd-run --user --pipe --wait --collect \
+#     podman compose -f docker-compose.yml -f compose.podman.yml up -d --build
+services:
+  db:
+    network_mode: host
+  api:
+    network_mode: host
+    environment:
+      DATABASE_URL: postgresql://imob:imob@localhost:5432/imob
+  web:
+    network_mode: host
+    environment:
+      BACKEND_URL: http://localhost:4000

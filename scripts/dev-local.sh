@@ -11,8 +11,9 @@
 #     watch e o Next com polling (sem inotify).
 #
 # Uso:
-#   bash scripts/dev-local.sh          # sobe tudo
-#   bash scripts/dev-local.sh stop     # derruba tudo
+#   bash scripts/dev-local.sh          # sobe tudo NO HOST (db em container, api/web via node)
+#   bash scripts/dev-local.sh docker   # sobe TUDO EM CONTAINERS (podman compose)
+#   bash scripts/dev-local.sh stop     # derruba tudo (host + containers)
 #
 # Depois: web em http://localhost:3000 · api em http://localhost:4000
 # Contas demo (senha Senha@123): joao.captador@demo.com, maria.compradora@demo.com,
@@ -28,6 +29,32 @@ export APP_WEB_URL="http://localhost:3000"
 export CORS_ORIGIN="http://localhost:3000"
 export BACKEND_URL="http://localhost:4000"
 
+# podman precisa rodar fora do NoNewPrivileges (systemd --user = processo novo).
+compose() {
+  systemd-run --user --pipe --wait --collect --quiet --working-directory="$ROOT" \
+    podman compose -f docker-compose.yml -f compose.podman.yml "$@"
+}
+
+docker_up() {
+  echo "→ Subindo stack em containers (podman compose, rede do host)…"
+  compose up -d --build
+  # Quirk do podman-compose: o `up -d` derruba o container do db logo após subir.
+  # Reinicia-o (idempotente) para deixar o Postgres de pé.
+  echo "→ Garantindo o Postgres de pé…"
+  podman start imob-parcerias_db_1 >/dev/null 2>&1 || true
+  sleep 4
+  echo
+  echo "✔ Containers:"
+  podman ps --format '   {{.Names}}  {{.Status}}' | grep imob || true
+  echo "   Web:  http://localhost:3000   ·   API: http://localhost:4000"
+  echo "   Parar: bash scripts/dev-local.sh stop"
+}
+
+docker_down() {
+  echo "→ Derrubando containers…"
+  compose down 2>/dev/null || true
+}
+
 stop() {
   echo "→ Derrubando stack local…"
   pkill -f "tsx src/server.ts" 2>/dev/null || true
@@ -35,13 +62,14 @@ stop() {
   systemctl --user stop imob-db 2>/dev/null || true
   systemctl --user reset-failed imob-db 2>/dev/null || true
   podman rm -f imob-test-db 2>/dev/null || true
+  docker_down
   echo "✔ parado."
 }
 
-if [[ "${1:-}" == "stop" ]]; then
-  stop
-  exit 0
-fi
+case "${1:-}" in
+  stop)   stop; exit 0 ;;
+  docker) docker_up; exit 0 ;;
+esac
 
 # 1) Postgres via systemd --user (evita o NoNewPrivileges/SELinux) --------------
 if ! systemctl --user is-active --quiet imob-db; then
