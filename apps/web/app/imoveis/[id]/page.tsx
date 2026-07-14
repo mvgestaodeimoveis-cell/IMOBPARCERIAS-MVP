@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/useAuthGuard';
 import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 import { AppHeader } from '@/components/AppHeader';
 import { Lightbox } from '@/components/Lightbox';
@@ -32,6 +33,7 @@ interface Imovel {
 
 export default function ImovelDetalhePage() {
   const router = useRouter();
+  const token = useAuthGuard();
   const params = useParams<{ id: string }>();
   const id = params.id;
 
@@ -42,17 +44,13 @@ export default function ImovelDetalhePage() {
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!token) return;
     apiFetch<Imovel>(`/imoveis/${id}`, { token })
       .then(setImovel)
       .catch((err) => {
         setErro(err instanceof ApiRequestError ? err.message : 'Imóvel não encontrado.');
       });
-  }, [id, router]);
+  }, [id, token]);
 
   async function mudarStatus(status: 'ativo' | 'vendido' | 'em_negociacao') {
     const token = getAccessToken();

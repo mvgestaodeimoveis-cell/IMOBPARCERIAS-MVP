@@ -958,9 +958,9 @@ export default function NovoImovelPage() {
               </div>
 
               <p style={{ margin: '1rem 0 0.75rem' }}>
-                <a href="/termo-parceria" target="_blank" rel="noopener noreferrer">
+                <Link href="/termo-parceria" target="_blank" rel="noopener noreferrer">
                   📄 Ler o Termo de Parceria completo
-                </a>
+                </Link>
               </p>
 
               <label

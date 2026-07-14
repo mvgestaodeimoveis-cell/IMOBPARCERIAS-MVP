@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { clearSession, getAccessToken } from '@/lib/auth';
+import { clearSession } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/useAuthGuard';
 import { contatoEmail, whatsappLink } from '@/lib/contato';
 import { Brandmark } from '@/components/Brandmark';
 
@@ -16,20 +17,17 @@ interface Me {
 
 export default function PerfilRejeitadoPage() {
   const router = useRouter();
+  const token = useAuthGuard();
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!token) return;
     apiFetch<Me>('/corretores/me', { token })
       .then(setMe)
       .catch(() => router.replace('/login'))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [token, router]);
 
   function sair() {
     clearSession();

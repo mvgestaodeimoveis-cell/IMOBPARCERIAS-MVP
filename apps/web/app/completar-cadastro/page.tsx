@@ -7,6 +7,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { maskCreci, maskPhone } from '@/lib/masks';
 import { validateCidade, validateCreci, validateWhatsapp } from '@/lib/validation';
 import { clearSession, getAccessToken, routeForStatus } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/useAuthGuard';
 import { AuthShell } from '@/components/AuthShell';
 
 interface TermoResponse {
@@ -25,6 +26,7 @@ const CIDADES_BA = [
 
 export default function CompletarCadastroPage() {
   const router = useRouter();
+  const token = useAuthGuard();
   const [carregando, setCarregando] = useState(true);
   const [nome, setNome] = useState('');
   const [termo, setTermo] = useState<TermoResponse | null>(null);
@@ -43,11 +45,7 @@ export default function CompletarCadastroPage() {
   const [reenvioMsg, setReenvioMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = getAccessToken();
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!token) return;
     apiFetch<{ nome: string; status: string; email_verificado_em: string | null }>('/corretores/me', { token })
       .then((me) => {
         if (me.status !== 'cadastro_incompleto') {
@@ -63,7 +61,7 @@ export default function CompletarCadastroPage() {
     apiFetch<TermoResponse>('/termo/atual')
       .then(setTermo)
       .catch(() => setTermo(null));
-  }, [router]);
+  }, [token, router]);
 
   const VALIDATORS: Record<string, (v: string) => string | null> = {
     whatsapp: validateWhatsapp,

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { clearSession, getAccessToken, routeForStatus } from '@/lib/auth';
+import { clearSession, routeForStatus } from '@/lib/auth';
+import { useAuthGuard } from '@/lib/useAuthGuard';
 import { Brandmark } from '@/components/Brandmark';
 
 interface Me {
@@ -17,16 +18,13 @@ interface Me {
 
 export default function PerfilAnalisePage() {
   const router = useRouter();
+  const token = useAuthGuard();
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [verificando, setVerificando] = useState(false);
 
   const checkStatus = useCallback(async () => {
-    const token = getAccessToken();
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
+    if (!token) return;
     try {
       const data = await apiFetch<Me>('/corretores/me', { token });
       if (data.status !== 'verificacao_pendente') {
@@ -39,7 +37,7 @@ export default function PerfilAnalisePage() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [token, router]);
 
   useEffect(() => {
     checkStatus();
