@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
-import { AppHeader } from '@/components/AppHeader';
-import { BottomNav } from '@/components/BottomNav';
 
 interface Parceria {
   id: string;
@@ -184,14 +182,11 @@ export default function ParceriasPage() {
   }
 
   return (
-    <div className="frame frame-app">
-      <AppHeader active="parcerias" />
-
-      <div className="screen has-bottomnav">
-        <h1 style={{ fontSize: '1.5rem' }}>Minhas parcerias</h1>
-        <p className="muted" style={{ marginBottom: '1.25rem' }}>
-          <Link href="/painel">← Voltar ao início</Link>
-        </p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Minhas parcerias</h1>
+      <p className="muted" style={{ marginBottom: '1.25rem' }}>
+        <Link href="/painel">← Voltar ao início</Link>
+      </p>
 
         {erro && <div className="banner banner-error">{erro}</div>}
 
@@ -221,9 +216,6 @@ export default function ParceriasPage() {
             )}
           </>
         )}
-      </div>
-
-      <BottomNav active="parcerias" />
-    </div>
+    </>
   );
 }

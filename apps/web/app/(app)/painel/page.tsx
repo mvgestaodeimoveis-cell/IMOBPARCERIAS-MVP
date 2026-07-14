@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken, routeForStatus } from '@/lib/auth';
-import { AppHeader } from '@/components/AppHeader';
-import { BottomNav } from '@/components/BottomNav';
 
 interface Me {
   nome: string;
@@ -101,12 +99,9 @@ export default function AppHomePage() {
   const emNegociacao = imoveis?.filter((im) => im.status === 'em_negociacao').length ?? 0;
 
   return (
-    <div className="frame frame-app">
-      <AppHeader active="inicio" parceriasBadge={pendentes} />
-
-      <div className="screen has-bottomnav">
-        <h1 style={{ fontSize: '1.5rem' }}>Olá{me ? `, ${me.nome.split(' ')[0]}` : ''}!</h1>
-        <p className="muted" style={{ marginBottom: '1.1rem' }}>Seu perfil está ativo e verificado.</p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Olá{me ? `, ${me.nome.split(' ')[0]}` : ''}!</h1>
+      <p className="muted" style={{ marginBottom: '1.1rem' }}>Seu perfil está ativo e verificado.</p>
 
         {imoveis !== null && (
           <div className="painel-stats">
@@ -220,9 +215,6 @@ export default function AppHomePage() {
             ))}
           </div>
         )}
-      </div>
-
-      <BottomNav active="inicio" />
-    </div>
+    </>
   );
 }

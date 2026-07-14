@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
-import { AppHeader } from '@/components/AppHeader';
-import { BottomNav } from '@/components/BottomNav';
 
 interface Conversa {
   id: string;
@@ -67,14 +65,11 @@ export default function ConversasPage() {
   }, [router]);
 
   return (
-    <div className="frame frame-app">
-      <AppHeader active="conversas" />
-
-      <div className="screen has-bottomnav">
-        <h1 style={{ fontSize: '1.5rem' }}>Conversas</h1>
-        <p className="muted" style={{ marginBottom: '1.25rem' }}>
-          Suas negociações ativas em um só lugar.
-        </p>
+    <>
+      <h1 style={{ fontSize: '1.5rem' }}>Conversas</h1>
+      <p className="muted" style={{ marginBottom: '1.25rem' }}>
+        Suas negociações ativas em um só lugar.
+      </p>
 
         {conversas === null ? (
           <p className="muted">Carregando…</p>
@@ -128,9 +123,6 @@ export default function ConversasPage() {
             ))}
           </div>
         )}
-      </div>
-
-      <BottomNav active="conversas" />
-    </div>
+    </>
   );
 }
