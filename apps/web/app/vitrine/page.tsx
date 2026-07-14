@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { formatBRL } from '@/lib/masks';
+import { formatBRL, formatMilhar } from '@/lib/masks';
 import { TIPO_LABEL } from '@/lib/labels';
 import { isAuthenticated, getRole, getAccessToken } from '@/lib/auth';
 import { encodeSelecao } from '@/lib/selecao';
@@ -38,6 +38,23 @@ const FILTROS_INICIAIS = {
   area_min: '',
   quartos_min: '',
 };
+
+const CIDADES = [
+  'Salvador',
+  'Lauro de Freitas',
+  'Camaçari',
+  'Mata de São João',
+  "Dias d'Ávila",
+  'Simões Filho',
+];
+
+const TIPOS_FILTRO: { v: string; l: string }[] = [
+  { v: '', l: 'Todos' },
+  { v: 'apartamento', l: 'Apartamento' },
+  { v: 'casa', l: 'Casa' },
+  { v: 'terreno', l: 'Terreno' },
+  { v: 'comercial', l: 'Comercial' },
+];
 
 export default function VitrinePage() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
@@ -220,25 +237,125 @@ export default function VitrinePage() {
             </div>
 
             {filtrosAbertos && (
-              <div className="filtros">
-                <select className="input" value={filtros.finalidade} onChange={(e) => set('finalidade', e.target.value)}>
-                  <option value="">Finalidade</option>
-                  <option value="venda">Venda</option>
-                  <option value="aluguel">Aluguel</option>
-                </select>
-                <select className="input" value={filtros.tipo} onChange={(e) => set('tipo', e.target.value)}>
-                  <option value="">Tipo</option>
-                  <option value="apartamento">Apartamento</option>
-                  <option value="casa">Casa</option>
-                  <option value="terreno">Terreno</option>
-                  <option value="comercial">Comercial</option>
-                </select>
-                <input className="input" placeholder="Cidade" value={filtros.cidade} onChange={(e) => set('cidade', e.target.value)} />
-                <input className="input" placeholder="Bairro" value={filtros.bairro} onChange={(e) => set('bairro', e.target.value)} />
-                <input className="input" inputMode="numeric" placeholder="Preço mín." value={filtros.preco_min} onChange={(e) => set('preco_min', e.target.value.replace(/\D/g, ''))} />
-                <input className="input" inputMode="numeric" placeholder="Preço máx." value={filtros.preco_max} onChange={(e) => set('preco_max', e.target.value.replace(/\D/g, ''))} />
-                <input className="input" inputMode="numeric" placeholder="Metragem mín. (m²)" value={filtros.area_min} onChange={(e) => set('area_min', e.target.value.replace(/\D/g, ''))} />
-                <input className="input" inputMode="numeric" placeholder="Quartos mín." value={filtros.quartos_min} onChange={(e) => set('quartos_min', e.target.value.replace(/\D/g, ''))} />
+              <div className="filtros-panel">
+                <div className="filtro-grupo">
+                  <span className="filtro-label" id="lbl-finalidade">Finalidade</span>
+                  <div className="filtro-chips" role="group" aria-labelledby="lbl-finalidade">
+                    {[['', 'Todas'], ['venda', 'Venda'], ['aluguel', 'Aluguel']].map(([v, l]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        className={`filtro-chip${filtros.finalidade === v ? ' on' : ''}`}
+                        aria-pressed={filtros.finalidade === v}
+                        onClick={() => set('finalidade', v)}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filtro-grupo">
+                  <span className="filtro-label" id="lbl-tipo">Tipo de imóvel</span>
+                  <div className="filtro-chips" role="group" aria-labelledby="lbl-tipo">
+                    {TIPOS_FILTRO.map((t) => (
+                      <button
+                        key={t.v}
+                        type="button"
+                        className={`filtro-chip${filtros.tipo === t.v ? ' on' : ''}`}
+                        aria-pressed={filtros.tipo === t.v}
+                        onClick={() => set('tipo', t.v)}
+                      >
+                        {t.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filtro-grupo">
+                  <span className="filtro-label" id="lbl-quartos">Quartos (mínimo)</span>
+                  <div className="filtro-chips" role="group" aria-labelledby="lbl-quartos">
+                    <button
+                      type="button"
+                      className={`filtro-chip${!filtros.quartos_min ? ' on' : ''}`}
+                      aria-pressed={!filtros.quartos_min}
+                      onClick={() => set('quartos_min', '')}
+                    >
+                      Qualquer
+                    </button>
+                    {['1', '2', '3', '4'].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        className={`filtro-chip${filtros.quartos_min === n ? ' on' : ''}`}
+                        aria-pressed={filtros.quartos_min === n}
+                        onClick={() => set('quartos_min', n)}
+                      >
+                        {n}+
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="filtro-grupo">
+                  <span className="filtro-label">Localização</span>
+                  <div className="filtro-row2">
+                    <label className="filtro-campo">
+                      <span className="filtro-campo-label">Cidade</span>
+                      <select className="input" value={filtros.cidade} onChange={(e) => set('cidade', e.target.value)}>
+                        <option value="">Todas</option>
+                        {CIDADES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="filtro-campo">
+                      <span className="filtro-campo-label">Bairro</span>
+                      <input className="input" placeholder="Ex.: Pituba" value={filtros.bairro} onChange={(e) => set('bairro', e.target.value)} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="filtro-grupo">
+                  <span className="filtro-label">Faixa de preço</span>
+                  <div className="filtro-row2">
+                    <label className="filtro-campo">
+                      <span className="filtro-campo-label">De</span>
+                      <div className="input-prefix">
+                        <span>R$</span>
+                        <input inputMode="numeric" placeholder="0" value={formatMilhar(filtros.preco_min)} onChange={(e) => set('preco_min', e.target.value.replace(/\D/g, ''))} />
+                      </div>
+                    </label>
+                    <label className="filtro-campo">
+                      <span className="filtro-campo-label">Até</span>
+                      <div className="input-prefix">
+                        <span>R$</span>
+                        <input inputMode="numeric" placeholder="Sem limite" value={formatMilhar(filtros.preco_max)} onChange={(e) => set('preco_max', e.target.value.replace(/\D/g, ''))} />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="filtro-grupo">
+                  <label className="filtro-campo">
+                    <span className="filtro-label">Metragem mínima</span>
+                    <div className="input-prefix input-suffix">
+                      <input inputMode="numeric" placeholder="0" value={filtros.area_min} onChange={(e) => set('area_min', e.target.value.replace(/\D/g, ''))} />
+                      <span>m²</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="filtro-acoes">
+                  {filtrosAtivos > 0 && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFiltros(FILTROS_INICIAIS)}>
+                      Limpar filtros
+                    </button>
+                  )}
+                  <button type="button" className="btn btn-emerald filtro-ver" onClick={() => setFiltrosAbertos(false)}>
+                    Ver {total} imóvel(is)
+                  </button>
+                </div>
               </div>
             )}
 
