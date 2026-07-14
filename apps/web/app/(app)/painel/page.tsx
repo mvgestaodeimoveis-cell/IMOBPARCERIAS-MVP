@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken, routeForStatus } from '@/lib/auth';
+import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 
 interface Me {
   nome: string;
@@ -28,20 +29,6 @@ interface Imovel {
   exclusividade: boolean;
   exclusividade_status: string;
 }
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  ativo: 'Disponível',
-  em_negociacao: 'Em negociação',
-  vendido: 'Vendido',
-  inativo: 'Inativo',
-};
 
 export default function AppHomePage() {
   const router = useRouter();

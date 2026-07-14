@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { clearSession, getAccessToken, getRole } from '@/lib/auth';
+import { CORRETOR_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 import { Brandmark } from '@/components/Brandmark';
 
 interface CorretorRow {
@@ -40,14 +41,6 @@ interface AceitesResponse {
   corretor: { id: string; nome: string; email: string; creci: string };
   data: AceiteTermo[];
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  verificacao_pendente: 'Pendente',
-  ativo: 'Ativo',
-  rejeitado: 'Rejeitado',
-  suspenso: 'Suspenso',
-  cadastro_incompleto: 'Incompleto',
-};
 
 const STATUS_FILTROS = ['verificacao_pendente', 'ativo', 'suspenso', 'rejeitado', ''];
 

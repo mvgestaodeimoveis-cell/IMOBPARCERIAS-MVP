@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
+import { TIPO_LABEL } from '@/lib/labels';
 import { isAuthenticated, getRole, getAccessToken } from '@/lib/auth';
 import { encodeSelecao } from '@/lib/selecao';
 import { Topbar } from '@/components/Topbar';
@@ -26,13 +27,6 @@ interface ImovelVitrine {
   diferenciais: string[];
   exclusividade_verificada: boolean;
 }
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
 
 const FILTROS_INICIAIS = {
   tipo: '',

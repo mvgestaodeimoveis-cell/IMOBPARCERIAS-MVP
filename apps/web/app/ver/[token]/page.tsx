@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { decodeSelecao } from '@/lib/selecao';
+import { TIPO_LABEL } from '@/lib/labels';
 import { Lightbox } from '@/components/Lightbox';
 
 interface ImovelVitrine {
@@ -21,13 +22,6 @@ interface ImovelVitrine {
   fotos: string[];
   diferenciais: string[];
 }
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
 
 export default function SelecaoClientePage() {
   const params = useParams<{ token: string }>();

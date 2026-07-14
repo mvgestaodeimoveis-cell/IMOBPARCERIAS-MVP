@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken, isAuthenticated, getRole } from '@/lib/auth';
+import { TIPO_LABEL } from '@/lib/labels';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { BottomNav } from '@/components/BottomNav';
@@ -26,13 +27,6 @@ interface ImovelVitrine {
   diferenciais: string[];
   exclusividade_verificada: boolean;
 }
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
 
 export default function VitrineDetalhePage() {
   const params = useParams<{ id: string }>();

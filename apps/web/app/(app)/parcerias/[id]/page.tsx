@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
-import { formatBRL } from '@/lib/masks';
+import { formatBRL, maskCpf } from '@/lib/masks';
+import { waLink } from '@/lib/format';
 import { getAccessToken } from '@/lib/auth';
+import { TIPO_LABEL, PARCERIA_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 import { AppHeader } from '@/components/AppHeader';
 
 interface Endereco {
@@ -63,37 +65,10 @@ interface Mensagem {
   meu: boolean;
 }
 
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  aceita: 'Aceita',
-  em_negociacao: 'Em negociação',
-  vendida: 'Vendida',
-  encerrada: 'Encerrada',
-};
-
 function statusBadge(status: string): string {
   if (status === 'em_negociacao') return 'badge-orange';
   if (status === 'encerrada') return 'badge-gray';
   return 'badge-emerald';
-}
-
-function maskCpf(v: string): string {
-  const d = v.replace(/\D/g, '').slice(0, 11);
-  return d
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-}
-
-function waLink(whatsapp: string | null): string | null {
-  if (!whatsapp) return null;
-  return `https://wa.me/${whatsapp.replace(/\D/g, '')}`;
 }
 
 export default function ParceriaDetalhePage() {

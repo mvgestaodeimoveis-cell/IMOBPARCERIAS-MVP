@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
+import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 import { AppHeader } from '@/components/AppHeader';
 import { Lightbox } from '@/components/Lightbox';
 
@@ -28,20 +29,6 @@ interface Imovel {
   status: string;
   fotos: string[];
 }
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  ativo: 'Disponível',
-  em_negociacao: 'Em negociação',
-  vendido: 'Vendido',
-  inativo: 'Inativo',
-};
 
 export default function ImovelDetalhePage() {
   const router = useRouter();

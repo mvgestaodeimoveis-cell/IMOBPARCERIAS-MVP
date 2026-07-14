@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
+import { TIPO_LABEL, PARCERIA_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 
 interface Parceria {
   id: string;
@@ -22,22 +23,6 @@ interface Parceria {
   criado_em: string;
 }
 
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  solicitada: 'Solicitada',
-  aceita: 'Aceita',
-  recusada: 'Recusada',
-  em_negociacao: 'Em negociação',
-  vendida: 'Vendida',
-  encerrada: 'Encerrada',
-  cancelada: 'Cancelada',
-};
 
 function statusBadgeClass(status: string): string {
   if (status === 'aceita' || status === 'vendida') return 'badge badge-emerald';

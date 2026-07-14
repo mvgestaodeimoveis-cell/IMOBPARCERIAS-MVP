@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { clearSession, getAccessToken, getRole } from '@/lib/auth';
+import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 import { Brandmark } from '@/components/Brandmark';
 
 interface ImovelRow {
@@ -21,20 +22,6 @@ interface ImovelRow {
   corretor_creci: string | null;
   criado_em: string;
 }
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  ativo: 'Disponível',
-  em_negociacao: 'Em negociação',
-  vendido: 'Vendido',
-  inativo: 'Inativo',
-};
 
 const STATUS = ['', 'ativo', 'em_negociacao', 'vendido', 'inativo'];
 

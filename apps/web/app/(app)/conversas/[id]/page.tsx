@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
+import { TIPO_LABEL } from '@/lib/labels';
+import { iniciais } from '@/lib/format';
 
 interface Detalhe {
   id: string;
@@ -25,18 +27,6 @@ interface Mensagem {
   corpo: string;
   criado_em: string;
   meu: boolean;
-}
-
-const TIPO_LABEL: Record<string, string> = {
-  apartamento: 'Apartamento',
-  casa: 'Casa',
-  terreno: 'Terreno',
-  comercial: 'Comercial',
-};
-
-function iniciais(nome: string): string {
-  const p = nome.trim().split(/\s+/);
-  return ((p[0]?.[0] ?? '') + (p[1]?.[0] ?? '')).toUpperCase();
 }
 
 function mesmoDia(a: string, b: string): boolean {

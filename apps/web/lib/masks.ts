@@ -23,6 +23,15 @@ export function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+/** Máscara de CPF BR: XXX.XXX.XXX-XX. */
+export function maskCpf(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11);
+  return d
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+}
+
 /** Formata número em Real (R$ 1.234,56). */
 export function formatBRL(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
