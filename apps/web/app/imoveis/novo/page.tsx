@@ -349,6 +349,9 @@ export default function NovoImovelPage() {
       }));
       if (d.fotos && d.fotos.length > 0) setFotos((atuais) => [...atuais, ...d.fotos].slice(0, 10));
       setLinkOrigem(importUrl.trim());
+      // Importação é autoritativa: descarta rascunho antigo e passa a salvar o cadastro atual.
+      setTemRascunho(false);
+      setSalvarAtivo(true);
       setImportMsg('Dados importados! Revise cada etapa e complete o que faltar.');
       setStep(2);
     } catch (err) {
@@ -394,6 +397,10 @@ export default function NovoImovelPage() {
       if (Array.isArray(d.diferenciais) && d.diferenciais.length > 0) {
         setDiferenciais((arr) => Array.from(new Set([...arr, ...d.diferenciais!])).slice(0, 20));
       }
+      // A importação é autoritativa: descarta o rascunho antigo (evita que o banner
+      // "cadastro em andamento" sobrescreva os dados) e passa a salvar o cadastro atual.
+      setTemRascunho(false);
+      setSalvarAtivo(true);
       const rec = d.reconhecidos ?? [];
       if (rec.length > 0) {
         setImportMsg(`Reconhecemos: ${rec.join(', ')}. Revise cada etapa e complete o endereço e as fotos.`);
