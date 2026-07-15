@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { LogoMark } from '@/components/LogoMark';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 export default function LandingPage() {
   return (
@@ -26,8 +27,9 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="hero-nomensalidade">
-              <span aria-hidden>✓</span> 100% sem mensalidade — você só investe quando fecha negócio
+              <span aria-hidden>✓</span> Sem mensalidade
             </p>
+            <InstallPrompt />
           </div>
         </section>
 

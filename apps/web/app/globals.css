@@ -2780,6 +2780,81 @@ a.stat-chip:hover {
   padding: 0.6rem 1.2rem;
 }
 
+/* Caixinha de busca rápida (vitrine) */
+.busca-rapida {
+  margin-bottom: 0.75rem;
+}
+.busca-rapida-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.6rem;
+}
+.busca-rapida-dica {
+  margin: 0.7rem 0 0;
+  font-size: 0.78rem;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .busca-rapida-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Convite de instalação (PWA) */
+.install-prompt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  max-width: 420px;
+  margin: 1.25rem auto 0;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(16, 40, 61, 0.08);
+  text-align: left;
+}
+.install-corpo {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 190px;
+}
+.install-ico {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.install-corpo strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--navy);
+}
+.install-corpo p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.install-cta {
+  width: auto;
+  min-height: auto;
+  padding: 0.55rem 1rem;
+  white-space: nowrap;
+}
+.install-fechar {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: #9aa5b1;
+  cursor: pointer;
+}
+
 /* Chips (diferenciais) */
 .chips {
   display: flex;

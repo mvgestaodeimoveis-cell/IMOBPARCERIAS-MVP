@@ -68,7 +68,9 @@ export function clearSession(): void {
 export function routeForStatus(status: string): string {
   switch (status) {
     case 'ativo':
-      return '/painel';
+      // Corretor ativo cai na Vitrine (onde busca imóveis para a demanda do cliente),
+      // não no painel — ele acessa o painel pela navegação quando quiser.
+      return '/vitrine';
     case 'cadastro_incompleto':
       return '/completar-cadastro';
     case 'rejeitado':

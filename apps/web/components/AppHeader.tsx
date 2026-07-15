@@ -5,11 +5,11 @@ import { useRouter } from 'next/navigation';
 import { Brandmark } from './Brandmark';
 import { clearSession } from '@/lib/auth';
 
-export type AppTab = 'inicio' | 'vitrine' | 'conversas' | 'parcerias';
+export type AppTab = 'inicio' | 'painel' | 'conversas' | 'parcerias';
 
 const NAV: { key: AppTab; label: string; href: string }[] = [
-  { key: 'inicio', label: 'Início', href: '/painel' },
-  { key: 'vitrine', label: 'Vitrine', href: '/vitrine' },
+  { key: 'inicio', label: 'Início', href: '/vitrine' },
+  { key: 'painel', label: 'Painel', href: '/painel' },
   { key: 'conversas', label: 'Chat', href: '/conversas' },
   { key: 'parcerias', label: 'Parcerias', href: '/parcerias' },
 ];

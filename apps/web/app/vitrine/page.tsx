@@ -56,6 +56,16 @@ const TIPOS_FILTRO: { v: string; l: string }[] = [
   { v: 'comercial', l: 'Comercial' },
 ];
 
+// Faixas de valor prontas para a busca rápida (mapeiam para preco_min/preco_max).
+const FAIXAS: { v: string; l: string; min: string; max: string }[] = [
+  { v: '', l: 'Qualquer valor', min: '', max: '' },
+  { v: 'a', l: 'Até R$ 300 mil', min: '', max: '300000' },
+  { v: 'b', l: 'R$ 300 mil a 500 mil', min: '300000', max: '500000' },
+  { v: 'c', l: 'R$ 500 mil a 800 mil', min: '500000', max: '800000' },
+  { v: 'd', l: 'R$ 800 mil a 1 milhão', min: '800000', max: '1000000' },
+  { v: 'e', l: 'Acima de R$ 1 milhão', min: '1000000', max: '' },
+];
+
 export default function VitrinePage() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [imoveis, setImoveis] = useState<ImovelVitrine[] | null>(null);
@@ -87,8 +97,20 @@ export default function VitrinePage() {
 
   async function compartilharSelecao() {
     if (sel.length === 0) return;
-    const token = encodeSelecao(sel, { whatsapp: me.whatsapp, corretor: me.nome });
-    const url = `${window.location.origin}/ver/${token}`;
+    let url: string;
+    try {
+      const token = getAccessToken();
+      const res = await apiFetch<{ codigo: string }>('/selecoes', {
+        method: 'POST',
+        body: { ids: sel },
+        token,
+      });
+      url = `${window.location.origin}/ver/${res.codigo}`;
+    } catch {
+      // Fallback: link autocontido (caso o endpoint de link curto não esteja disponível).
+      const legacy = encodeSelecao(sel, { whatsapp: me.whatsapp, corretor: me.nome });
+      url = `${window.location.origin}/ver/${legacy}`;
+    }
     const texto = `Olá! Separei ${sel.length} imóvel(is) para você. Veja as opções e me diga qual mais gostou:`;
     const nav = navigator as Navigator & { share?: (d: ShareData) => Promise<void> };
     if (nav.share) {
@@ -129,6 +151,14 @@ export default function VitrinePage() {
     setFiltros((f) => ({ ...f, [k]: v }));
   }
 
+  const faixaAtual =
+    FAIXAS.find((f) => f.min === filtros.preco_min && f.max === filtros.preco_max)?.v ?? '';
+
+  function setFaixa(v: string) {
+    const f = FAIXAS.find((x) => x.v === v) ?? FAIXAS[0];
+    setFiltros((prev) => ({ ...prev, preco_min: f.min, preco_max: f.max }));
+  }
+
   async function interpretarBusca() {
     if (buscaTexto.trim().length < 10) return;
     setBuscaMsg(null);
@@ -161,7 +191,7 @@ export default function VitrinePage() {
 
   return (
     <div className="site">
-      {appNav ? <AppHeader active="vitrine" /> : <Topbar />}
+      {appNav ? <AppHeader active="inicio" /> : <Topbar />}
 
       <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
@@ -172,6 +202,47 @@ export default function VitrinePage() {
             <p className="muted center vitrine-sub">
               O endereço completo é revelado apenas no chat, após o match.
             </p>
+
+            <div className="card busca-rapida">
+              <div className="busca-rapida-grid">
+                <label className="filtro-campo">
+                  <span className="filtro-campo-label">Finalidade</span>
+                  <select className="input" value={filtros.finalidade} onChange={(e) => set('finalidade', e.target.value)}>
+                    <option value="">Todas</option>
+                    <option value="venda">Venda</option>
+                    <option value="aluguel">Aluguel</option>
+                  </select>
+                </label>
+                <label className="filtro-campo">
+                  <span className="filtro-campo-label">Tipo</span>
+                  <select className="input" value={filtros.tipo} onChange={(e) => set('tipo', e.target.value)}>
+                    {TIPOS_FILTRO.map((t) => (
+                      <option key={t.v} value={t.v}>{t.l}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="filtro-campo">
+                  <span className="filtro-campo-label">Cidade</span>
+                  <select className="input" value={filtros.cidade} onChange={(e) => set('cidade', e.target.value)}>
+                    <option value="">Todas</option>
+                    {CIDADES.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="filtro-campo">
+                  <span className="filtro-campo-label">Faixa de valor</span>
+                  <select className="input" value={faixaAtual} onChange={(e) => setFaixa(e.target.value)}>
+                    {FAIXAS.map((f) => (
+                      <option key={f.v} value={f.v}>{f.l}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="muted busca-rapida-dica">
+                Busque pelos botões acima <strong>ou</strong> cole o pedido do cliente abaixo.
+              </p>
+            </div>
 
             {!buscaAberta ? (
               <button type="button" className="vitrine-colar" onClick={() => setBuscaAberta(true)}>
@@ -483,7 +554,7 @@ export default function VitrinePage() {
         </div>
       )}
 
-      {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
+      {appNav ? <BottomNav active="inicio" /> : <SiteFooter />}
     </div>
   );
 }

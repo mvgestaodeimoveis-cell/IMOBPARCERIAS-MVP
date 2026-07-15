@@ -12,7 +12,7 @@ import { BottomNav } from '@/components/BottomNav';
  * As demais rotas do grupo (detalhe de parceria, chat) renderizam o próprio shell.
  */
 const TABS: { path: string; tab: AppTab }[] = [
-  { path: '/painel', tab: 'inicio' },
+  { path: '/painel', tab: 'painel' },
   { path: '/parcerias', tab: 'parcerias' },
   { path: '/conversas', tab: 'conversas' },
 ];

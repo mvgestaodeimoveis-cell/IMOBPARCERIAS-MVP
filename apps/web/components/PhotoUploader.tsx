@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { reportarErro } from '@/lib/telemetry';
 
 interface Assinatura {
   cloud_name: string;
@@ -32,12 +33,13 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
     const selecionados = Array.from(files).slice(0, restantes);
     setUploading(true);
     try {
+      // Uma assinatura serve para todos os arquivos desta leva (válida por ~1h).
+      const sig = await apiFetch<Assinatura>('/imoveis/upload-assinatura', {
+        method: 'POST',
+        token,
+      });
       const novos: string[] = [];
       for (const file of selecionados) {
-        const sig = await apiFetch<Assinatura>('/imoveis/upload-assinatura', {
-          method: 'POST',
-          token,
-        });
         const fd = new FormData();
         fd.append('file', file);
         fd.append('api_key', sig.api_key);
@@ -49,13 +51,22 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
           `https://api.cloudinary.com/v1_1/${sig.cloud_name}/image/upload`,
           { method: 'POST', body: fd },
         );
-        if (!res.ok) throw new Error('upload falhou');
+        if (!res.ok) {
+          // Repassa o motivo real do Cloudinary (tamanho, formato, assinatura, etc.).
+          const corpo = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+          throw new Error(corpo?.error?.message || `Falha no upload (HTTP ${res.status}).`);
+        }
         const data = (await res.json()) as { secure_url: string };
         novos.push(data.secure_url);
       }
       onChange([...value, ...novos]);
-    } catch {
-      setErro('Não foi possível enviar as fotos. Tente novamente.');
+    } catch (e) {
+      reportarErro('upload-foto', e, { selecionadas: selecionados.length, jaEnviadas: value.length });
+      setErro(
+        e instanceof Error && e.message
+          ? `Não foi possível enviar as fotos: ${e.message}`
+          : 'Não foi possível enviar as fotos. Tente novamente.',
+      );
     } finally {
       setUploading(false);
     }

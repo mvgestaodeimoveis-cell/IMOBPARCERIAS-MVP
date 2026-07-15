@@ -9,9 +9,6 @@ export function SiteFooter() {
           <Brandmark />
         </Link>
         <nav className="foot-links" aria-label="Rodapé">
-          <Link href="/como-funciona">Como funciona</Link>
-          <Link href="/login">Entrar</Link>
-          <Link href="/cadastro">Cadastrar</Link>
           <Link href="/termo">Termo de Uso</Link>
           <Link href="/politica-privacidade">Política de Privacidade</Link>
         </nav>

@@ -95,7 +95,7 @@ export default function VitrineDetalhePage() {
 
   return (
     <div className="site">
-      {appNav ? <AppHeader active="vitrine" /> : <Topbar />}
+      {appNav ? <AppHeader active="inicio" /> : <Topbar />}
       <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
           <div className="section-inner section-narrow">
@@ -241,7 +241,7 @@ export default function VitrineDetalhePage() {
           </div>
         </section>
       </main>
-      {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
+      {appNav ? <BottomNav active="inicio" /> : <SiteFooter />}
       {lightbox !== null && imovel && (
         <Lightbox fotos={imovel.fotos} index={lightbox} onClose={() => setLightbox(null)} />
       )}

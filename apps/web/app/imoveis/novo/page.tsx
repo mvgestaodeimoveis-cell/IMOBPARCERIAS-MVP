@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';import { formatMilhar, maskCep, parseNumero } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
+import { reportarErro } from '@/lib/telemetry';
 import { Brandmark } from '@/components/Brandmark';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { BottomNav } from '@/components/BottomNav';
@@ -518,6 +519,7 @@ export default function NovoImovelPage() {
           else if (err.fields.preco || err.fields.area_m2) setStep(3);
         }
       } else {
+        reportarErro('publicar-imovel', err, { tipo: form.tipo, fotos: fotos.length });
         setErro('Não foi possível publicar o imóvel.');
       }
     } finally {
@@ -546,7 +548,7 @@ export default function NovoImovelPage() {
       </div>
 
       <div className="wizard-body">
-        {temRascunho && (
+        {temRascunho && step === 1 && (
           <div className="rascunho-banner">
             <div>
               <strong>Você tem um cadastro em andamento</strong>
