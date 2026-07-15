@@ -169,16 +169,30 @@ export function parseImovelTexto(textoOriginal: string): ImovelExtraido {
     }
   }
 
-  // Bairro — via rótulo explícito ("bairro: X" ou "no bairro X").
-  const bairroM =
-    texto.match(/bairro\s*:?\s*([A-Za-zÀ-ú][A-Za-zÀ-ú' ]{2,28})/) ??
-    texto.match(/\b(?:no|na)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s[A-ZÀ-Ú][a-zà-ú]+){0,2})/);
-  if (bairroM) {
-    const b = bairroM[1].trim().replace(/\s+(no|na|em|de|com|por)\b.*$/i, '').trim();
-    if (b.length >= 3 && !CIDADES.some((c) => normalizar(c) === normalizar(b))) {
-      out.bairro = b;
-      reconhecidos.push('bairro');
-    }
+  // Bairro — tenta, em ordem: rótulo explícito ("bairro: X"), título com barra
+  // ("Residencial | Abrantes") e "no/na X" (ignorando nomes de via como Estrada/Rua/Av).
+  const VIAS = /^(estrada|rua|r\.|av|avenida|alameda|al\.|travessa|tv\.|rodovia|rod\.|loteamento|condom[íi]nio|cond\.|residencial|vila|edif[íi]cio|ed\.)\b/i;
+  const limparBairro = (raw: string) =>
+    raw
+      .trim()
+      .replace(/\s+(no|na|em|de|com|por|antes|pr[óo]xim[oa])\b.*$/i, '')
+      .trim();
+
+  let bairro: string | undefined;
+  let bm = texto.match(/bairro\s*:?\s*([A-Za-zÀ-ú][A-Za-zÀ-ú' ]{2,28})/);
+  if (bm) bairro = limparBairro(bm[1]);
+  if (!bairro) {
+    // Título com separador em barra ou travessão: "Vila Florença Residencial | Abrantes".
+    bm = texto.match(/[|\u2013\u2014]\s*([A-ZÀ-Ú][A-Za-zÀ-ú' ]{2,28})/);
+    if (bm) bairro = limparBairro(bm[1]);
+  }
+  if (!bairro) {
+    bm = texto.match(/\b(?:no|na)\s+([A-ZÀ-Ú][a-zà-ú]+(?:\s[A-ZÀ-Ú][a-zà-ú]+){0,2})/);
+    if (bm && !VIAS.test(bm[1])) bairro = limparBairro(bm[1]);
+  }
+  if (bairro && bairro.length >= 3 && !VIAS.test(bairro) && !CIDADES.some((c) => normalizar(c) === normalizar(bairro!))) {
+    out.bairro = bairro;
+    reconhecidos.push('bairro');
   }
 
   // Diferenciais
