@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL, formatMilhar } from '@/lib/masks';
+import { dataPublicacao } from '@/lib/format';
 import { TIPO_LABEL } from '@/lib/labels';
 import { isAuthenticated, getRole, getAccessToken } from '@/lib/auth';
 import { encodeSelecao } from '@/lib/selecao';
@@ -19,6 +20,9 @@ interface ImovelVitrine {
   preco: number;
   cidade: string;
   bairro: string;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   banheiros: number | null;
@@ -26,6 +30,7 @@ interface ImovelVitrine {
   fotos: string[];
   diferenciais: string[];
   exclusividade_verificada: boolean;
+  criado_em: string;
 }
 
 const FILTROS_INICIAIS = {
@@ -506,6 +511,19 @@ export default function VitrinePage() {
                               .filter(Boolean)
                               .join(' · ')}
                           </p>
+                          {im.finalidade === 'aluguel' && (
+                            <p className="imovel-meta">
+                              {im.taxas_inclusas
+                                ? 'Condomínio + IPTU inclusos'
+                                : [
+                                    im.condominio != null ? `Cond. ${formatBRL(im.condominio)}` : null,
+                                    im.iptu != null ? `IPTU ${formatBRL(im.iptu)}` : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' · ') || null}
+                            </p>
+                          )}
+                          <p className="vitrine-data">Publicado em {dataPublicacao(im.criado_em)}</p>
                         </div>
                       </>
                     );

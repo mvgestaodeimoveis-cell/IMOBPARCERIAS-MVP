@@ -62,10 +62,32 @@ adminRoutes.post(
   }),
 );
 
+adminRoutes.delete(
+  '/corretores/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.excluirCorretor(req.params.id));
+  }),
+);
+
 adminRoutes.get(
   '/corretores/:id/aceites',
   asyncHandler(async (req: Request, res: Response) => {
     res.json(await adminService.listarAceitesTermo(req.params.id));
+  }),
+);
+
+// Monitoramento de conversas (chat) — a equipe acompanha as interações.
+adminRoutes.get(
+  '/conversas',
+  asyncHandler(async (_req: Request, res: Response) => {
+    res.json(await adminService.listarConversasAdmin());
+  }),
+);
+
+adminRoutes.get(
+  '/conversas/:id',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json(await adminService.obterConversaAdmin(req.params.id));
   }),
 );
 

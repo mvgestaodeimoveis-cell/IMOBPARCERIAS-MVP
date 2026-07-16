@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
+import { dataPublicacao } from '@/lib/format';
 import { getAccessToken, isAuthenticated, getRole } from '@/lib/auth';
 import { TIPO_LABEL } from '@/lib/labels';
 import { Topbar } from '@/components/Topbar';
@@ -20,6 +21,9 @@ interface ImovelVitrine {
   preco: number;
   cidade: string;
   bairro: string;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   banheiros: number | null;
@@ -27,6 +31,7 @@ interface ImovelVitrine {
   fotos: string[];
   diferenciais: string[];
   exclusividade_verificada: boolean;
+  criado_em: string;
 }
 
 export default function VitrineDetalhePage() {
@@ -158,6 +163,23 @@ export default function VitrineDetalhePage() {
                     <span className="badge badge-emerald" style={{ marginLeft: '0.5rem' }}>✓ Exclusividade</span>
                   )}
                 </p>
+                <p className="vitrine-data" style={{ marginTop: '0.15rem' }}>
+                  Publicado em {dataPublicacao(imovel.criado_em)}
+                </p>
+
+                {imovel.finalidade === 'aluguel' && (
+                  <div className="card" style={{ marginTop: '1rem' }}>
+                    <h3 className="detail-label">Taxas</h3>
+                    {imovel.taxas_inclusas ? (
+                      <p style={{ margin: 0 }}>Condomínio e IPTU inclusos no valor do aluguel.</p>
+                    ) : (
+                      <div className="detail-grid">
+                        <span>Condomínio: <b>{imovel.condominio != null ? formatBRL(imovel.condominio) : '—'}</b></span>
+                        <span>IPTU: <b>{imovel.iptu != null ? formatBRL(imovel.iptu) : '—'}</b></span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="card" style={{ marginTop: '1rem' }}>
                   <h3 className="detail-label">Características</h3>

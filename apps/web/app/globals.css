@@ -1249,6 +1249,11 @@ a.stat-chip:hover {
   color: var(--gray-700);
   font-size: 0.88rem;
 }
+.vitrine-data {
+  margin: 0.4rem 0 0;
+  color: var(--gray-500, #8a94a6);
+  font-size: 0.76rem;
+}
 .badge {
   font-size: 0.7rem;
   font-weight: 700;
@@ -1269,6 +1274,24 @@ a.stat-chip:hover {
 .badge-gray {
   background: var(--gray-100);
   color: var(--gray-700);
+}
+.badge-amber {
+  background: #fdf3cf;
+  color: #8a6d00;
+}
+.badge-red {
+  background: #fbe3e3;
+  color: #c0392b;
+}
+.badge-dot::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  margin-right: 0.35rem;
+  background: currentColor;
+  vertical-align: middle;
 }
 .empty-state {
   text-align: center;
@@ -3424,6 +3447,54 @@ a.stat-chip:hover {
 .admin-nav a.active {
   color: var(--emerald-600);
   background: #e6f5ec;
+}
+
+/* ---- Monitoramento de conversas (equipe) ---- */
+.admin-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.admin-chat-msg {
+  border: 1px solid var(--gray-200, #e6e9ef);
+  border-radius: 12px;
+  padding: 0.6rem 0.8rem;
+  background: #fff;
+  max-width: 85%;
+}
+.admin-chat-msg.captador {
+  align-self: flex-start;
+  border-top-left-radius: 3px;
+}
+.admin-chat-msg.comprador {
+  align-self: flex-end;
+  border-top-right-radius: 3px;
+  background: var(--bg, #f6f8fb);
+}
+.admin-chat-msg.alerta {
+  border-color: #e0a800;
+  background: #fdf9e7;
+}
+.admin-chat-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.76rem;
+  margin-bottom: 0.25rem;
+}
+.admin-chat-corpo {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.admin-chat-flag {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8a6d00;
 }
 
 /* ---- Tablet ---- */

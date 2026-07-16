@@ -118,9 +118,12 @@ export default function NovoImovelPage() {
     bairro: '',
     cidade: '',
     area_m2: '',
+    condominio: '',
+    iptu: '',
     descricao: '',
   });
   const [emCondominio, setEmCondominio] = useState(false);
+  const [taxasInclusas, setTaxasInclusas] = useState(false);
   const [counts, setCounts] = useState({ quartos: 0, suites: 0, banheiros: 0, vagas: 0 });
   const [diferenciais, setDiferenciais] = useState<string[]>([]);
   const [difInput, setDifInput] = useState('');
@@ -185,6 +188,7 @@ export default function NovoImovelPage() {
         JSON.stringify({
           form,
           emCondominio,
+          taxasInclusas,
           counts,
           diferenciais,
           documentacao,
@@ -200,13 +204,14 @@ export default function NovoImovelPage() {
     } catch {
       /* localStorage cheio/indisponível — ignora */
     }
-  }, [salvarAtivo, form, emCondominio, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);
+  }, [salvarAtivo, form, emCondominio, taxasInclusas, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);
 
   function restaurarRascunho() {
     try {
       const d = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || '{}');
       if (d.form) setForm(d.form);
       if (typeof d.emCondominio === 'boolean') setEmCondominio(d.emCondominio);
+      if (typeof d.taxasInclusas === 'boolean') setTaxasInclusas(d.taxasInclusas);
       if (d.counts) setCounts(d.counts);
       if (Array.isArray(d.diferenciais)) setDiferenciais(d.diferenciais);
       if (Array.isArray(d.documentacao)) setDocumentacao(d.documentacao);
@@ -482,6 +487,10 @@ export default function NovoImovelPage() {
       bairro: form.bairro,
       cidade: form.cidade,
       area_m2: parseNumero(form.area_m2),
+      taxas_inclusas: form.finalidade === 'aluguel' ? taxasInclusas : false,
+      condominio:
+        form.finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.condominio) : undefined,
+      iptu: form.finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.iptu) : undefined,
       quartos: counts.quartos,
       suites: counts.suites,
       banheiros: counts.banheiros,
@@ -847,6 +856,55 @@ export default function NovoImovelPage() {
                 {fieldErrors.area_m2 && <div className="field-error">{fieldErrors.area_m2}</div>}
               </div>
             </div>
+
+            {form.finalidade === 'aluguel' && (
+              <div className="field" style={{ marginTop: '0.25rem' }}>
+                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 400 }}>
+                  <input
+                    type="checkbox"
+                    checked={taxasInclusas}
+                    onChange={(e) => setTaxasInclusas(e.target.checked)}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <span>Condomínio e IPTU inclusos no valor do aluguel</span>
+                </label>
+                <div className="grid-2" style={{ marginTop: '0.6rem' }}>
+                  <div className="field">
+                    <label htmlFor="condominio">Condomínio (mês)</label>
+                    <div className="input-prefix">
+                      <span>R$</span>
+                      <input
+                        id="condominio"
+                        inputMode="numeric"
+                        placeholder="0"
+                        disabled={taxasInclusas}
+                        value={form.condominio}
+                        onChange={(e) => set('condominio', formatMilhar(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="iptu">IPTU (mês)</label>
+                    <div className="input-prefix">
+                      <span>R$</span>
+                      <input
+                        id="iptu"
+                        inputMode="numeric"
+                        placeholder="0"
+                        disabled={taxasInclusas}
+                        value={form.iptu}
+                        onChange={(e) => set('iptu', formatMilhar(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {taxasInclusas && (
+                  <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
+                    As taxas já estão incluídas no valor do aluguel.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="steppers">
               <Stepper label="Quartos" value={counts.quartos} onDelta={(d) => setCounts((c) => ({ ...c, quartos: Math.max(0, Math.min(50, c.quartos + d)) }))} />

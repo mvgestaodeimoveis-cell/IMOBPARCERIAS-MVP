@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { getAccessToken, getRole } from '@/lib/auth';
+import { dataPublicacao, tempoRelativo } from '@/lib/format';
 import { CORRETOR_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 
 interface CorretorRow {
@@ -13,6 +14,7 @@ interface CorretorRow {
   cidade: string;
   status: string;
   criado_em: string;
+  ultimo_acesso_em: string | null;
 }
 
 interface ListResponse {
@@ -109,6 +111,17 @@ export default function AdminCorretoresPage() {
     }
   }
 
+  async function excluir(id: string, nome: string) {
+    if (!window.confirm(`Excluir (arquivar) o corretor “${nome}”? Ele deixa de acessar a plataforma. A ação pode ser revertida no banco.`)) return;
+    const token = getAccessToken();
+    try {
+      await apiFetch(`/admin/corretores/${id}`, { method: 'DELETE', token });
+      carregar();
+    } catch (err) {
+      alert(err instanceof ApiRequestError ? err.message : 'Erro ao excluir.');
+    }
+  }
+
   async function verAceites(id: string) {
     const token = getAccessToken();
     setAceites(null);
@@ -155,7 +168,8 @@ export default function AdminCorretoresPage() {
               <tr>
                 <th>Nome</th>
                 <th>CRECI</th>
-                <th>Cidade</th>
+                <th>Inscrição</th>
+                <th>Último acesso</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -165,7 +179,8 @@ export default function AdminCorretoresPage() {
                 <tr key={c.id}>
                   <td>{c.nome}</td>
                   <td>{c.creci}</td>
-                  <td>{c.cidade}</td>
+                  <td>{dataPublicacao(c.criado_em)}</td>
+                  <td>{c.ultimo_acesso_em ? tempoRelativo(c.ultimo_acesso_em) : '—'}</td>
                   <td>{STATUS_LABEL[c.status] ?? c.status}</td>
                   <td>
                     <div className="row-actions" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
@@ -182,6 +197,7 @@ export default function AdminCorretoresPage() {
                         <button className="btn btn-emerald" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => moderar(c.id, 'reativar')}>Reativar</button>
                       )}
                       <button className="btn btn-ghost" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.7rem' }} onClick={() => verAceites(c.id)}>Termos</button>
+                      <button className="btn btn-ghost" title="Excluir corretor" aria-label="Excluir corretor" style={{ width: 'auto', minHeight: 'auto', padding: '0.35rem 0.6rem', color: 'var(--error)' }} onClick={() => excluir(c.id, c.nome)}>🗑️</button>
                     </div>
                   </td>
                 </tr>

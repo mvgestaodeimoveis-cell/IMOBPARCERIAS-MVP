@@ -21,6 +21,16 @@ export function tempoRelativo(iso: string | null): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+/** Data legível curta a partir de um ISO: "12 de jul. de 2026". */
+export function dataPublicacao(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** Link do WhatsApp a partir de um número (ou null se vazio). */
 export function waLink(whatsapp: string | null): string | null {
   if (!whatsapp) return null;

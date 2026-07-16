@@ -10,6 +10,7 @@ const NAV: { href: string; label: string }[] = [
   { href: '/admin/dashboard', label: 'Painel' },
   { href: '/admin/corretores', label: 'Corretores' },
   { href: '/admin/imoveis', label: 'Imóveis' },
+  { href: '/admin/conversas', label: 'Conversas' },
   { href: '/admin/exclusividades', label: 'Exclusividades' },
   { href: '/admin/pagamentos', label: 'Pagamentos' },
   { href: '/admin/equipe', label: 'Administradores' },

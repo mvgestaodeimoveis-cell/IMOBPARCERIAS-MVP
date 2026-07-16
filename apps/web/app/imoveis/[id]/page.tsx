@@ -21,6 +21,9 @@ interface Imovel {
   logradouro: string;
   numero: string;
   complemento: string | null;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   suites: number | null;
@@ -173,6 +176,20 @@ export default function ImovelDetalhePage() {
                 <p className="muted" style={{ marginTop: '0.85rem' }}>{imovel.descricao}</p>
               )}
             </div>
+
+            {imovel.finalidade === 'aluguel' && (
+              <div className="card" style={{ marginTop: '0.85rem' }}>
+                <h3 className="detail-label">Taxas (aluguel)</h3>
+                {imovel.taxas_inclusas ? (
+                  <p style={{ margin: 0 }}>Condomínio e IPTU inclusos no valor do aluguel.</p>
+                ) : (
+                  <div className="detail-grid">
+                    <span>Condomínio: <b>{imovel.condominio != null ? formatBRL(imovel.condominio) : '—'}</b></span>
+                    <span>IPTU: <b>{imovel.iptu != null ? formatBRL(imovel.iptu) : '—'}</b></span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.25rem' }}>
               {imovel.status === 'ativo' && (

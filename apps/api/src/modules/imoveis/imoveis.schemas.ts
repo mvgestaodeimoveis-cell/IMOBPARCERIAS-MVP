@@ -32,6 +32,10 @@ const imovelBase = z.object({
   andar: opcional(20),
   bloco: opcional(40),
   nome_condominio: opcional(120),
+  // Taxas (relevantes p/ aluguel). Se taxas_inclusas=true, condomínio/IPTU ficam nulos.
+  condominio: z.number().min(0).max(1_000_000).nullish(),
+  iptu: z.number().min(0).max(1_000_000).nullish(),
+  taxas_inclusas: z.boolean().optional().default(false),
   area_m2: z.number().positive().max(1_000_000).nullish(),
   quartos: inteiroOpcional,
   suites: inteiroOpcional,
