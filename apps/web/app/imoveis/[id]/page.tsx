@@ -6,7 +6,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/useAuthGuard';
-import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
+import { TIPO_LABEL, statusImovelLabel, marcarConcluidoLabel } from '@/lib/labels';
 import { AppHeader } from '@/components/AppHeader';
 import { Lightbox } from '@/components/Lightbox';
 
@@ -148,7 +148,7 @@ export default function ImovelDetalhePage() {
                   className={`badge ${imovel.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}
                   style={{ marginLeft: '0.5rem' }}
                 >
-                  {STATUS_LABEL[imovel.status] ?? imovel.status}
+                  {statusImovelLabel(imovel.status, imovel.finalidade)}
                 </span>
               )}
             </p>
@@ -198,7 +198,7 @@ export default function ImovelDetalhePage() {
                     Marcar em negociação
                   </button>
                   <button className="btn btn-emerald" disabled={acao} onClick={() => mudarStatus('vendido')}>
-                    Marcar como vendido
+                    {marcarConcluidoLabel(imovel.finalidade)}
                   </button>
                 </>
               )}
@@ -208,7 +208,7 @@ export default function ImovelDetalhePage() {
                     Voltar para disponível
                   </button>
                   <button className="btn btn-orange" disabled={acao} onClick={() => mudarStatus('vendido')}>
-                    Marcar como vendido
+                    {marcarConcluidoLabel(imovel.finalidade)}
                   </button>
                 </>
               )}

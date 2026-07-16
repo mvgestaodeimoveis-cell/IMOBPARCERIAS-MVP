@@ -32,6 +32,7 @@ interface ImovelVitrine {
   diferenciais: string[];
   exclusividade_verificada: boolean;
   criado_em: string;
+  atualizado_em: string;
 }
 
 export default function VitrineDetalhePage() {
@@ -164,7 +165,7 @@ export default function VitrineDetalhePage() {
                   )}
                 </p>
                 <p className="vitrine-data" style={{ marginTop: '0.15rem' }}>
-                  Publicado em {dataPublicacao(imovel.criado_em)}
+                  Atualizado em {dataPublicacao(imovel.atualizado_em)}
                 </p>
 
                 {imovel.finalidade === 'aluguel' && (

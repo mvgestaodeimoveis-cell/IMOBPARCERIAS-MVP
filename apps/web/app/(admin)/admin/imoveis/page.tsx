@@ -137,7 +137,9 @@ export default function AdminImoveisPage() {
                   <td>{formatBRL(im.preco)}</td>
                   <td>
                     <span className={`badge badge-dot ${STATUS_BADGE[im.status]?.cls ?? 'badge-gray'}`}>
-                      {STATUS_BADGE[im.status]?.label ?? (STATUS_LABEL[im.status] ?? im.status)}
+                      {im.status === 'vendido' && im.finalidade === 'aluguel'
+                        ? 'Alugado'
+                        : STATUS_BADGE[im.status]?.label ?? (STATUS_LABEL[im.status] ?? im.status)}
                     </span>
                   </td>
                   <td>

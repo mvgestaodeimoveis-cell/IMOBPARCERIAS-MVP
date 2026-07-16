@@ -31,6 +31,7 @@ interface ImovelVitrine {
   diferenciais: string[];
   exclusividade_verificada: boolean;
   criado_em: string;
+  atualizado_em: string;
 }
 
 const FILTROS_INICIAIS = {
@@ -523,7 +524,7 @@ export default function VitrinePage() {
                                     .join(' · ') || null}
                             </p>
                           )}
-                          <p className="vitrine-data">Publicado em {dataPublicacao(im.criado_em)}</p>
+                          <p className="vitrine-data">Atualizado em {dataPublicacao(im.atualizado_em)}</p>
                         </div>
                       </>
                     );

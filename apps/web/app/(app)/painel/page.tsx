@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken, routeForStatus } from '@/lib/auth';
-import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
+import { TIPO_LABEL, statusImovelLabel, marcarConcluidoLabel } from '@/lib/labels';
 
 interface Me {
   nome: string;
@@ -60,8 +60,9 @@ export default function AppHomePage() {
       .catch(() => router.replace('/login'));
   }, [router]);
 
-  async function marcarVendido(id: string) {
-    if (!window.confirm('Confirmar que este imóvel foi vendido? Ele sairá da vitrine.')) return;
+  async function marcarVendido(id: string, finalidade: string) {
+    const concluido = finalidade === 'aluguel' ? 'alugado' : 'vendido';
+    if (!window.confirm(`Confirmar que este imóvel foi ${concluido}? Ele sairá da vitrine.`)) return;
     const token = getAccessToken();
     if (!token) return;
     setAcaoId(id);
@@ -159,7 +160,7 @@ export default function AppHomePage() {
                     <div className="imovel-tags">
                       {im.status !== 'ativo' && (
                         <span className={`badge ${im.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}>
-                          {STATUS_LABEL[im.status] ?? im.status}
+                          {statusImovelLabel(im.status, im.finalidade)}
                         </span>
                       )}
                       {im.exclusividade && im.exclusividade_status === 'verificada' && (
@@ -192,9 +193,9 @@ export default function AppHomePage() {
                       type="button"
                       className="imovel-action imovel-action-emerald"
                       disabled={acaoId === im.id}
-                      onClick={() => marcarVendido(im.id)}
+                      onClick={() => marcarVendido(im.id, im.finalidade)}
                     >
-                      {acaoId === im.id ? '…' : 'Marcar vendido'}
+                      {acaoId === im.id ? '…' : marcarConcluidoLabel(im.finalidade)}
                     </button>
                   )}
                 </div>

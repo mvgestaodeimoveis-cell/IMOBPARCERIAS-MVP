@@ -19,6 +19,20 @@ export const IMOVEL_STATUS_LABEL: Record<string, string> = {
   inativo: 'Inativo',
 };
 
+/**
+ * Rótulo do status considerando a finalidade: para aluguel, "vendido" vira "Alugado".
+ * (Internamente o status continua sendo 'vendido' = negócio concluído.)
+ */
+export function statusImovelLabel(status: string, finalidade?: string): string {
+  if (status === 'vendido' && finalidade === 'aluguel') return 'Alugado';
+  return IMOVEL_STATUS_LABEL[status] ?? status;
+}
+
+/** Texto do botão de concluir o negócio, conforme a finalidade. */
+export function marcarConcluidoLabel(finalidade?: string): string {
+  return finalidade === 'aluguel' ? 'Marcar alugado' : 'Marcar vendido';
+}
+
 /** Status de uma parceria (fluxo completo). */
 export const PARCERIA_STATUS_LABEL: Record<string, string> = {
   solicitada: 'Solicitada',
