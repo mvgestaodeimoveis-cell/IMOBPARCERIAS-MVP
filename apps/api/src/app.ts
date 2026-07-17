@@ -14,6 +14,7 @@ import { jobsRoutes } from './modules/jobs/jobs.routes';
 import { telemetryRoutes } from './modules/telemetry/telemetry.routes';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 import { requestLogger } from './middleware/request-logger';
+import { buildInfo } from './lib/build-info';
 
 export function createApp() {
   const app = express();
@@ -26,7 +27,15 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(requestLogger);
 
-  app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+  app.get('/health', (_req, res) =>
+    res.json({
+      status: 'ok',
+      version: buildInfo.version,
+      commit: buildInfo.commit,
+      startedAt: buildInfo.startedAt,
+      uptimeSeconds: Math.round(process.uptime()),
+    }),
+  );
 
   const api = express.Router();
   api.use('/auth', authRoutes);
