@@ -640,7 +640,8 @@ function mapVitrine(row: ImovelVitrineRow): ImovelVitrine {
 const FICHA_COMPLETA = `status = 'ativo'
   AND jsonb_array_length(fotos) >= 5
   AND jsonb_array_length(diferenciais) >= 1
-  AND quartos IS NOT NULL AND banheiros IS NOT NULL AND vagas IS NOT NULL`;
+  AND quartos IS NOT NULL AND banheiros IS NOT NULL AND vagas IS NOT NULL
+  AND EXISTS (SELECT 1 FROM corretor c WHERE c.id = imovel.corretor_id AND c.excluido_em IS NULL)`;
 
 export async function listarVitrine(q: VitrineQuery) {
   const cond: string[] = [FICHA_COMPLETA];

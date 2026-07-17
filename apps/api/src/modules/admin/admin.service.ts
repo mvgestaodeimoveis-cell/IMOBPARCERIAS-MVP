@@ -1,4 +1,4 @@
-import { query } from '../../db/pool';
+import { pool, query } from '../../db/pool';
 import { env } from '../../config/env';
 import { conflict, notFound } from '../../lib/errors';
 import { hashPassword } from '../../lib/password';
@@ -73,15 +73,41 @@ export async function reativarCorretor(id: string) {
   return { id, status: 'ativo' as const };
 }
 
-/** Exclusão lógica (soft delete): arquiva o corretor, mantendo o histórico. */
+/** Exclusão lógica (soft delete): arquiva o corretor E os imóveis dele (saem da vitrine).
+ * Libera e-mail/CRECI (únicos) e a exclusividade dos imóveis para não bloquear um futuro
+ * novo cadastro do mesmo corretor ou do mesmo imóvel (decisão do cliente, jul/2026). */
 export async function excluirCorretor(id: string) {
-  const { rowCount } = await query(
-    `UPDATE corretor SET excluido_em = now(), atualizado_em = now()
-     WHERE id = $1 AND excluido_em IS NULL`,
-    [id],
-  );
-  if (!rowCount) throw notFound('Corretor não encontrado.');
-  return { id, excluido: true as const };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // "Solta" e-mail e CRECI renomeando na linha arquivada (o id garante unicidade),
+    // liberando os valores originais para um novo cadastro no futuro.
+    const { rowCount } = await client.query(
+      `UPDATE corretor
+       SET excluido_em = now(), atualizado_em = now(),
+           email = 'excluido:' || id || ':' || email,
+           creci = 'excluido:' || id || ':' || creci
+       WHERE id = $1 AND excluido_em IS NULL`,
+      [id],
+    );
+    if (!rowCount) throw notFound('Corretor não encontrado.');
+    // Arquiva os imóveis do corretor: saem da vitrine, liberam a chave de dedupe e a
+    // exclusividade (para não bloquear um futuro cadastro do mesmo imóvel por outro corretor).
+    await client.query(
+      `UPDATE imovel
+       SET status = 'inativo', atualizado_em = now(),
+           exclusividade_status = 'nao', exclusividade_vencimento = NULL
+       WHERE corretor_id = $1`,
+      [id],
+    );
+    await client.query('COMMIT');
+    return { id, excluido: true as const };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 interface AceiteTermoRow {
