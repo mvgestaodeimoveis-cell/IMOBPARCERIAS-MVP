@@ -15,6 +15,7 @@ interface Conversa {
   imovel: { id: string; tipo: string; bairro: string; cidade: string; preco: number; foto: string | null };
   outro_nome: string;
   sou_captador: boolean;
+  nao_lidas: number;
   ultima_mensagem: { corpo: string; criado_em: string } | null;
 }
 
@@ -56,7 +57,7 @@ export default function ConversasPage() {
         ) : (
           <div className="conversa-lista">
             {conversas.map((c) => (
-              <Link key={c.id} href={`/conversas/${c.id}`} className="conversa-item">
+              <Link key={c.id} href={`/conversas/${c.id}`} className={`conversa-item${c.nao_lidas > 0 ? ' nao-lida' : ''}`}>
                 <div className="conversa-avatar" aria-hidden>
                   {c.imovel.foto ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -81,12 +82,18 @@ export default function ConversasPage() {
                       : 'Combine a visita por aqui.'}
                   </p>
                 </div>
-                {c.status !== 'aceita' && (
-                  <span
-                    className={`badge ${c.status === 'em_negociacao' ? 'badge-orange' : c.status === 'vendida' ? 'badge-emerald' : 'badge-gray'}`}
-                  >
-                    {STATUS_LABEL[c.status] ?? c.status}
+                {c.nao_lidas > 0 ? (
+                  <span className="conversa-badge" aria-label={`${c.nao_lidas} não lidas`}>
+                    {c.nao_lidas > 9 ? '9+' : c.nao_lidas}
                   </span>
+                ) : (
+                  c.status !== 'aceita' && (
+                    <span
+                      className={`badge ${c.status === 'em_negociacao' ? 'badge-orange' : c.status === 'vendida' ? 'badge-emerald' : 'badge-gray'}`}
+                    >
+                      {STATUS_LABEL[c.status] ?? c.status}
+                    </span>
+                  )
                 )}
               </Link>
             ))}

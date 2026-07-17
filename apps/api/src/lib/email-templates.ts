@@ -336,6 +336,49 @@ export function emailContatoLiberado(
   };
 }
 
+/** Nova mensagem no chat da parceria (com cooldown — enviado ao destinatário). */
+export function emailNovaMensagem(
+  destinatarioNome: string,
+  remetenteNome: string,
+  imovelResumo: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: `Nova mensagem de ${primeiroNome(remetenteNome)} — Imob Parcerias`,
+    html: baseLayout({
+      preheader: `${primeiroNome(remetenteNome)} enviou uma mensagem no chat da parceria.`,
+      heading: `Você tem uma nova mensagem, ${primeiroNome(destinatarioNome)}`,
+      paragraphs: [
+        `<strong>${escapeHtml(primeiroNome(remetenteNome))}</strong> enviou uma mensagem no chat da parceria do imóvel <strong>${escapeHtml(imovelResumo)}</strong>.`,
+        'Abra a conversa para ler e responder. (Você recebe no máximo um aviso por período; não avisamos a cada mensagem.)',
+      ],
+      cta: { label: 'Abrir conversa', url },
+    }),
+  };
+}
+
+/** Visita proposta — avisa o outro corretor para dar o OK (data e hora). */
+export function emailVisitaProposta(
+  destinatarioNome: string,
+  propositorNome: string,
+  imovelResumo: string,
+  quando: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Proposta de data/hora da visita — Imob Parcerias',
+    html: baseLayout({
+      preheader: `${primeiroNome(propositorNome)} propôs uma data e hora para a visita.`,
+      heading: `Confirme a visita, ${primeiroNome(destinatarioNome)}`,
+      paragraphs: [
+        `<strong>${escapeHtml(primeiroNome(propositorNome))}</strong> propôs a visita ao imóvel <strong>${escapeHtml(imovelResumo)}</strong> para <strong>${escapeHtml(quando)}</strong>.`,
+        'Confira com o cliente e confirme (ou proponha outra data/hora) para dar sequência à parceria.',
+      ],
+      cta: { label: 'Ver e confirmar', url },
+    }),
+  };
+}
+
 /** Fase 8 — cobrança da taxa da plataforma via PIX (enviado ao captador). */
 export function emailTaxaPix(
   captadorNome: string,

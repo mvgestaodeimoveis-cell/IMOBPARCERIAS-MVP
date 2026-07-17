@@ -63,6 +63,15 @@ parceriasRoutes.get(
   }),
 );
 
+// Total de mensagens não lidas (badge do ícone Chat). Antes de '/:id'.
+parceriasRoutes.get(
+  '/nao-lidas',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.json(await parcerias.contarNaoLidas(req.user.id));
+  }),
+);
+
 parceriasRoutes.post(
   '/:id/aceitar',
   asyncHandler(async (req: Request, res: Response) => {
@@ -125,12 +134,29 @@ parceriasRoutes.post(
 );
 
 parceriasRoutes.post(
-  '/:id/visita',
+  '/:id/visita/propor',
   validate(visitaSchema),
   asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw unauthorized();
     const { visita_em } = req.body as VisitaInput;
-    res.json(await parcerias.registrarVisita(req.params.id, req.user.id, visita_em));
+    res.json(await parcerias.proporVisita(req.params.id, req.user.id, visita_em));
+  }),
+);
+
+parceriasRoutes.post(
+  '/:id/visita/confirmar',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.json(await parcerias.confirmarVisita(req.params.id, req.user.id));
+  }),
+);
+
+// Marca a conversa como lida (zera o indicador de não lidas do corretor).
+parceriasRoutes.post(
+  '/:id/ler',
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.json(await parcerias.marcarConversaLida(req.params.id, req.user.id));
   }),
 );
 

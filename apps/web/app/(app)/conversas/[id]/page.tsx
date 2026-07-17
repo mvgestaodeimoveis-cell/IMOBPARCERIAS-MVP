@@ -66,6 +66,8 @@ export default function ChatPage() {
       ]);
       setDetalhe(d);
       setMensagens(m.data);
+      // Marca a conversa como lida (zera o indicador de não lidas). Best-effort.
+      apiFetch(`/parcerias/${params.id}/ler`, { method: 'POST', token }).catch(() => {});
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === 'UNAUTHENTICATED') {
         router.replace('/login');

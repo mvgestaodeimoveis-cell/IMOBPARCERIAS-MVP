@@ -19,11 +19,13 @@ interface AppHeaderProps {
   active?: AppTab;
   /** Exibe um contador ao lado de "Parcerias" (ex.: solicitações pendentes). */
   parceriasBadge?: number;
+  /** Exibe um contador ao lado de "Chat" (mensagens não lidas). */
+  conversasBadge?: number;
   /** Variante de página de detalhe: mostra um link de voltar no lugar da navegação. */
   back?: { href: string; label: string };
 }
 
-export function AppHeader({ active, parceriasBadge, back }: AppHeaderProps) {
+export function AppHeader({ active, parceriasBadge, conversasBadge, back }: AppHeaderProps) {
   const router = useRouter();
 
   function sair() {
@@ -51,6 +53,7 @@ export function AppHeader({ active, parceriasBadge, back }: AppHeaderProps) {
               >
                 {item.label}
                 {item.key === 'parcerias' && parceriasBadge ? ` (${parceriasBadge})` : ''}
+                {item.key === 'conversas' && conversasBadge ? ` (${conversasBadge})` : ''}
               </Link>
             ))}
           </nav>

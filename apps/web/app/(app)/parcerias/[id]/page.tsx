@@ -36,6 +36,8 @@ interface Detalhe {
   };
   confirmacao: {
     visita_em: string | null;
+    visita_proposta_por_mim: boolean;
+    visita_confirmada_em: string | null;
     cpf_preenchido: boolean;
     cpf_cliente: string | null;
     confirmada_em: string | null;
@@ -72,6 +74,19 @@ function statusBadge(status: string): string {
 }
 
 const PASSOS = ['Aceita', 'Visita', 'Negociação', 'Venda'];
+
+/** Data + hora da visita (exibe o horário como foi combinado, sem deslocar por fuso). */
+function formatVisita(iso: string | null): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'UTC',
+  });
+}
 
 /** Índice do passo atual no fluxo (para o stepper). */
 function passoAtual(status: string): number {
@@ -122,19 +137,31 @@ export default function ParceriaDetalhePage() {
     return () => clearInterval(t);
   }, [carregar]);
 
-  async function registrarVisita() {
+  async function proporVisita() {
     if (!dataVisita) return;
     setAcaoErro(null);
     const token = getAccessToken();
     try {
-      await apiFetch(`/parcerias/${params.id}/visita`, {
+      await apiFetch(`/parcerias/${params.id}/visita/propor`, {
         method: 'POST',
         token,
         body: { visita_em: dataVisita },
       });
+      setDataVisita('');
       carregar();
     } catch (err) {
-      setAcaoErro(err instanceof ApiRequestError ? err.message : 'Erro ao registrar a visita.');
+      setAcaoErro(err instanceof ApiRequestError ? err.message : 'Erro ao propor a visita.');
+    }
+  }
+
+  async function confirmarVisita() {
+    setAcaoErro(null);
+    const token = getAccessToken();
+    try {
+      await apiFetch(`/parcerias/${params.id}/visita/confirmar`, { method: 'POST', token });
+      carregar();
+    } catch (err) {
+      setAcaoErro(err instanceof ApiRequestError ? err.message : 'Erro ao confirmar a visita.');
     }
   }
 
@@ -308,17 +335,21 @@ export default function ParceriaDetalhePage() {
               {acaoErro && <div className="banner banner-error">{acaoErro}</div>}
 
               <div className="confirm-list">
-                <div className={`confirm-item${detalhe.confirmacao.visita_em ? ' ok' : ''}`}>
-                  <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '1'}</span>
+                <div className={`confirm-item${detalhe.confirmacao.visita_confirmada_em ? ' ok' : ''}`}>
+                  <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.visita_confirmada_em ? '✓' : '1'}</span>
                   <div className="confirm-body">
-                    <span className="confirm-titulo">Data da visita</span>
+                    <span className="confirm-titulo">Visita (data e hora)</span>
                     <span className="confirm-sub">
-                      {detalhe.confirmacao.visita_em
-                        ? new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')
-                        : 'Captador'}
+                      {detalhe.confirmacao.visita_em ? formatVisita(detalhe.confirmacao.visita_em) : 'A combinar'}
                     </span>
                   </div>
-                  <span className="confirm-status">{detalhe.confirmacao.visita_em ? 'Confirmado' : 'Pendente'}</span>
+                  <span className="confirm-status">
+                    {detalhe.confirmacao.visita_confirmada_em
+                      ? 'Confirmada'
+                      : detalhe.confirmacao.visita_em
+                        ? 'Aguardando OK'
+                        : 'Pendente'}
+                  </span>
                 </div>
                 <div className={`confirm-item${detalhe.confirmacao.cpf_preenchido ? ' ok' : ''}`}>
                   <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '2'}</span>
@@ -330,22 +361,44 @@ export default function ParceriaDetalhePage() {
                 </div>
               </div>
 
-              {detalhe.status === 'aceita' && detalhe.papel === 'captador' && !detalhe.confirmacao.visita_em && (
+              {/* Visita: qualquer um propõe data+hora; o OUTRO confirma */}
+              {detalhe.status === 'aceita' && !detalhe.confirmacao.visita_confirmada_em && (
                 <div className="confirm-acao">
-                  <label htmlFor="visita">Informe a data da visita</label>
+                  {detalhe.confirmacao.visita_em && (
+                    <p className="muted" style={{ margin: '0 0 0.6rem', fontSize: '0.86rem' }}>
+                      {detalhe.confirmacao.visita_proposta_por_mim
+                        ? `Você propôs ${formatVisita(detalhe.confirmacao.visita_em)}. Aguardando ${detalhe.outro_nome} confirmar.`
+                        : `${detalhe.outro_nome} propôs ${formatVisita(detalhe.confirmacao.visita_em)}. Confirme se o cliente aceitou.`}
+                    </p>
+                  )}
+                  {detalhe.confirmacao.visita_em && !detalhe.confirmacao.visita_proposta_por_mim && (
+                    <button className="btn btn-emerald btn-sm" style={{ marginBottom: '0.7rem' }} onClick={confirmarVisita}>
+                      Confirmar esta data/hora
+                    </button>
+                  )}
+                  <label htmlFor="visita">
+                    {detalhe.confirmacao.visita_em ? 'Propor outra data e hora' : 'Propor data e hora da visita'}
+                  </label>
                   <div className="confirm-acao-row">
                     <input
                       id="visita"
-                      type="date"
+                      type="datetime-local"
                       className="input"
                       value={dataVisita}
                       onChange={(e) => setDataVisita(e.target.value)}
                     />
-                    <button className="btn btn-emerald btn-sm" onClick={registrarVisita} disabled={!dataVisita}>
-                      Confirmar
+                    <button className="btn btn-ghost btn-sm" onClick={proporVisita} disabled={!dataVisita}>
+                      {detalhe.confirmacao.visita_em ? 'Repropor' : 'Propor'}
                     </button>
                   </div>
                 </div>
+              )}
+
+              {detalhe.status === 'aceita' && detalhe.confirmacao.visita_confirmada_em && (
+                <p className="muted" style={{ margin: '0.6rem 0 0', fontSize: '0.86rem' }}>
+                  ✓ Visita confirmada para {formatVisita(detalhe.confirmacao.visita_em)}.
+                  {!detalhe.confirmacao.cpf_preenchido && ' Falta o CPF do cliente para concluir.'}
+                </p>
               )}
 
               {detalhe.status === 'aceita' && detalhe.papel === 'comprador' && !detalhe.confirmacao.cpf_preenchido && (

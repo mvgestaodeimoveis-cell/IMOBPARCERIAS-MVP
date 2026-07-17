@@ -21,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [pendentes, setPendentes] = useState(0);
+  const [naoLidas, setNaoLidas] = useState(0);
   // null = verificando; false = sem sessão (redirecionando); true = liberado.
   const [autorizado, setAutorizado] = useState<boolean | null>(null);
 
@@ -35,7 +36,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     apiFetch<{ data: { status: string }[] }>('/parcerias/recebidas', { token })
       .then((res) => setPendentes(res.data.filter((p) => p.status === 'solicitada').length))
       .catch(() => setPendentes(0));
-  }, [router]);
+    apiFetch<{ total: number }>('/parcerias/nao-lidas', { token })
+      .then((res) => setNaoLidas(res.total))
+      .catch(() => setNaoLidas(0));
+  }, [router, pathname]);
 
   // Enquanto não confirmar a sessão, NÃO renderiza o conteúdo protegido
   // (evita expor o painel antes do redirecionamento para o login).
@@ -56,9 +60,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="frame frame-app">
-      <AppHeader active={tab.tab} parceriasBadge={pendentes} />
+      <AppHeader active={tab.tab} parceriasBadge={pendentes} conversasBadge={naoLidas} />
       <div className="screen has-bottomnav">{children}</div>
-      <BottomNav active={tab.tab} />
+      <BottomNav active={tab.tab} conversasBadge={naoLidas} />
     </div>
   );
 }

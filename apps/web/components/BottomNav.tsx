@@ -47,7 +47,7 @@ const ITEMS: { key: Tab; label: string; href: string }[] = [
   { key: 'parcerias', label: 'Parcerias', href: '/parcerias' },
 ];
 
-export function BottomNav({ active = 'inicio' }: { active?: Tab }) {
+export function BottomNav({ active = 'inicio', conversasBadge = 0 }: { active?: Tab; conversasBadge?: number }) {
   return (
     <nav className="bottomnav" aria-label="Navegação principal">
       {ITEMS.map((item) => (
@@ -57,7 +57,14 @@ export function BottomNav({ active = 'inicio' }: { active?: Tab }) {
           className={active === item.key ? 'active' : ''}
           aria-current={active === item.key ? 'page' : undefined}
         >
-          {ICONS[item.key]}
+          <span className="bottomnav-ico-wrap">
+            {ICONS[item.key]}
+            {item.key === 'conversas' && conversasBadge > 0 && (
+              <span className="bottomnav-badge" aria-label={`${conversasBadge} não lidas`}>
+                {conversasBadge > 9 ? '9+' : conversasBadge}
+              </span>
+            )}
+          </span>
           {item.label}
         </Link>
       ))}

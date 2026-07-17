@@ -14,6 +14,8 @@ import {
   emailParceriaSolicitada,
   emailTaxaPix,
   emailVendaDeclarada,
+  emailNovaMensagem,
+  emailVisitaProposta,
 } from '../../lib/email-templates';
 import { TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
 import { gerarContratoParceria } from '../../lib/contrato-parceria';
@@ -172,6 +174,7 @@ interface ConversaRow {
   sou_captador: boolean;
   ultima_msg: string | null;
   ultima_msg_em: string | null;
+  nao_lidas: string;
 }
 
 /** Central de conversas: parcerias com chat (aceita+), com a última mensagem. */
@@ -182,7 +185,13 @@ export async function listarConversas(corretorId: string) {
        i.preco::text AS imovel_preco, (i.fotos->>0) AS imovel_foto,
        CASE WHEN p.captador_id = $1 THEN comp.nome ELSE cap.nome END AS outro_nome,
        (p.captador_id = $1) AS sou_captador,
-       m.corpo AS ultima_msg, m.criado_em::text AS ultima_msg_em
+       m.corpo AS ultima_msg, m.criado_em::text AS ultima_msg_em,
+       (SELECT count(*) FROM parceria_mensagem mm
+         WHERE mm.parceria_id = p.id AND mm.autor_id <> $1
+           AND mm.criado_em > COALESCE(
+             CASE WHEN p.captador_id = $1 THEN p.captador_lido_em ELSE p.comprador_lido_em END,
+             'epoch'::timestamptz
+           ))::text AS nao_lidas
      FROM parceria p
      JOIN imovel i ON i.id = p.imovel_id
      JOIN corretor cap ON cap.id = p.captador_id
@@ -210,6 +219,7 @@ export async function listarConversas(corretorId: string) {
       },
       outro_nome: r.outro_nome,
       sou_captador: r.sou_captador,
+      nao_lidas: Number(r.nao_lidas),
       ultima_mensagem: r.ultima_msg
         ? { corpo: r.ultima_msg, criado_em: r.ultima_msg_em }
         : null,
@@ -351,6 +361,8 @@ interface ParceriaFull {
   captador_id: string;
   comprador_id: string;
   visita_em: string | null;
+  visita_proposta_por: string | null;
+  visita_confirmada_em: string | null;
   cpf_cliente: string | null;
   confirmada_em: string | null;
   janela_ativada_em: string | null;
@@ -385,7 +397,8 @@ interface ParceriaFull {
 async function buscarParceriaFull(parceriaId: string): Promise<ParceriaFull> {
   const { rows } = await query<ParceriaFull>(
     `SELECT p.id, p.status, p.cliente_nome, p.criado_em, p.captador_id, p.comprador_id,
-            p.visita_em, p.cpf_cliente, p.confirmada_em, p.janela_ativada_em, p.janela_dias,
+            p.visita_em, p.visita_proposta_por, p.visita_confirmada_em,
+            p.cpf_cliente, p.confirmada_em, p.janela_ativada_em, p.janela_dias,
             p.venda_valor::text AS venda_valor, p.comissao::text AS comissao,
             p.taxa_plataforma::text AS taxa_plataforma, p.venda_declarada_em,
             p.pagamento_status, p.pagamento_vencimento::text AS pagamento_vencimento,
@@ -449,6 +462,8 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
     },
     confirmacao: {
       visita_em: p.visita_em,
+      visita_proposta_por_mim: Boolean(p.visita_proposta_por) && p.visita_proposta_por === corretorId,
+      visita_confirmada_em: p.visita_confirmada_em,
       // O CPF só é revelado ao captador após a confirmação bilateral (Nível 3).
       cpf_preenchido: Boolean(p.cpf_cliente),
       cpf_cliente: souCaptador ? (nivel3 ? p.cpf_cliente : null) : p.cpf_cliente,
@@ -522,7 +537,75 @@ export async function enviarMensagem(parceriaId: string, corretorId: string, cor
      RETURNING id, autor_id, corpo, criado_em`,
     [parceriaId, corretorId, corpo],
   );
+  await notificarNovaMensagem(p, corretorId);
   return { ...rows[0], meu: true };
+}
+
+/**
+ * E-mail de "nova mensagem" ao destinatário, com COOLDOWN por conversa (evita spam):
+ * envia no máximo 1 e-mail a cada MENSAGEM_EMAIL_COOLDOWN_HORAS por destinatário.
+ */
+async function notificarNovaMensagem(p: ParceriaFull, autorId: string): Promise<void> {
+  const autorCaptador = autorId === p.captador_id;
+  // Destinatário = o outro corretor.
+  const destinatario = autorCaptador
+    ? { nome: p.comprador_nome, email: p.comprador_email, whatsapp: p.comprador_whatsapp }
+    : { nome: p.captador_nome, email: p.captador_email, whatsapp: p.captador_whatsapp };
+  const remetenteNome = autorCaptador ? p.captador_nome : p.comprador_nome;
+  const colunaNotif = autorCaptador ? 'comprador_notificado_em' : 'captador_notificado_em';
+
+  // Marca o destinatário como notificado SOMENTE se passou o cooldown (atômico).
+  const horas = env.MENSAGEM_EMAIL_COOLDOWN_HORAS;
+  const { rowCount } = await query(
+    `UPDATE parceria
+     SET ${colunaNotif} = now()
+     WHERE id = $1
+       AND (${colunaNotif} IS NULL OR ${colunaNotif} < now() - ($2 || ' hours')::interval)`,
+    [p.id, String(horas)],
+  );
+  if (!rowCount) return; // ainda dentro do cooldown → não notifica
+
+  const url = `${env.APP_WEB_URL}/conversas/${p.id}`;
+  await sendEmail({
+    to: destinatario.email,
+    ...emailNovaMensagem(destinatario.nome, remetenteNome, resumoImovel(p), url),
+  });
+}
+
+/** Marca as mensagens da conversa como lidas para o corretor (indicador de não lidas). */
+export async function marcarConversaLida(parceriaId: string, corretorId: string) {
+  const { rows } = await query<{ captador_id: string; comprador_id: string }>(
+    'SELECT captador_id, comprador_id FROM parceria WHERE id = $1',
+    [parceriaId],
+  );
+  const p = rows[0];
+  if (!p) throw notFound('Parceria não encontrada.');
+  const coluna =
+    p.captador_id === corretorId
+      ? 'captador_lido_em'
+      : p.comprador_id === corretorId
+        ? 'comprador_lido_em'
+        : null;
+  if (!coluna) throw forbidden('Acesso negado.');
+  await query(`UPDATE parceria SET ${coluna} = now() WHERE id = $1`, [parceriaId]);
+  return { ok: true };
+}
+
+/** Total de mensagens não lidas do corretor (para o badge do ícone Chat). */
+export async function contarNaoLidas(corretorId: string): Promise<{ total: number }> {
+  const { rows } = await query<{ total: string }>(
+    `SELECT count(*)::text AS total
+     FROM parceria_mensagem m
+     JOIN parceria p ON p.id = m.parceria_id
+     WHERE (p.captador_id = $1 OR p.comprador_id = $1)
+       AND m.autor_id <> $1
+       AND m.criado_em > COALESCE(
+         CASE WHEN p.captador_id = $1 THEN p.captador_lido_em ELSE p.comprador_lido_em END,
+         'epoch'::timestamptz
+       )`,
+    [corretorId],
+  );
+  return { total: Number(rows[0]?.total ?? 0) };
 }
 
 /**
@@ -535,12 +618,12 @@ async function finalizarSeBilateral(
   parceriaId: string,
   imovelId: string,
 ): Promise<'em_negociacao' | 'aceita'> {
-  const { rows } = await client.query<{ visita_em: string | null; cpf_cliente: string | null }>(
-    'SELECT visita_em, cpf_cliente FROM parceria WHERE id = $1 FOR UPDATE',
+  const { rows } = await client.query<{ visita_confirmada_em: string | null; cpf_cliente: string | null }>(
+    'SELECT visita_confirmada_em, cpf_cliente FROM parceria WHERE id = $1 FOR UPDATE',
     [parceriaId],
   );
   const p = rows[0];
-  if (p && p.visita_em && p.cpf_cliente) {
+  if (p && p.visita_confirmada_em && p.cpf_cliente) {
     await client.query(
       `UPDATE parceria
        SET status = 'em_negociacao', confirmada_em = now(), janela_ativada_em = now(),
@@ -576,21 +659,69 @@ async function notificarContatoLiberado(p: ParceriaFull): Promise<void> {
   await sendWhatsapp({ to: p.comprador_whatsapp, message: `Imob Parcerias: confirmação concluída (${resumo}). Contato direto liberado: ${url}` });
 }
 
-/** Captador registra a data da visita (campo exclusivo do captador — Nota 16). */
-export async function registrarVisita(parceriaId: string, captadorId: string, visitaEm: string) {
+/** Formata "YYYY-MM-DDTHH:MM" (ou só data) para exibição pt-BR, sem depender de fuso. */
+function formatarVisita(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
+  if (!m) return iso;
+  const [, y, mo, d, h, min] = m;
+  return h ? `${d}/${mo}/${y} às ${h}:${min}` : `${d}/${mo}/${y}`;
+}
+
+/** Qualquer participante propõe data+hora da visita; o OUTRO precisa confirmar (Nota 16). */
+export async function proporVisita(parceriaId: string, corretorId: string, visitaEm: string) {
   const p = await buscarParceriaFull(parceriaId);
-  if (p.captador_id !== captadorId) {
-    throw forbidden('Apenas o corretor captador registra a data da visita.');
+  if (p.captador_id !== corretorId && p.comprador_id !== corretorId) {
+    throw forbidden('Acesso negado.');
   }
   if (p.status !== 'aceita') {
-    throw conflict('A parceria precisa estar aceita para registrar a visita.');
+    throw conflict('A parceria precisa estar aceita para propor a visita.');
+  }
+  await query(
+    `UPDATE parceria SET visita_em = $2, visita_proposta_por = $3,
+       visita_confirmada_em = NULL, atualizado_em = now()
+     WHERE id = $1`,
+    [parceriaId, visitaEm, corretorId],
+  );
+  // Avisa o outro corretor para confirmar (best-effort).
+  const souCaptador = corretorId === p.captador_id;
+  const outro = souCaptador
+    ? { nome: p.comprador_nome, email: p.comprador_email, whatsapp: p.comprador_whatsapp }
+    : { nome: p.captador_nome, email: p.captador_email, whatsapp: p.captador_whatsapp };
+  const propositor = souCaptador ? p.captador_nome : p.comprador_nome;
+  const url = `${env.APP_WEB_URL}/parcerias/${parceriaId}`;
+  const quando = formatarVisita(visitaEm);
+  await sendEmail({ to: outro.email, ...emailVisitaProposta(outro.nome, propositor, resumoImovel(p), quando, url) });
+  await sendWhatsapp({
+    to: outro.whatsapp,
+    message: `Imob Parcerias: ${propositor.split(' ')[0]} propôs a visita para ${quando} (${resumoImovel(p)}). Confirme: ${url}`,
+  });
+  return { id: parceriaId, status: p.status, visita_em: visitaEm };
+}
+
+/** O corretor que NÃO propôs confirma a data/hora — gatilho da confirmação bilateral. */
+export async function confirmarVisita(parceriaId: string, corretorId: string) {
+  const p = await buscarParceriaFull(parceriaId);
+  if (p.captador_id !== corretorId && p.comprador_id !== corretorId) {
+    throw forbidden('Acesso negado.');
+  }
+  if (p.status !== 'aceita') {
+    throw conflict('A parceria precisa estar aceita para confirmar a visita.');
+  }
+  if (!p.visita_em || !p.visita_proposta_por) {
+    throw conflict('Ainda não há uma data/hora proposta para a visita.');
+  }
+  if (p.visita_proposta_por === corretorId) {
+    throw forbidden('A confirmação é feita pelo outro corretor (você fez a proposta).');
+  }
+  if (p.visita_confirmada_em) {
+    throw conflict('A visita já foi confirmada.');
   }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     await client.query(
-      `UPDATE parceria SET visita_em = $2, atualizado_em = now() WHERE id = $1`,
-      [parceriaId, visitaEm],
+      `UPDATE parceria SET visita_confirmada_em = now(), atualizado_em = now() WHERE id = $1`,
+      [parceriaId],
     );
     const status = await finalizarSeBilateral(client, parceriaId, p.imovel_id);
     await client.query('COMMIT');

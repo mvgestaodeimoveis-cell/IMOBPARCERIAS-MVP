@@ -28,6 +28,8 @@ const envSchema = z.object({
   CLOUDINARY_API_SECRET: z.string().optional(),
   CRON_SECRET: z.string().optional(),
   INATIVIDADE_DIAS: z.coerce.number().int().positive().default(60),
+  // Cooldown (horas) do e-mail de "nova mensagem" por conversa/destinatário — evita spam.
+  MENSAGEM_EMAIL_COOLDOWN_HORAS: z.coerce.number().min(0).default(2),
   // Login com Google (OAuth 2.0) — opcional. Sem as três, o fluxo fica desativado.
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),

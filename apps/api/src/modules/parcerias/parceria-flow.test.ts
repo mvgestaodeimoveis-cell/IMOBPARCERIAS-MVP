@@ -105,13 +105,16 @@ test('captador aceita a parceria', async () => {
   assert.equal(r.status, 'aceita');
 });
 
-test('simetria: comprador não registra visita; captador não insere CPF', async () => {
-  await assert.rejects(() => parcerias.registrarVisita(parceriaId, compradorId, '2026-08-01'));
+test('visita: quem propõe não confirma a própria; CPF é exclusivo do comprador', async () => {
+  await parcerias.proporVisita(parceriaId, captadorId, '2026-08-01T14:00');
+  // Quem propôs não pode dar o próprio OK.
+  await assert.rejects(() => parcerias.confirmarVisita(parceriaId, captadorId));
+  // Captador não insere o CPF do cliente.
   await assert.rejects(() => parcerias.inserirCpf(parceriaId, captadorId, '52998224725'));
 });
 
-test('confirmação bilateral: visita + CPF → EM NEGOCIAÇÃO', async () => {
-  const v = await parcerias.registrarVisita(parceriaId, captadorId, '2026-08-01');
+test('confirmação bilateral: visita confirmada + CPF → EM NEGOCIAÇÃO', async () => {
+  const v = await parcerias.confirmarVisita(parceriaId, compradorId);
   assert.equal(v.status, 'aceita'); // ainda falta o CPF
   const c = await parcerias.inserirCpf(parceriaId, compradorId, '52998224725');
   assert.equal(c.status, 'em_negociacao');
