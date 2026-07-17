@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Poppins } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { GoogleAnalytics } from '@next/third-parties/google';
 import './globals.css';
 import { ErrorReporter } from '@/components/ErrorReporter';
 
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Analytics />
       </body>
+      <GoogleAnalytics gaId="G-K5HBLNLW6W" />
     </html>
   );
 }
