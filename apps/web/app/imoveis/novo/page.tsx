@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';import { formatMilhar, maskCep, parseNumero } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
+import { reportarErro } from '@/lib/telemetry';
 import { Brandmark } from '@/components/Brandmark';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { BottomNav } from '@/components/BottomNav';
@@ -26,8 +27,11 @@ interface Draft {
   finalidade?: Finalidade;
   area_m2?: number;
   quartos?: number;
+  suites?: number;
   banheiros?: number;
   vagas?: number;
+  diferenciais?: string[];
+  reconhecidos?: string[];
 }
 
 const FINALIDADES: { value: Finalidade; label: string; ico: string }[] = [
@@ -114,9 +118,12 @@ export default function NovoImovelPage() {
     bairro: '',
     cidade: '',
     area_m2: '',
+    condominio: '',
+    iptu: '',
     descricao: '',
   });
   const [emCondominio, setEmCondominio] = useState(false);
+  const [taxasInclusas, setTaxasInclusas] = useState(false);
   const [counts, setCounts] = useState({ quartos: 0, suites: 0, banheiros: 0, vagas: 0 });
   const [diferenciais, setDiferenciais] = useState<string[]>([]);
   const [difInput, setDifInput] = useState('');
@@ -135,8 +142,10 @@ export default function NovoImovelPage() {
   const [cepLoading, setCepLoading] = useState(false);
 
   const [importUrl, setImportUrl] = useState('');
+  const [importTexto, setImportTexto] = useState('');
   const [importando, setImportando] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importAberto, setImportAberto] = useState(false);
   const [linkOrigem, setLinkOrigem] = useState<string | null>(null);
 
   // Rascunho automático (reduz abandono): salva o progresso no aparelho e permite retomar.
@@ -179,6 +188,7 @@ export default function NovoImovelPage() {
         JSON.stringify({
           form,
           emCondominio,
+          taxasInclusas,
           counts,
           diferenciais,
           documentacao,
@@ -194,13 +204,14 @@ export default function NovoImovelPage() {
     } catch {
       /* localStorage cheio/indisponível — ignora */
     }
-  }, [salvarAtivo, form, emCondominio, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);
+  }, [salvarAtivo, form, emCondominio, taxasInclusas, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);
 
   function restaurarRascunho() {
     try {
       const d = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || '{}');
       if (d.form) setForm(d.form);
       if (typeof d.emCondominio === 'boolean') setEmCondominio(d.emCondominio);
+      if (typeof d.taxasInclusas === 'boolean') setTaxasInclusas(d.taxasInclusas);
       if (d.counts) setCounts(d.counts);
       if (Array.isArray(d.diferenciais)) setDiferenciais(d.diferenciais);
       if (Array.isArray(d.documentacao)) setDocumentacao(d.documentacao);
@@ -343,11 +354,68 @@ export default function NovoImovelPage() {
       }));
       if (d.fotos && d.fotos.length > 0) setFotos((atuais) => [...atuais, ...d.fotos].slice(0, 10));
       setLinkOrigem(importUrl.trim());
+      // Importação é autoritativa: descarta rascunho antigo e passa a salvar o cadastro atual.
+      setTemRascunho(false);
+      setSalvarAtivo(true);
       setImportMsg('Dados importados! Revise cada etapa e complete o que faltar.');
       setStep(2);
     } catch (err) {
       setImportMsg(
         err instanceof ApiRequestError ? err.message : 'Não foi possível importar deste link.',
+      );
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  async function importarTexto() {
+    if (importTexto.trim().length < 10) return;
+    const token = getAccessToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    setImportMsg(null);
+    setImportando(true);
+    try {
+      const d = await apiFetch<Draft>('/imoveis/importar-texto', {
+        method: 'POST',
+        token,
+        body: { texto: importTexto.trim() },
+      });
+      setForm((f) => ({
+        ...f,
+        finalidade: d.finalidade ?? f.finalidade,
+        tipo: d.tipo ?? f.tipo,
+        preco: d.preco != null ? formatMilhar(String(Math.round(d.preco))) : f.preco,
+        bairro: d.bairro ?? f.bairro,
+        cidade: d.cidade ?? f.cidade,
+        area_m2: d.area_m2 != null ? String(Math.round(d.area_m2)) : f.area_m2,
+        descricao: d.descricao ?? f.descricao,
+      }));
+      setCounts((c) => ({
+        quartos: d.quartos ?? c.quartos,
+        suites: d.suites ?? c.suites,
+        banheiros: d.banheiros ?? c.banheiros,
+        vagas: d.vagas ?? c.vagas,
+      }));
+      if (Array.isArray(d.diferenciais) && d.diferenciais.length > 0) {
+        setDiferenciais((arr) => Array.from(new Set([...arr, ...d.diferenciais!])).slice(0, 20));
+      }
+      // A importação é autoritativa: descarta o rascunho antigo (evita que o banner
+      // "cadastro em andamento" sobrescreva os dados) e passa a salvar o cadastro atual.
+      setTemRascunho(false);
+      setSalvarAtivo(true);
+      const rec = d.reconhecidos ?? [];
+      if (rec.length > 0) {
+        setImportMsg(`Reconhecemos: ${rec.join(', ')}. Revise cada etapa e complete o endereço e as fotos.`);
+        setStep(2);
+      } else {
+        setImportMsg('Não reconhecemos campos automaticamente. Preencha manualmente nas próximas etapas.');
+      }
+    } catch (err) {
+      setImportMsg(
+        err instanceof ApiRequestError ? err.message : 'Não foi possível ler o texto colado.',
       );
     } finally {
       setImportando(false);
@@ -419,6 +487,10 @@ export default function NovoImovelPage() {
       bairro: form.bairro,
       cidade: form.cidade,
       area_m2: parseNumero(form.area_m2),
+      taxas_inclusas: form.finalidade === 'aluguel' ? taxasInclusas : false,
+      condominio:
+        form.finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.condominio) : undefined,
+      iptu: form.finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.iptu) : undefined,
       quartos: counts.quartos,
       suites: counts.suites,
       banheiros: counts.banheiros,
@@ -463,6 +535,7 @@ export default function NovoImovelPage() {
           else if (err.fields.preco || err.fields.area_m2) setStep(3);
         }
       } else {
+        reportarErro('publicar-imovel', err, { tipo: form.tipo, fotos: fotos.length });
         setErro('Não foi possível publicar o imóvel.');
       }
     } finally {
@@ -491,7 +564,7 @@ export default function NovoImovelPage() {
       </div>
 
       <div className="wizard-body">
-        {temRascunho && (
+        {temRascunho && step === 1 && (
           <div className="rascunho-banner">
             <div>
               <strong>Você tem um cadastro em andamento</strong>
@@ -512,31 +585,79 @@ export default function NovoImovelPage() {
         {/* ETAPA 1 — Tipo do anúncio */}
         {step === 1 && (
           <>
-            <div className="card import-box">
-              <h3 className="import-title">Já anunciou em outro site?</h3>
-              <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.88rem' }}>
-                Cole o link (OLX, VivaReal, ZAP, Chaves na Mão, site próprio…) e preenchemos o que
-                for possível para você revisar.
-              </p>
-              <div className="import-row">
-                <input
+            {!importAberto ? (
+              <button
+                type="button"
+                className="import-toggle"
+                onClick={() => setImportAberto(true)}
+              >
+                <span className="import-toggle-ico">✨</span>
+                <span className="import-toggle-txt">
+                  <strong>Agilize o cadastro</strong>
+                  <small>Cole um link ou o texto do WhatsApp e a gente pré-preenche</small>
+                </span>
+                <span className="import-toggle-seta">＋</span>
+              </button>
+            ) : (
+              <div className="card import-box">
+                <div className="import-head">
+                  <h3 className="import-title">Agilize o cadastro</h3>
+                  <button
+                    type="button"
+                    className="import-fechar"
+                    aria-label="Fechar"
+                    onClick={() => setImportAberto(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="muted" style={{ margin: '0 0 0.85rem', fontSize: '0.88rem' }}>
+                  Recebeu o imóvel por link ou por texto no WhatsApp? Cole aqui e a gente pré-preenche —
+                  você só revisa e completa.
+                </p>
+
+                <label className="import-label">Link do anúncio (OLX, ZAP, Chaves na Mão…)</label>
+                <div className="import-row">
+                  <input
+                    className="input"
+                    type="url"
+                    placeholder="https://…"
+                    value={importUrl}
+                    onChange={(e) => setImportUrl(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-navy"
+                    disabled={importando || !importUrl.trim()}
+                    onClick={importar}
+                  >
+                    {importando ? 'Importando…' : 'Importar'}
+                  </button>
+                </div>
+
+                <div className="import-ou"><span>ou</span></div>
+
+                <label className="import-label">Texto do WhatsApp</label>
+                <textarea
                   className="input"
-                  type="url"
-                  placeholder="https://…"
-                  value={importUrl}
-                  onChange={(e) => setImportUrl(e.target.value)}
+                  rows={4}
+                  placeholder="Cole a mensagem com as informações do imóvel (tipo, preço, quartos, bairro, diferenciais…)"
+                  value={importTexto}
+                  onChange={(e) => setImportTexto(e.target.value)}
                 />
                 <button
                   type="button"
-                  className="btn btn-navy"
-                  disabled={importando || !importUrl.trim()}
-                  onClick={importar}
+                  className="btn btn-navy btn-sm"
+                  style={{ marginTop: '0.5rem' }}
+                  disabled={importando || importTexto.trim().length < 10}
+                  onClick={importarTexto}
                 >
-                  {importando ? 'Importando…' : 'Importar'}
+                  {importando ? 'Lendo…' : 'Preencher pelo texto'}
                 </button>
+
+                {importMsg && <div className="import-msg">{importMsg}</div>}
               </div>
-              {importMsg && <div className="import-msg">{importMsg}</div>}
-            </div>
+            )}
 
             <h2 className="wizard-q">Qual é a finalidade?</h2>
             <div className="choice-grid">
@@ -735,6 +856,55 @@ export default function NovoImovelPage() {
                 {fieldErrors.area_m2 && <div className="field-error">{fieldErrors.area_m2}</div>}
               </div>
             </div>
+
+            {form.finalidade === 'aluguel' && (
+              <div className="field" style={{ marginTop: '0.25rem' }}>
+                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 400 }}>
+                  <input
+                    type="checkbox"
+                    checked={taxasInclusas}
+                    onChange={(e) => setTaxasInclusas(e.target.checked)}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <span>Condomínio e IPTU inclusos no valor do aluguel</span>
+                </label>
+                <div className="grid-2" style={{ marginTop: '0.6rem' }}>
+                  <div className="field">
+                    <label htmlFor="condominio">Condomínio (mês)</label>
+                    <div className="input-prefix">
+                      <span>R$</span>
+                      <input
+                        id="condominio"
+                        inputMode="numeric"
+                        placeholder="0"
+                        disabled={taxasInclusas}
+                        value={form.condominio}
+                        onChange={(e) => set('condominio', formatMilhar(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="iptu">IPTU (mês)</label>
+                    <div className="input-prefix">
+                      <span>R$</span>
+                      <input
+                        id="iptu"
+                        inputMode="numeric"
+                        placeholder="0"
+                        disabled={taxasInclusas}
+                        value={form.iptu}
+                        onChange={(e) => set('iptu', formatMilhar(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {taxasInclusas && (
+                  <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
+                    As taxas já estão incluídas no valor do aluguel.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="steppers">
               <Stepper label="Quartos" value={counts.quartos} onDelta={(d) => setCounts((c) => ({ ...c, quartos: Math.max(0, Math.min(50, c.quartos + d)) }))} />

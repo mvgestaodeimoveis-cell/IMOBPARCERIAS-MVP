@@ -32,6 +32,10 @@ const imovelBase = z.object({
   andar: opcional(20),
   bloco: opcional(40),
   nome_condominio: opcional(120),
+  // Taxas (relevantes p/ aluguel). Se taxas_inclusas=true, condomínio/IPTU ficam nulos.
+  condominio: z.number().min(0).max(1_000_000).nullish(),
+  iptu: z.number().min(0).max(1_000_000).nullish(),
+  taxas_inclusas: z.boolean().optional().default(false),
   area_m2: z.number().positive().max(1_000_000).nullish(),
   quartos: inteiroOpcional,
   suites: inteiroOpcional,
@@ -101,6 +105,10 @@ export const importarImovelSchema = z.object({
   url: z.string().url('Informe um link válido.').max(500),
 });
 
+export const importarTextoSchema = z.object({
+  texto: z.string().trim().min(10, 'Cole um texto com as informações do imóvel.').max(5000),
+});
+
 export const vitrineQuerySchema = z.object({
   tipo: z.enum(['apartamento', 'casa', 'terreno', 'comercial']).optional(),
   finalidade: z.enum(['venda', 'aluguel']).optional(),
@@ -121,4 +129,5 @@ export const atualizarImovelSchema = imovelBase.partial().extend({
 export type CriarImovelInput = z.infer<typeof criarImovelSchema>;
 export type AtualizarImovelInput = z.infer<typeof atualizarImovelSchema>;
 export type ImportarImovelInput = z.infer<typeof importarImovelSchema>;
+export type ImportarTextoInput = z.infer<typeof importarTextoSchema>;
 export type VitrineQuery = z.infer<typeof vitrineQuerySchema>;

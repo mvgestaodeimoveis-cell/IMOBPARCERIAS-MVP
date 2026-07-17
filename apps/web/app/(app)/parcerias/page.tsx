@@ -179,6 +179,29 @@ export default function ParceriasPage() {
           <p className="muted">Carregando…</p>
         ) : (
           <>
+            {(() => {
+              const todas = [...recebidas, ...enviadas];
+              const aguardando = recebidas.filter((p) => p.status === 'solicitada').length;
+              const visitas = todas.filter((p) => p.status === 'aceita').length;
+              const emNeg = todas.filter((p) => p.status === 'em_negociacao').length;
+              return (
+                <div className="painel-stats" style={{ marginBottom: '1.25rem' }}>
+                  <div className="stat-chip">
+                    <strong>{aguardando}</strong>
+                    <span>Aguardando resposta</span>
+                  </div>
+                  <div className="stat-chip">
+                    <strong>{visitas}</strong>
+                    <span>Visitas agendadas</span>
+                  </div>
+                  <div className="stat-chip">
+                    <strong>{emNeg}</strong>
+                    <span>Em negociação</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="parceria-secao">
               <h2>Recebidas</h2>
               <span className="parceria-secao-sub">nos meus imóveis</span>

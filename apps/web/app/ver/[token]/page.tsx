@@ -31,16 +31,34 @@ export default function SelecaoClientePage() {
   const [corretorNome, setCorretorNome] = useState<string | undefined>();
 
   useEffect(() => {
-    const data = decodeSelecao(params.token);
-    setCorretorWa(data.whatsapp);
-    setCorretorNome(data.corretor);
-    if (data.ids.length === 0) {
-      setImoveis([]);
-      return;
+    let cancelado = false;
+    async function carregar() {
+      let data: { ids: string[]; whatsapp?: string; corretor?: string };
+      try {
+        // Formato novo: código curto guardado no backend.
+        data = await apiFetch<{ ids: string[]; whatsapp?: string; corretor?: string }>(
+          `/selecoes/${params.token}`,
+        );
+      } catch {
+        // Fallback: link antigo autocontido (base64 na própria URL).
+        data = decodeSelecao(params.token);
+      }
+      if (cancelado) return;
+      setCorretorWa(data.whatsapp);
+      setCorretorNome(data.corretor);
+      if (!data.ids || data.ids.length === 0) {
+        setImoveis([]);
+        return;
+      }
+      const res = await Promise.all(
+        data.ids.map((id) => apiFetch<ImovelVitrine>(`/vitrine/${id}`).catch(() => null)),
+      );
+      if (!cancelado) setImoveis(res.filter((x): x is ImovelVitrine => x !== null));
     }
-    Promise.all(
-      data.ids.map((id) => apiFetch<ImovelVitrine>(`/vitrine/${id}`).catch(() => null)),
-    ).then((res) => setImoveis(res.filter((x): x is ImovelVitrine => x !== null)));
+    carregar();
+    return () => {
+      cancelado = true;
+    };
   }, [params.token]);
 
   function waHref(im: ImovelVitrine): string {

@@ -71,6 +71,16 @@ function statusBadge(status: string): string {
   return 'badge-emerald';
 }
 
+const PASSOS = ['Aceita', 'Visita', 'Negociação', 'Venda'];
+
+/** Índice do passo atual no fluxo (para o stepper). */
+function passoAtual(status: string): number {
+  if (status === 'vendida') return 4;
+  if (status === 'em_negociacao') return 2;
+  if (status === 'aceita') return 1;
+  return 0;
+}
+
 export default function ParceriaDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -213,91 +223,153 @@ export default function ParceriaDetalhePage() {
                 <h1 style={{ fontSize: '1.3rem', margin: 0 }}>
                   {TIPO_LABEL[detalhe.imovel.tipo] ?? detalhe.imovel.tipo} · {detalhe.imovel.bairro}
                 </h1>
-                <p className="muted" style={{ margin: '0.25rem 0 0' }}>
-                  {formatBRL(detalhe.imovel.preco)} · Cliente: {detalhe.cliente_nome}
-                </p>
               </div>
               <span className={`badge ${statusBadge(detalhe.status)}`}>
                 {STATUS_LABEL[detalhe.status] ?? detalhe.status.replace('_', ' ')}
               </span>
             </div>
 
+            {['aceita', 'em_negociacao', 'vendida'].includes(detalhe.status) && (
+              <ol className="parceria-steps">
+                {PASSOS.map((label, i) => {
+                  const cur = passoAtual(detalhe.status);
+                  return (
+                    <li key={label} className={i < cur ? 'done' : i === cur ? 'active' : ''}>
+                      <span className="parceria-step-dot">{i < cur ? '✓' : i + 1}</span>
+                      <span>{label}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+
+            <div className="card" style={{ marginTop: '0.85rem' }}>
+              <div className="info-grid">
+                <div className="info-item">
+                  <span className="info-dt">Preço</span>
+                  <span className="info-dd destaque">{formatBRL(detalhe.imovel.preco)}</span>
+                </div>
+                <div className="info-item">
+                  <span className="info-dt">Cliente</span>
+                  <span className="info-dd">{detalhe.cliente_nome}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Nível 2 — endereço completo (após match aceito) */}
             {detalhe.imovel.endereco && (
               <div className="card" style={{ marginTop: '0.85rem' }}>
-                <h3 className="detail-label">Endereço (Nível 2)</h3>
-                <p style={{ margin: 0 }}>
-                  {detalhe.imovel.endereco.logradouro}, {detalhe.imovel.endereco.numero}
-                  {detalhe.imovel.endereco.complemento ? ` — ${detalhe.imovel.endereco.complemento}` : ''}
-                  {detalhe.imovel.endereco.unidade ? ` · Unid. ${detalhe.imovel.endereco.unidade}` : ''}
-                  {detalhe.imovel.endereco.andar ? ` · ${detalhe.imovel.endereco.andar}º andar` : ''}
-                  {detalhe.imovel.endereco.bloco ? ` · Bloco ${detalhe.imovel.endereco.bloco}` : ''}
-                  <br />
-                  {detalhe.imovel.bairro}, {detalhe.imovel.cidade} · CEP {detalhe.imovel.endereco.cep}
-                </p>
+                <h3 className="detail-label">Endereço do imóvel</h3>
+                <div className="info-stack">
+                  <div className="info-item">
+                    <span className="info-dt">Logradouro</span>
+                    <span className="info-dd">
+                      {detalhe.imovel.endereco.logradouro}, {detalhe.imovel.endereco.numero}
+                    </span>
+                  </div>
+                  {(detalhe.imovel.endereco.complemento ||
+                    detalhe.imovel.endereco.unidade ||
+                    detalhe.imovel.endereco.andar ||
+                    detalhe.imovel.endereco.bloco) && (
+                    <div className="info-item">
+                      <span className="info-dt">Complemento</span>
+                      <span className="info-dd">
+                        {[
+                          detalhe.imovel.endereco.complemento,
+                          detalhe.imovel.endereco.unidade ? `Unid. ${detalhe.imovel.endereco.unidade}` : null,
+                          detalhe.imovel.endereco.andar ? `${detalhe.imovel.endereco.andar}º andar` : null,
+                          detalhe.imovel.endereco.bloco ? `Bloco ${detalhe.imovel.endereco.bloco}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="info-item">
+                    <span className="info-dt">Bairro / Cidade</span>
+                    <span className="info-dd">
+                      {detalhe.imovel.bairro}, {detalhe.imovel.cidade}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-dt">CEP</span>
+                    <span className="info-dd">{detalhe.imovel.endereco.cep}</span>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Confirmação bilateral */}
             <div className="card" style={{ marginTop: '0.85rem' }}>
-              <h3 className="detail-label">Confirmação bilateral da visita</h3>
+              <h3 className="detail-label">Confirmação da visita</h3>
+              <p className="muted" style={{ margin: '0 0 0.9rem', fontSize: '0.82rem' }}>
+                Os dois lados confirmam para liberar os contatos.
+              </p>
               {acaoErro && <div className="banner banner-error">{acaoErro}</div>}
 
-              <ul className="check-list">
-                <li className={detalhe.confirmacao.visita_em ? 'ok' : ''}>
-                  <span className="check-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '○'}</span>
-                  <span>
-                    Data da visita <span className="muted">(captador)</span>
-                    {detalhe.confirmacao.visita_em
-                      ? ` — ${new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')}`
-                      : ' — pendente'}
-                  </span>
-                </li>
-                <li className={detalhe.confirmacao.cpf_preenchido ? 'ok' : ''}>
-                  <span className="check-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '○'}</span>
-                  <span>
-                    CPF do cliente <span className="muted">(comprador)</span>
-                    {detalhe.confirmacao.cpf_preenchido ? ' — inserido' : ' — pendente'}
-                  </span>
-                </li>
-              </ul>
+              <div className="confirm-list">
+                <div className={`confirm-item${detalhe.confirmacao.visita_em ? ' ok' : ''}`}>
+                  <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.visita_em ? '✓' : '1'}</span>
+                  <div className="confirm-body">
+                    <span className="confirm-titulo">Data da visita</span>
+                    <span className="confirm-sub">
+                      {detalhe.confirmacao.visita_em
+                        ? new Date(detalhe.confirmacao.visita_em).toLocaleDateString('pt-BR')
+                        : 'Captador'}
+                    </span>
+                  </div>
+                  <span className="confirm-status">{detalhe.confirmacao.visita_em ? 'Confirmado' : 'Pendente'}</span>
+                </div>
+                <div className={`confirm-item${detalhe.confirmacao.cpf_preenchido ? ' ok' : ''}`}>
+                  <span className="confirm-ico" aria-hidden>{detalhe.confirmacao.cpf_preenchido ? '✓' : '2'}</span>
+                  <div className="confirm-body">
+                    <span className="confirm-titulo">CPF do cliente</span>
+                    <span className="confirm-sub">Comprador</span>
+                  </div>
+                  <span className="confirm-status">{detalhe.confirmacao.cpf_preenchido ? 'Inserido' : 'Pendente'}</span>
+                </div>
+              </div>
 
               {detalhe.status === 'aceita' && detalhe.papel === 'captador' && !detalhe.confirmacao.visita_em && (
-                <div className="field">
-                  <label htmlFor="visita">Registrar data da visita</label>
-                  <input
-                    id="visita"
-                    type="date"
-                    className="input"
-                    value={dataVisita}
-                    onChange={(e) => setDataVisita(e.target.value)}
-                  />
-                  <button className="btn btn-emerald" style={{ marginTop: '0.5rem' }} onClick={registrarVisita} disabled={!dataVisita}>
-                    Registrar visita
-                  </button>
+                <div className="confirm-acao">
+                  <label htmlFor="visita">Informe a data da visita</label>
+                  <div className="confirm-acao-row">
+                    <input
+                      id="visita"
+                      type="date"
+                      className="input"
+                      value={dataVisita}
+                      onChange={(e) => setDataVisita(e.target.value)}
+                    />
+                    <button className="btn btn-emerald btn-sm" onClick={registrarVisita} disabled={!dataVisita}>
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               )}
 
               {detalhe.status === 'aceita' && detalhe.papel === 'comprador' && !detalhe.confirmacao.cpf_preenchido && (
-                <div className="field">
-                  <label htmlFor="cpf">CPF do cliente</label>
-                  <input
-                    id="cpf"
-                    inputMode="numeric"
-                    className="input"
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    maxLength={14}
-                    onChange={(e) => setCpf(maskCpf(e.target.value))}
-                  />
-                  <button className="btn btn-emerald" style={{ marginTop: '0.5rem' }} onClick={inserirCpf} disabled={cpf.replace(/\D/g, '').length !== 11}>
-                    Inserir CPF
-                  </button>
+                <div className="confirm-acao">
+                  <label htmlFor="cpf">Informe o CPF do cliente</label>
+                  <div className="confirm-acao-row">
+                    <input
+                      id="cpf"
+                      inputMode="numeric"
+                      className="input"
+                      placeholder="000.000.000-00"
+                      value={cpf}
+                      maxLength={14}
+                      onChange={(e) => setCpf(maskCpf(e.target.value))}
+                    />
+                    <button className="btn btn-emerald btn-sm" onClick={inserirCpf} disabled={cpf.replace(/\D/g, '').length !== 11}>
+                      Confirmar
+                    </button>
+                  </div>
                 </div>
               )}
 
               {detalhe.status === 'em_negociacao' && (
-                <div className="banner banner-success">
+                <div className="banner banner-success" style={{ marginTop: '0.9rem' }}>
                   Confirmação concluída! Janela de {detalhe.confirmacao.janela_dias} dias ativada. Contato liberado.
                 </div>
               )}
@@ -311,26 +383,28 @@ export default function ParceriaDetalhePage() {
                 {detalhe.status === 'em_negociacao' && (
                   <>
                     {detalhe.papel === 'captador' ? (
-                      <div className="field">
+                      <div className="confirm-acao" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
                         <label htmlFor="valor">Declarar venda — valor final (R$)</label>
-                        <input
-                          id="valor"
-                          inputMode="numeric"
-                          className="input"
-                          placeholder="Ex.: 500000"
-                          value={valorVenda}
-                          onChange={(e) => setValorVenda(e.target.value)}
-                        />
-                        <button className="btn btn-emerald" style={{ marginTop: '0.5rem' }} onClick={declararVenda}>
-                          Declarar venda
-                        </button>
+                        <div className="confirm-acao-row">
+                          <input
+                            id="valor"
+                            inputMode="numeric"
+                            className="input"
+                            placeholder="Ex.: 500000"
+                            value={valorVenda}
+                            onChange={(e) => setValorVenda(e.target.value)}
+                          />
+                          <button className="btn btn-emerald btn-sm" onClick={declararVenda}>
+                            Declarar
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <p className="muted" style={{ fontSize: '0.86rem' }}>
+                      <p className="muted" style={{ fontSize: '0.86rem', margin: 0 }}>
                         A declaração da venda é feita pelo corretor captador.
                       </p>
                     )}
-                    <button className="btn btn-ghost" style={{ marginTop: '0.5rem' }} onClick={encerrar}>
+                    <button className="btn btn-ghost btn-sm" style={{ marginTop: '0.75rem' }} onClick={encerrar}>
                       Encerrar sem venda
                     </button>
                   </>
@@ -338,13 +412,22 @@ export default function ParceriaDetalhePage() {
 
                 {detalhe.venda && (
                   <>
-                    <p style={{ margin: '0 0 0.5rem' }}>
-                      <strong>Venda:</strong> {formatBRL(detalhe.venda.valor)}<br />
-                      <strong>Comissão (5%):</strong> {formatBRL(detalhe.venda.comissao)}<br />
-                      <strong>Taxa da plataforma (10% da comissão):</strong> {formatBRL(detalhe.venda.taxa_plataforma)}
-                    </p>
+                    <div className="info-stack">
+                      <div className="info-item">
+                        <span className="info-dt">Valor da venda</span>
+                        <span className="info-dd destaque">{formatBRL(detalhe.venda.valor)}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-dt">Comissão (5%)</span>
+                        <span className="info-dd">{formatBRL(detalhe.venda.comissao)}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-dt">Taxa da plataforma (10% da comissão)</span>
+                        <span className="info-dd">{formatBRL(detalhe.venda.taxa_plataforma)}</span>
+                      </div>
+                    </div>
                     {detalhe.venda.pagamento_status === 'pendente' && (
-                      <div className="banner banner-warning">
+                      <div className="banner banner-warning" style={{ marginTop: '0.75rem' }}>
                         Pagamento da taxa via PIX pendente
                         {detalhe.venda.pagamento_vencimento
                           ? ` — vence em ${new Date(detalhe.venda.pagamento_vencimento).toLocaleDateString('pt-BR')}`
@@ -353,7 +436,7 @@ export default function ParceriaDetalhePage() {
                       </div>
                     )}
                     {detalhe.venda.pagamento_status === 'confirmado' && (
-                      <div className="banner banner-success">Pagamento confirmado pela equipe.</div>
+                      <div className="banner banner-success" style={{ marginTop: '0.75rem' }}>Pagamento confirmado pela equipe.</div>
                     )}
                   </>
                 )}
@@ -406,24 +489,33 @@ export default function ParceriaDetalhePage() {
             {/* Nível 3 — contatos revelados */}
             {detalhe.contatos && (
               <div className="card" style={{ marginTop: '0.85rem' }}>
-                <h3 className="detail-label">Contatos liberados (Nível 3)</h3>
-                <p style={{ margin: 0 }}>
-                  <strong>Captador:</strong> {detalhe.contatos.captador.nome}
-                  {detalhe.contatos.captador.whatsapp && (
-                    <> · <a href={waLink(detalhe.contatos.captador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">{detalhe.contatos.captador.whatsapp}</a></>
-                  )}
-                  <br />
-                  <strong>Comprador:</strong> {detalhe.contatos.comprador.nome}
-                  {detalhe.contatos.comprador.whatsapp && (
-                    <> · <a href={waLink(detalhe.contatos.comprador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">{detalhe.contatos.comprador.whatsapp}</a></>
-                  )}
+                <h3 className="detail-label">Contatos liberados</h3>
+                <div className="info-stack">
+                  <div className="info-item">
+                    <span className="info-dt">Captador</span>
+                    <span className="info-dd">{detalhe.contatos.captador.nome}</span>
+                    {detalhe.contatos.captador.whatsapp && (
+                      <a className="info-wa" href={waLink(detalhe.contatos.captador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">
+                        {detalhe.contatos.captador.whatsapp}
+                      </a>
+                    )}
+                  </div>
+                  <div className="info-item">
+                    <span className="info-dt">Comprador</span>
+                    <span className="info-dd">{detalhe.contatos.comprador.nome}</span>
+                    {detalhe.contatos.comprador.whatsapp && (
+                      <a className="info-wa" href={waLink(detalhe.contatos.comprador.whatsapp) ?? '#'} target="_blank" rel="noopener noreferrer">
+                        {detalhe.contatos.comprador.whatsapp}
+                      </a>
+                    )}
+                  </div>
                   {detalhe.papel === 'captador' && detalhe.confirmacao.cpf_cliente && (
-                    <>
-                      <br />
-                      <strong>CPF do cliente:</strong> {maskCpf(detalhe.confirmacao.cpf_cliente)}
-                    </>
+                    <div className="info-item">
+                      <span className="info-dt">CPF do cliente</span>
+                      <span className="info-dd">{maskCpf(detalhe.confirmacao.cpf_cliente)}</span>
+                    </div>
                   )}
-                </p>
+                </div>
               </div>
             )}
 

@@ -24,6 +24,7 @@ export function Topbar() {
         </Link>
 
         <nav className="nav-desktop" aria-label="Principal">
+          <Link href="/">Início</Link>
           <Link href="/vitrine">Vitrine</Link>
           <Link href="/como-funciona">Como funciona</Link>
           {logado ? (
@@ -62,6 +63,9 @@ export function Topbar() {
 
         {open && (
           <div className="nav-mobile">
+            <Link href="/" onClick={() => setOpen(false)}>
+              Início
+            </Link>
             <Link href="/vitrine" onClick={() => setOpen(false)}>
               Vitrine
             </Link>

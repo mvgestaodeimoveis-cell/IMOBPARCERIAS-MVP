@@ -1,0 +1,33 @@
+name: Keep-alive (evita cold start do Render)
+
+# O plano free do Render suspende o serviço após ~15 min sem tráfego; o primeiro
+# acesso do dia fica lento (a "tela preta" ao entrar). Este ping mantém a API
+# acordada durante o horário comercial, batendo no /health a cada 10 minutos.
+#
+# Configure em Settings > Secrets and variables > Actions:
+#   API_BASE_URL  ex.: https://imobparcerias-api.onrender.com
+#
+# OBS: em repositório PRIVADO isso consome minutos do GitHub Actions. Se preferir
+# custo zero e mais confiável, use um pinger externo gratuito apontando para
+# {API_BASE_URL}/health (ex.: cron-job.org a cada 5 min, ou UptimeRobot).
+
+on:
+  schedule:
+    # A cada 10 min, das 10:00 às 23:59 UTC (~07:00–20:59 BRT).
+    - cron: '*/10 10-23 * * *'
+  workflow_dispatch: {}
+
+# Evita acúmulo de execuções se uma demorar.
+concurrency:
+  group: keep-alive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /health
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          curl -fsS "$API_BASE_URL/health" --max-time 60 -w '\nHTTP %{http_code}\n'

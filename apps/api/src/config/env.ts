@@ -15,6 +15,9 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Imob Parcerias <no-reply@imobparcerias.com.br>'),
   EQUIPE_NOTIFICACAO_EMAIL: z.string().optional(),
+  // Chave PIX para cobrança da taxa da plataforma (Fase 8). Sem ela, o e-mail
+  // orienta o captador a aguardar a chave enviada pela equipe.
+  PIX_CHAVE: z.string().optional(),
   // Double opt-in (B4): quando 'true', exige e-mail confirmado para concluir o cadastro.
   EXIGIR_EMAIL_VERIFICADO: z
     .string()

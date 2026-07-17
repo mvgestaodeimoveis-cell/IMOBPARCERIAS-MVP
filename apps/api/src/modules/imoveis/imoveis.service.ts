@@ -26,6 +26,9 @@ export interface Imovel {
   andar: string | null;
   bloco: string | null;
   nome_condominio: string | null;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   suites: number | null;
@@ -47,25 +50,31 @@ export interface Imovel {
   atualizado_em: string;
 }
 
-interface ImovelRow extends Omit<Imovel, 'preco' | 'area_m2'> {
+interface ImovelRow extends Omit<Imovel, 'preco' | 'area_m2' | 'condominio' | 'iptu'> {
   preco: string;
   area_m2: string | null;
+  condominio: string | null;
+  iptu: string | null;
 }
 
 const COLUNAS = `id, corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro,
-  numero, complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
+  numero, complemento, unidade, andar, bloco, nome_condominio, condominio, iptu, taxas_inclusas,
+  area_m2, quartos, suites, banheiros,
   vagas, descricao, fotos, diferenciais, documentacao, exclusividade_verificada, exclusividade,
   exclusividade_contrato_url, exclusividade_vencimento::text AS exclusividade_vencimento,
   exclusividade_status, status, origem, link_origem, criado_em, atualizado_em`;
 
 // Nível 1 (vitrine pública): NUNCA expõe logradouro, número, complemento ou CEP.
-const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, area_m2, quartos,
-  banheiros, vagas, fotos, diferenciais, exclusividade_verificada, status, criado_em`;
+const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, condominio, iptu, taxas_inclusas,
+  area_m2, quartos, banheiros, vagas, fotos, diferenciais, exclusividade_verificada, status,
+  criado_em, atualizado_em`;
 
 function mapImovel(row: ImovelRow): Imovel {
   return {
     ...row,
     preco: Number(row.preco),
+    condominio: row.condominio === null ? null : Number(row.condominio),
+    iptu: row.iptu === null ? null : Number(row.iptu),
     area_m2: row.area_m2 === null ? null : Number(row.area_m2),
   };
 }
@@ -246,8 +255,8 @@ export async function criarImovel(
           complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
           vagas, descricao, fotos, diferenciais, documentacao, chave_dedupe, chave_predio, origem,
           link_origem, exclusividade, exclusividade_contrato_url, exclusividade_vencimento,
-          exclusividade_status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31)
+          exclusividade_status, condominio, iptu, taxas_inclusas)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34)
        RETURNING ${COLUNAS}`,
       [
         corretorId,
@@ -281,6 +290,9 @@ export async function criarImovel(
         input.exclusividade_contrato_url ?? null,
         input.exclusividade_vencimento ?? null,
         input.exclusividade ? 'pendente' : 'nao',
+        input.taxas_inclusas ? null : input.condominio ?? null,
+        input.taxas_inclusas ? null : input.iptu ?? null,
+        input.taxas_inclusas ?? false,
       ],
     );
     const imovel = rows[0];
@@ -374,6 +386,9 @@ export async function atualizarImovel(
     andar: input.andar === undefined ? atual.andar : input.andar,
     bloco: input.bloco === undefined ? atual.bloco : input.bloco,
     nome_condominio: input.nome_condominio === undefined ? atual.nome_condominio : input.nome_condominio,
+    condominio: input.condominio === undefined ? atual.condominio : input.condominio,
+    iptu: input.iptu === undefined ? atual.iptu : input.iptu,
+    taxas_inclusas: input.taxas_inclusas === undefined ? atual.taxas_inclusas : input.taxas_inclusas,
     area_m2: input.area_m2 === undefined ? atual.area_m2 : input.area_m2,
     quartos: input.quartos === undefined ? atual.quartos : input.quartos,
     suites: input.suites === undefined ? atual.suites : input.suites,
@@ -398,10 +413,8 @@ export async function atualizarImovel(
   const { rows } = await query<ImovelRow>(
     `UPDATE imovel SET
        finalidade = $2, tipo = $3, preco = $4, cidade = $5, bairro = $6, cep = $7,
-       logradouro = $8, numero = $9, complemento = $10, unidade = $11, andar = $12, bloco = $13,
-       nome_condominio = $14, area_m2 = $15, quartos = $16, suites = $17, banheiros = $18,
-       vagas = $19, descricao = $20, fotos = $21, diferenciais = $22, documentacao = $23,
-       status = $24, chave_dedupe = $25, chave_predio = $26, atualizado_em = now()
+       logradouro = $8, numero = $9, complemento = $10, unid
+       condominio = $27, iptu = $28, taxas_inclusas = $29, atualizado_em = now()
      WHERE id = $1
      RETURNING ${COLUNAS}`,
     [
@@ -431,6 +444,9 @@ export async function atualizarImovel(
       merged.status,
       chave,
       predio,
+      merged.taxas_inclusas ? null : merged.condominio,
+      merged.taxas_inclusas ? null : merged.iptu,
+      merged.taxas_inclusas,
     ],
   );
   return mapImovel(rows[0]);
@@ -585,6 +601,9 @@ export interface ImovelVitrine {
   preco: number;
   cidade: string;
   bairro: string;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   banheiros: number | null;
@@ -594,17 +613,22 @@ export interface ImovelVitrine {
   exclusividade_verificada: boolean;
   status: string;
   criado_em: string;
+  atualizado_em: string;
 }
 
-type ImovelVitrineRow = Omit<ImovelVitrine, 'preco' | 'area_m2'> & {
+type ImovelVitrineRow = Omit<ImovelVitrine, 'preco' | 'area_m2' | 'condominio' | 'iptu'> & {
   preco: string;
   area_m2: string | null;
+  condominio: string | null;
+  iptu: string | null;
 };
 
 function mapVitrine(row: ImovelVitrineRow): ImovelVitrine {
   return {
     ...row,
     preco: Number(row.preco),
+    condominio: row.condominio === null ? null : Number(row.condominio),
+    iptu: row.iptu === null ? null : Number(row.iptu),
     area_m2: row.area_m2 === null ? null : Number(row.area_m2),
   };
 }

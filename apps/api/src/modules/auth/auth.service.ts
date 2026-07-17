@@ -273,7 +273,7 @@ async function notificarEquipeNovoCadastro(
 }
 
 export async function loginCorretor(input: LoginInput) {
-  const { rows } = await query<CorretorSafe & { senha_hash: string | null }>(
+  const { rows } = await query<CorretorSafe & { senha_hash: string | null; excluido_em: string | null }>(
     'SELECT * FROM corretor WHERE email = $1',
     [input.email],
   );
@@ -281,6 +281,14 @@ export async function loginCorretor(input: LoginInput) {
   if (!corretor || !corretor.senha_hash || !(await verifyPassword(input.senha, corretor.senha_hash))) {
     throw unauthorized('E-mail ou senha inválidos.');
   }
+  if (corretor.excluido_em) {
+    throw unauthorized('Esta conta foi desativada. Fale com o suporte.');
+  }
+
+  // Registra o último acesso (best-effort — não bloqueia o login se falhar).
+  await query('UPDATE corretor SET ultimo_acesso_em = now() WHERE id = $1', [corretor.id]).catch(
+    () => {},
+  );
 
   const tokens = await issueTokens(corretor.id, 'corretor', corretor.status);
   return {

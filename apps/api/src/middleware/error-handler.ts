@@ -10,7 +10,7 @@ export function notFoundHandler(_req: Request, res: Response) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
     return res.status(err.status).json({
       error: { code: err.code, message: err.message, ...(err.fields ? { fields: err.fields } : {}) },
@@ -28,7 +28,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     });
   }
 
-  console.error('Erro não tratado:', err);
+  console.error(`Erro não tratado em ${req.method} ${req.originalUrl}:`, err);
   return res.status(500).json({
     error: {
       code: 'INTERNAL_ERROR',

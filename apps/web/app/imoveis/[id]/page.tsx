@@ -6,7 +6,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
 import { useAuthGuard } from '@/lib/useAuthGuard';
-import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
+import { TIPO_LABEL, statusImovelLabel, marcarConcluidoLabel } from '@/lib/labels';
 import { AppHeader } from '@/components/AppHeader';
 import { Lightbox } from '@/components/Lightbox';
 
@@ -21,6 +21,9 @@ interface Imovel {
   logradouro: string;
   numero: string;
   complemento: string | null;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   suites: number | null;
@@ -145,7 +148,7 @@ export default function ImovelDetalhePage() {
                   className={`badge ${imovel.status === 'em_negociacao' ? 'badge-orange' : 'badge-gray'}`}
                   style={{ marginLeft: '0.5rem' }}
                 >
-                  {STATUS_LABEL[imovel.status] ?? imovel.status}
+                  {statusImovelLabel(imovel.status, imovel.finalidade)}
                 </span>
               )}
             </p>
@@ -174,6 +177,20 @@ export default function ImovelDetalhePage() {
               )}
             </div>
 
+            {imovel.finalidade === 'aluguel' && (
+              <div className="card" style={{ marginTop: '0.85rem' }}>
+                <h3 className="detail-label">Taxas (aluguel)</h3>
+                {imovel.taxas_inclusas ? (
+                  <p style={{ margin: 0 }}>Condomínio e IPTU inclusos no valor do aluguel.</p>
+                ) : (
+                  <div className="detail-grid">
+                    <span>Condomínio: <b>{imovel.condominio != null ? formatBRL(imovel.condominio) : '—'}</b></span>
+                    <span>IPTU: <b>{imovel.iptu != null ? formatBRL(imovel.iptu) : '—'}</b></span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.25rem' }}>
               {imovel.status === 'ativo' && (
                 <>
@@ -181,7 +198,7 @@ export default function ImovelDetalhePage() {
                     Marcar em negociação
                   </button>
                   <button className="btn btn-emerald" disabled={acao} onClick={() => mudarStatus('vendido')}>
-                    Marcar como vendido
+                    {marcarConcluidoLabel(imovel.finalidade)}
                   </button>
                 </>
               )}
@@ -191,7 +208,7 @@ export default function ImovelDetalhePage() {
                     Voltar para disponível
                   </button>
                   <button className="btn btn-orange" disabled={acao} onClick={() => mudarStatus('vendido')}>
-                    Marcar como vendido
+                    {marcarConcluidoLabel(imovel.finalidade)}
                   </button>
                 </>
               )}

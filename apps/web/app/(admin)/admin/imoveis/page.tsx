@@ -23,6 +23,15 @@ interface ImovelRow {
 
 const STATUS = ['', 'ativo', 'em_negociacao', 'vendido', 'inativo'];
 
+// Status por cores (feedback cliente): disponível=verde, em negociação=amarelo,
+// vendido=vermelho, inativo=cinza.
+const STATUS_BADGE: Record<string, { cls: string; label: string }> = {
+  ativo: { cls: 'badge-emerald', label: 'Disponível' },
+  em_negociacao: { cls: 'badge-amber', label: 'Em negociação' },
+  vendido: { cls: 'badge-red', label: 'Vendido' },
+  inativo: { cls: 'badge-gray', label: 'Inativo' },
+};
+
 export default function AdminImoveisPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ImovelRow[]>([]);
@@ -119,11 +128,20 @@ export default function AdminImoveisPage() {
                 <tr key={im.id}>
                   <td>
                     {TIPO_LABEL[im.tipo] ?? im.tipo} · {im.bairro}, {im.cidade}
+                    <span className={`badge ${im.finalidade === 'venda' ? 'badge-emerald' : 'badge-orange'}`} style={{ marginLeft: '0.4rem' }}>
+                      {im.finalidade === 'venda' ? 'Venda' : 'Aluguel'}
+                    </span>
                     {im.exclusividade_status === 'verificada' && <span className="badge badge-emerald" style={{ marginLeft: '0.4rem' }}>✓ Excl.</span>}
                   </td>
                   <td>{im.corretor_nome}</td>
                   <td>{formatBRL(im.preco)}</td>
-                  <td>{STATUS_LABEL[im.status] ?? im.status}</td>
+                  <td>
+                    <span className={`badge badge-dot ${STATUS_BADGE[im.status]?.cls ?? 'badge-gray'}`}>
+                      {im.status === 'vendido' && im.finalidade === 'aluguel'
+                        ? 'Alugado'
+                        : STATUS_BADGE[im.status]?.label ?? (STATUS_LABEL[im.status] ?? im.status)}
+                    </span>
+                  </td>
                   <td>
                     <div className="row-actions" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                       {im.status === 'inativo' ? (

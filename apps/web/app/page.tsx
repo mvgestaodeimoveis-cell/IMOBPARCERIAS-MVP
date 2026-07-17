@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { LogoMark } from '@/components/LogoMark';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 export default function LandingPage() {
   return (
@@ -26,8 +27,9 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="hero-nomensalidade">
-              <span aria-hidden>✓</span> 100% sem mensalidade — você só investe quando fecha negócio
+              <span aria-hidden>✓</span> Sem mensalidade
             </p>
+            <InstallPrompt />
           </div>
         </section>
 
@@ -56,9 +58,13 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="feature">
-                <span className="fi ico-blue">🔒</span>
-                <h3>Negociação segura</h3>
-                <p>Chat mediado, contrato digital e comissão protegida.</p>
+                <span className="fi ico-blue">🤝</span>
+                <h3>Parceria 50/50</h3>
+                <p>
+                  Apenas captações <strong>diretas do corretor</strong> — sem terceiros ou
+                  intermediários. Divisão <strong>50/50</strong> entre os parceiros com contrato
+                  digital protegido. Taxa de serviço conforme o plano escolhido.
+                </p>
               </div>
             </div>
 

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-type Tab = 'inicio' | 'vitrine' | 'novo' | 'parcerias' | 'conversas';
+type Tab = 'inicio' | 'painel' | 'novo' | 'parcerias' | 'conversas';
 
 const ICONS: Record<Tab, React.ReactNode> = {
   inicio: (
@@ -11,11 +11,12 @@ const ICONS: Record<Tab, React.ReactNode> = {
       <path d="M5 9.5V21h14V9.5" />
     </svg>
   ),
-  vitrine: (
+  painel: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l1.5-4.5h15L21 9" />
-      <path d="M4 9v11h16V9" />
-      <path d="M9 20v-6h6v6" />
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
     </svg>
   ),
   novo: (
@@ -39,8 +40,8 @@ const ICONS: Record<Tab, React.ReactNode> = {
 };
 
 const ITEMS: { key: Tab; label: string; href: string }[] = [
-  { key: 'inicio', label: 'Início', href: '/painel' },
-  { key: 'vitrine', label: 'Vitrine', href: '/vitrine' },
+  { key: 'inicio', label: 'Início', href: '/vitrine' },
+  { key: 'painel', label: 'Painel', href: '/painel' },
   { key: 'novo', label: 'Anunciar', href: '/imoveis/novo' },
   { key: 'conversas', label: 'Chat', href: '/conversas' },
   { key: 'parcerias', label: 'Parcerias', href: '/parcerias' },

@@ -5,10 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
+import { dataPublicacao } from '@/lib/format';
 import { getAccessToken, isAuthenticated, getRole } from '@/lib/auth';
 import { TIPO_LABEL } from '@/lib/labels';
 import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
+import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
 import { Lightbox } from '@/components/Lightbox';
 
@@ -19,6 +21,9 @@ interface ImovelVitrine {
   preco: number;
   cidade: string;
   bairro: string;
+  condominio: number | null;
+  iptu: number | null;
+  taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
   banheiros: number | null;
@@ -26,6 +31,8 @@ interface ImovelVitrine {
   fotos: string[];
   diferenciais: string[];
   exclusividade_verificada: boolean;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 export default function VitrineDetalhePage() {
@@ -94,7 +101,7 @@ export default function VitrineDetalhePage() {
 
   return (
     <div className="site">
-      <Topbar />
+      {appNav ? <AppHeader active="inicio" /> : <Topbar />}
       <main className={appNav ? 'has-bottomnav' : undefined}>
         <section className="section">
           <div className="section-inner section-narrow">
@@ -157,6 +164,23 @@ export default function VitrineDetalhePage() {
                     <span className="badge badge-emerald" style={{ marginLeft: '0.5rem' }}>✓ Exclusividade</span>
                   )}
                 </p>
+                <p className="vitrine-data" style={{ marginTop: '0.15rem' }}>
+                  Atualizado em {dataPublicacao(imovel.atualizado_em)}
+                </p>
+
+                {imovel.finalidade === 'aluguel' && (
+                  <div className="card" style={{ marginTop: '1rem' }}>
+                    <h3 className="detail-label">Taxas</h3>
+                    {imovel.taxas_inclusas ? (
+                      <p style={{ margin: 0 }}>Condomínio e IPTU inclusos no valor do aluguel.</p>
+                    ) : (
+                      <div className="detail-grid">
+                        <span>Condomínio: <b>{imovel.condominio != null ? formatBRL(imovel.condominio) : '—'}</b></span>
+                        <span>IPTU: <b>{imovel.iptu != null ? formatBRL(imovel.iptu) : '—'}</b></span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="card" style={{ marginTop: '1rem' }}>
                   <h3 className="detail-label">Características</h3>
@@ -240,7 +264,7 @@ export default function VitrineDetalhePage() {
           </div>
         </section>
       </main>
-      {appNav ? <BottomNav active="vitrine" /> : <SiteFooter />}
+      {appNav ? <BottomNav active="inicio" /> : <SiteFooter />}
       {lightbox !== null && imovel && (
         <Lightbox fotos={imovel.fotos} index={lightbox} onClose={() => setLightbox(null)} />
       )}

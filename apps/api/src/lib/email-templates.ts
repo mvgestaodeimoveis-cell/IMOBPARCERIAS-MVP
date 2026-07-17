@@ -316,6 +316,52 @@ export function emailVendaDeclarada(
   };
 }
 
+/** Fase 7 — contato liberado após a confirmação bilateral (enviado aos dois). */
+export function emailContatoLiberado(
+  nome: string,
+  imovelResumo: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Contato liberado — confirmação concluída',
+    html: baseLayout({
+      preheader: 'A visita foi confirmada pelos dois lados.',
+      heading: `Confirmação concluída, ${primeiroNome(nome)}!`,
+      paragraphs: [
+        `A confirmação bilateral da parceria no imóvel <strong>${escapeHtml(imovelResumo)}</strong> foi concluída.`,
+        'O contato direto entre os corretores está liberado e a janela de proteção de 180 dias foi ativada.',
+      ],
+      cta: { label: 'Ver a parceria', url },
+    }),
+  };
+}
+
+/** Fase 8 — cobrança da taxa da plataforma via PIX (enviado ao captador). */
+export function emailTaxaPix(
+  captadorNome: string,
+  imovelResumo: string,
+  taxa: string,
+  vencimento: string,
+  chavePix: string | null,
+  url: string,
+): EmailContent {
+  return {
+    subject: 'Taxa da plataforma — pagamento via PIX',
+    html: baseLayout({
+      preheader: `Taxa de ${taxa} — vence em ${vencimento}.`,
+      heading: `Falta pouco, ${primeiroNome(captadorNome)}`,
+      paragraphs: [
+        `A venda do imóvel <strong>${escapeHtml(imovelResumo)}</strong> foi declarada. A taxa da plataforma é de <strong>${taxa}</strong>, com vencimento em <strong>${vencimento}</strong>.`,
+        chavePix
+          ? `Pague via PIX para a chave <strong>${escapeHtml(chavePix)}</strong>. A equipe confirma o recebimento em seguida.`
+          : 'A chave PIX para pagamento será enviada pela equipe. Assim que pagar, a equipe confirma o recebimento.',
+        'A avaliação mútua é liberada após a confirmação do pagamento.',
+      ],
+      cta: { label: 'Ver a parceria', url },
+    }),
+  };
+}
+
 export function emailPagamentoConfirmado(
   nome: string,
   imovelResumo: string,

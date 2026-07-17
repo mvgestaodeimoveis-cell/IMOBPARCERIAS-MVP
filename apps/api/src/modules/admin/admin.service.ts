@@ -13,10 +13,12 @@ interface CorretorListRow {
   cidade: string;
   status: string;
   criado_em: string;
+  ultimo_acesso_em: string | null;
 }
 
 export async function listCorretores(q: ListCorretoresQuery) {
-  const conditions: string[] = [];
+  // Corretores arquivados (soft delete) ficam ocultos da lista.
+  const conditions: string[] = ['excluido_em IS NULL'];
   const params: unknown[] = [];
 
   if (q.status) {
@@ -37,7 +39,7 @@ export async function listCorretores(q: ListCorretoresQuery) {
 
   const offset = (q.page - 1) * q.page_size;
   const dataRes = await query<CorretorListRow>(
-    `SELECT id, nome, creci, cidade, status, criado_em
+    `SELECT id, nome, creci, cidade, status, criado_em, ultimo_acesso_em
      FROM corretor ${where}
      ORDER BY criado_em ASC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -67,6 +69,17 @@ export async function reativarCorretor(id: string) {
   );
   if (!rowCount) throw conflict('Só é possível reativar um corretor suspenso.');
   return { id, status: 'ativo' as const };
+}
+
+/** Exclusão lógica (soft delete): arquiva o corretor, mantendo o histórico. */
+export async function excluirCorretor(id: string) {
+  const { rowCount } = await query(
+    `UPDATE corretor SET excluido_em = now(), atualizado_em = now()
+     WHERE id = $1 AND excluido_em IS NULL`,
+    [id],
+  );
+  if (!rowCount) throw notFound('Corretor não encontrado.');
+  return { id, excluido: true as const };
 }
 
 interface AceiteTermoRow {
@@ -202,6 +215,131 @@ export async function excluirImovel(id: string) {
   const { rowCount } = await query('DELETE FROM imovel WHERE id = $1', [id]);
   if (!rowCount) throw notFound('Imóvel não encontrado.');
   return { id, excluido: true as const };
+}
+
+// ============================================================
+// Monitoramento de conversas (chat) — a plataforma acompanha as
+// interações entre parceiros para poder intervir (ex.: tentativa de
+// levar a negociação para fora da plataforma).
+// ============================================================
+
+// Sinais de possível contato externo / negociação por fora da plataforma.
+const PADRAO_CONTATO_EXTERNO =
+  /\b(whats?app|whats|zap+|telefone|celular|ligar|me\s+chama|fora\s+da\s+plataforma|por\s+fora|meu\s+n[uú]mero|meu\s+numero|e-?mail|gmail|hotmail|outlook)\b|(\+?\d[\s.-]?){10,}|@[\w.-]+\.\w{2,}/i;
+
+// Versão para o Postgres (POSIX) — usada só para CONTAR alertas por conversa em SQL.
+const PADRAO_CONTATO_EXTERNO_PG =
+  '(whats|zap|telefone|celular|ligar|me chama|por fora|fora da plataforma|meu numero|meu número|e-?mail|gmail|hotmail|outlook|[0-9][0-9 .-]{8,})';
+
+export function detectarContatoExterno(texto: string): boolean {
+  return PADRAO_CONTATO_EXTERNO.test(texto);
+}
+
+interface ConversaAdminRow {
+  id: string;
+  status: string;
+  imovel_id: string;
+  imovel_tipo: string;
+  imovel_bairro: string;
+  imovel_cidade: string;
+  captador_nome: string;
+  comprador_nome: string;
+  total_mensagens: string;
+  alertas: string;
+  ultima_msg: string | null;
+  ultima_msg_em: string | null;
+}
+
+/** Todas as conversas com ao menos uma mensagem (visão da equipe). */
+export async function listarConversasAdmin() {
+  const { rows } = await query<ConversaAdminRow>(
+    `SELECT p.id, p.status, p.imovel_id,
+       i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+       cap.nome AS captador_nome, comp.nome AS comprador_nome,
+       (SELECT count(*) FROM parceria_mensagem m WHERE m.parceria_id = p.id)::text AS total_mensagens,
+       (SELECT count(*) FROM parceria_mensagem m WHERE m.parceria_id = p.id AND m.corpo ~* $1)::text AS alertas,
+       lm.corpo AS ultima_msg, lm.criado_em::text AS ultima_msg_em
+     FROM parceria p
+     JOIN imovel i ON i.id = p.imovel_id
+     JOIN corretor cap ON cap.id = p.captador_id
+     JOIN corretor comp ON comp.id = p.comprador_id
+     LEFT JOIN LATERAL (
+       SELECT corpo, criado_em FROM parceria_mensagem
+       WHERE parceria_id = p.id ORDER BY criado_em DESC LIMIT 1
+     ) lm ON true
+     WHERE EXISTS (SELECT 1 FROM parceria_mensagem m WHERE m.parceria_id = p.id)
+     ORDER BY COALESCE(lm.criado_em, p.criado_em) DESC`,
+    [PADRAO_CONTATO_EXTERNO_PG],
+  );
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      imovel: {
+        id: r.imovel_id,
+        tipo: r.imovel_tipo,
+        bairro: r.imovel_bairro,
+        cidade: r.imovel_cidade,
+      },
+      captador_nome: r.captador_nome,
+      comprador_nome: r.comprador_nome,
+      total_mensagens: Number(r.total_mensagens),
+      alertas: Number(r.alertas),
+      ultima_mensagem: r.ultima_msg
+        ? { corpo: r.ultima_msg, criado_em: r.ultima_msg_em }
+        : null,
+    })),
+  };
+}
+
+interface MensagemAdminRow {
+  id: string;
+  autor_id: string;
+  autor_nome: string;
+  corpo: string;
+  criado_em: string;
+}
+
+/** Cabeçalho + todas as mensagens de uma conversa (visão da equipe). */
+export async function obterConversaAdmin(parceriaId: string) {
+  const cab = await query<{
+    id: string;
+    status: string;
+    imovel_id: string;
+    imovel_tipo: string;
+    imovel_bairro: string;
+    imovel_cidade: string;
+    captador_id: string;
+    captador_nome: string;
+    comprador_id: string;
+    comprador_nome: string;
+  }>(
+    `SELECT p.id, p.status, p.imovel_id,
+       i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+       p.captador_id, cap.nome AS captador_nome,
+       p.comprador_id, comp.nome AS comprador_nome
+     FROM parceria p
+     JOIN imovel i ON i.id = p.imovel_id
+     JOIN corretor cap ON cap.id = p.captador_id
+     JOIN corretor comp ON comp.id = p.comprador_id
+     WHERE p.id = $1`,
+    [parceriaId],
+  );
+  if (!cab.rows[0]) throw notFound('Conversa não encontrada.');
+
+  const { rows } = await query<MensagemAdminRow>(
+    `SELECT m.id, m.autor_id, a.nome AS autor_nome, m.corpo, m.criado_em::text AS criado_em
+     FROM parceria_mensagem m
+     JOIN corretor a ON a.id = m.autor_id
+     WHERE m.parceria_id = $1
+     ORDER BY m.criado_em ASC`,
+    [parceriaId],
+  );
+
+  return {
+    parceria: cab.rows[0],
+    mensagens: rows.map((m) => ({ ...m, alerta: detectarContatoExterno(m.corpo) })),
+  };
 }
 
 // ============================================================

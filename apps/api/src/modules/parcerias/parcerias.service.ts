@@ -5,12 +5,14 @@ import { sendEmail } from '../../lib/email';
 import { sendWhatsapp } from '../../lib/whatsapp';
 import { calcularComissaoTaxa } from '../../lib/comissao';
 import {
+  emailContatoLiberado,
   emailImovelDisponivel,
   emailPagamentoConfirmado,
   emailParceriaAceita,
   emailParceriaCancelada,
   emailParceriaRecusada,
   emailParceriaSolicitada,
+  emailTaxaPix,
   emailVendaDeclarada,
 } from '../../lib/email-templates';
 import { TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
@@ -564,6 +566,16 @@ async function finalizarSeBilateral(
   return 'aceita';
 }
 
+/** Fase 7 — avisa os dois corretores que o contato foi liberado (confirmação bilateral). */
+async function notificarContatoLiberado(p: ParceriaFull): Promise<void> {
+  const resumo = resumoImovel(p);
+  const url = `${env.APP_WEB_URL}/parcerias/${p.id}`;
+  await sendEmail({ to: p.captador_email, ...emailContatoLiberado(p.captador_nome, resumo, url) });
+  await sendEmail({ to: p.comprador_email, ...emailContatoLiberado(p.comprador_nome, resumo, url) });
+  await sendWhatsapp({ to: p.captador_whatsapp, message: `Imob Parcerias: confirmação concluída (${resumo}). Contato direto liberado: ${url}` });
+  await sendWhatsapp({ to: p.comprador_whatsapp, message: `Imob Parcerias: confirmação concluída (${resumo}). Contato direto liberado: ${url}` });
+}
+
 /** Captador registra a data da visita (campo exclusivo do captador — Nota 16). */
 export async function registrarVisita(parceriaId: string, captadorId: string, visitaEm: string) {
   const p = await buscarParceriaFull(parceriaId);
@@ -582,6 +594,7 @@ export async function registrarVisita(parceriaId: string, captadorId: string, vi
     );
     const status = await finalizarSeBilateral(client, parceriaId, p.imovel_id);
     await client.query('COMMIT');
+    if (status === 'em_negociacao') await notificarContatoLiberado(p);
     return { id: parceriaId, status };
   } catch (err) {
     await client.query('ROLLBACK');
@@ -612,6 +625,7 @@ export async function inserirCpf(parceriaId: string, compradorId: string, cpf: s
     );
     const status = await finalizarSeBilateral(client, parceriaId, p.imovel_id);
     await client.query('COMMIT');
+    if (status === 'em_negociacao') await notificarContatoLiberado(p);
     return { id: parceriaId, status };
   } catch (err) {
     await client.query('ROLLBACK');
@@ -672,6 +686,17 @@ export async function declararVenda(parceriaId: string, captadorId: string, valo
   await sendWhatsapp({
     to: p.comprador_whatsapp,
     message: `Imob Parcerias: venda declarada na parceria (${resumoImovel(p)}). Acompanhe: ${env.APP_WEB_URL}/parcerias/${parceriaId}`,
+  });
+  // Cobrança da taxa da plataforma via PIX (Fase 8) — enviada ao captador.
+  const taxaFmt = taxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const vencimento = new Date(Date.now() + PRAZO_PAGAMENTO_DIAS * 86400000).toLocaleDateString('pt-BR');
+  await sendEmail({
+    to: p.captador_email,
+    ...emailTaxaPix(p.captador_nome, resumoImovel(p), taxaFmt, vencimento, env.PIX_CHAVE ?? null, `${env.APP_WEB_URL}/parcerias/${parceriaId}`),
+  });
+  await sendWhatsapp({
+    to: p.captador_whatsapp,
+    message: `Imob Parcerias: taxa de ${taxaFmt} (venda ${resumoImovel(p)}) vence em ${vencimento}${env.PIX_CHAVE ? `. Chave PIX: ${env.PIX_CHAVE}` : ' — a equipe enviará a chave PIX'}. ${env.APP_WEB_URL}/parcerias/${parceriaId}`,
   });
   return { id: parceriaId, status: 'vendida' as const, valor, comissao, taxa_plataforma: taxa };
 }

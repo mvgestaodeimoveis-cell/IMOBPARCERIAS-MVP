@@ -107,6 +107,12 @@ export default function ComoFuncionaPage() {
                 </Link>
               </div>
             </div>
+
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <Link href="/" className="btn btn-ghost btn-inline">
+                <span aria-hidden>🏠</span> Voltar para a página inicial
+              </Link>
+            </div>
           </div>
         </section>
       </main>

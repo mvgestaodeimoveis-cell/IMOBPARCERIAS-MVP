@@ -6,8 +6,9 @@ import { validate } from '../../middleware/validate';
 import { badRequest, unauthorized } from '../../lib/errors';
 import { assinarUpload, isCloudinaryConfigured } from '../../lib/cloudinary';
 import { importarDeUrl } from '../../lib/importer';
-import { atualizarImovelSchema, criarImovelSchema, importarImovelSchema } from './imoveis.schemas';
-import type { AtualizarImovelInput, CriarImovelInput, ImportarImovelInput } from './imoveis.schemas';
+import { parseImovelTexto } from '../../lib/parse-imovel-texto';
+import { atualizarImovelSchema, criarImovelSchema, importarImovelSchema, importarTextoSchema } from './imoveis.schemas';
+import type { AtualizarImovelInput, CriarImovelInput, ImportarImovelInput, ImportarTextoInput } from './imoveis.schemas';
 import * as imoveis from './imoveis.service';
 
 export const imoveisRoutes = Router();
@@ -21,6 +22,15 @@ imoveisRoutes.post(
     if (!req.user) throw unauthorized();
     const draft = await importarDeUrl((req.body as ImportarImovelInput).url);
     res.json(draft);
+  }),
+);
+
+imoveisRoutes.post(
+  '/importar-texto',
+  validate(importarTextoSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.json(parseImovelTexto((req.body as ImportarTextoInput).texto));
   }),
 );
 
