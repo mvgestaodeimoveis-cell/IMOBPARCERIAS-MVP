@@ -379,6 +379,30 @@ export function emailVisitaProposta(
   };
 }
 
+/** Item 3 — feedback pós-visita (enviado aos dois corretores após a data agendada). */
+export function emailFeedbackVisita(
+  nome: string,
+  imovelResumo: string,
+  quando: string,
+  url: string,
+  ehCaptador: boolean,
+): EmailContent {
+  return {
+    subject: 'Como foi a visita? Registre o feedback — Imob Parcerias',
+    html: baseLayout({
+      preheader: 'Conte o resultado da visita para dar sequência à parceria.',
+      heading: `Como foi a visita, ${primeiroNome(nome)}?`,
+      paragraphs: [
+        `A visita ao imóvel <strong>${escapeHtml(imovelResumo)}</strong> estava agendada para <strong>${escapeHtml(quando)}</strong>. Registre o resultado: houve proposta, houve interesse (sem proposta ainda), o cliente não se interessou, deseja revisitar (sem data) ou outro motivo.`,
+        ehCaptador
+          ? 'Como captador, confirme também se o imóvel deve <strong>continuar em negociação</strong> ou voltar para a vitrine. Lembre-se: enquanto o imóvel fica <strong>em negociação</strong>, ele não recebe novas demandas de outros corretores.'
+          : 'Seu retorno ajuda o corretor captador a decidir se o imóvel continua em negociação.',
+      ],
+      cta: { label: 'Registrar feedback', url },
+    }),
+  };
+}
+
 /** Fase 8 — cobrança da taxa da plataforma via PIX (enviado ao captador). */
 export function emailTaxaPix(
   captadorNome: string,

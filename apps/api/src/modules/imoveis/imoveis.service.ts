@@ -413,7 +413,10 @@ export async function atualizarImovel(
   const { rows } = await query<ImovelRow>(
     `UPDATE imovel SET
        finalidade = $2, tipo = $3, preco = $4, cidade = $5, bairro = $6, cep = $7,
-       logradouro = $8, numero = $9, complemento = $10, unid
+       logradouro = $8, numero = $9, complemento = $10, unidade = $11, andar = $12,
+       bloco = $13, nome_condominio = $14, area_m2 = $15, quartos = $16, suites = $17,
+       banheiros = $18, vagas = $19, descricao = $20, fotos = $21, diferenciais = $22,
+       documentacao = $23, status = $24, chave_dedupe = $25, chave_predio = $26,
        condominio = $27, iptu = $28, taxas_inclusas = $29, atualizado_em = now()
      WHERE id = $1
      RETURNING ${COLUNAS}`,

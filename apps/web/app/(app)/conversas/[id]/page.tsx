@@ -137,8 +137,8 @@ export default function ChatPage() {
 
         {mensagens.length === 0 ? (
           <p className="chat-vazio">
-            Nenhuma mensagem ainda. Combine a visita por aqui — o contato direto é liberado após a
-            confirmação bilateral.
+            Nenhuma mensagem ainda. Combine a visita por aqui — o contato por WhatsApp é
+            liberado assim que os dois confirmarem a data da visita.
           </p>
         ) : (
           mensagens.map((m, i) => {
@@ -163,7 +163,7 @@ export default function ChatPage() {
         <div ref={fimRef} />
       </div>
 
-      {detalhe?.status === 'aceita' ? (
+      {detalhe && ['aceita', 'em_negociacao'].includes(detalhe.status) ? (
         <form onSubmit={enviar} className="chat-composer chat-composer-fixo">
           <input
             className="input"
@@ -182,7 +182,7 @@ export default function ChatPage() {
         </form>
       ) : detalhe ? (
         <p className="chat-encerrado">
-          O chat é encerrado após a confirmação bilateral. O histórico fica registrado.
+          Esta parceria foi finalizada. O histórico da conversa fica registrado.
         </p>
       ) : null}
     </div>

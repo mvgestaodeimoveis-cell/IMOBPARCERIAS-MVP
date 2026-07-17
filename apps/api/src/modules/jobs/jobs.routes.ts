@@ -3,7 +3,7 @@ import { asyncHandler } from '../../lib/async-handler';
 import { env } from '../../config/env';
 import { forbidden } from '../../lib/errors';
 import { executarManutencaoImoveis, alertarExclusividadeVencendo } from '../imoveis/imoveis.service';
-import { suspenderInadimplentes } from '../parcerias/parcerias.service';
+import { suspenderInadimplentes, solicitarFeedbackVisitas } from '../parcerias/parcerias.service';
 
 export const jobsRoutes = Router();
 
@@ -43,5 +43,15 @@ jobsRoutes.post(
     autorizarCron(req);
     const alertas = await alertarExclusividadeVencendo();
     res.json({ alertas });
+  }),
+);
+
+// Item 3 — e-mail de feedback pós-visita (algumas horas após a data agendada). Rodar diário.
+jobsRoutes.post(
+  '/feedback-visitas',
+  asyncHandler(async (req: Request, res: Response) => {
+    autorizarCron(req);
+    const solicitados = await solicitarFeedbackVisitas();
+    res.json({ solicitados });
   }),
 );

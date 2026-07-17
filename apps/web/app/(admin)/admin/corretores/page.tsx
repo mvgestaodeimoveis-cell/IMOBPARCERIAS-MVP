@@ -15,6 +15,7 @@ interface CorretorRow {
   status: string;
   criado_em: string;
   ultimo_acesso_em: string | null;
+  imoveis_total: number;
 }
 
 interface ListResponse {
@@ -168,6 +169,7 @@ export default function AdminCorretoresPage() {
               <tr>
                 <th>Nome</th>
                 <th>CRECI</th>
+                <th>Imóveis</th>
                 <th>Inscrição</th>
                 <th>Último acesso</th>
                 <th>Status</th>
@@ -179,6 +181,7 @@ export default function AdminCorretoresPage() {
                 <tr key={c.id}>
                   <td>{c.nome}</td>
                   <td>{c.creci}</td>
+                  <td style={{ textAlign: 'center' }}>{c.imoveis_total}</td>
                   <td>{dataPublicacao(c.criado_em)}</td>
                   <td>{c.ultimo_acesso_em ? tempoRelativo(c.ultimo_acesso_em) : '—'}</td>
                   <td>{STATUS_LABEL[c.status] ?? c.status}</td>

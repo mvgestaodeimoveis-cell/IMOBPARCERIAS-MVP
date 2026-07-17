@@ -58,6 +58,12 @@ interface Detalhe {
     pagamento_confirmado_em: string | null;
   } | null;
   avaliacao: { ja_avaliei: boolean; total: number };
+  feedback: {
+    disponivel: boolean;
+    solicitado: boolean;
+    ja_respondi: boolean;
+    meu_resultado: string | null;
+  };
 }
 
 interface Mensagem {
@@ -74,6 +80,16 @@ function statusBadge(status: string): string {
 }
 
 const PASSOS = ['Aceita', 'Visita', 'Negociação', 'Venda'];
+
+const FEEDBACK_OPCOES: [string, string][] = [
+  ['proposta', 'Houve proposta'],
+  ['interesse_sem_proposta', 'Houve interesse, mas ainda sem proposta'],
+  ['sem_interesse', 'O cliente não se interessou / não gostou'],
+  ['revisitar', 'Deseja revisitar (data ainda não confirmada)'],
+  ['outros', 'Outros motivos'],
+];
+
+const FEEDBACK_LABEL: Record<string, string> = Object.fromEntries(FEEDBACK_OPCOES);
 
 /** Data + hora da visita (exibe o horário como foi combinado, sem deslocar por fuso). */
 function formatVisita(iso: string | null): string {
@@ -108,6 +124,9 @@ export default function ParceriaDetalhePage() {
   const [valorVenda, setValorVenda] = useState('');
   const [notaAval, setNotaAval] = useState(0);
   const [comentarioAval, setComentarioAval] = useState('');
+  const [fbResultado, setFbResultado] = useState('');
+  const [fbObs, setFbObs] = useState('');
+  const [fbManter, setFbManter] = useState(true);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -215,9 +234,33 @@ export default function ParceriaDetalhePage() {
     }
   }
 
+  async function enviarFeedback() {
+    if (!fbResultado) {
+      setAcaoErro('Selecione o resultado da visita.');
+      return;
+    }
+    setAcaoErro(null);
+    const token = getAccessToken();
+    try {
+      await apiFetch(`/parcerias/${params.id}/feedback`, {
+        method: 'POST',
+        token,
+        body: {
+          resultado: fbResultado,
+          observacao: fbObs.trim() || undefined,
+          ...(detalhe?.papel === 'captador' ? { manter_status: fbManter } : {}),
+        },
+      });
+      setFbResultado('');
+      setFbObs('');
+      carregar();
+    } catch (err) {
+      setAcaoErro(err instanceof ApiRequestError ? err.message : 'Erro ao enviar o feedback.');
+    }
+  }
+
   async function avaliar() {
-    if (notaAval < 1) {
-      setAcaoErro('Escolha uma nota de 1 a 5.');
+    if (notaAval < 1) {      setAcaoErro('Escolha uma nota de 1 a 5.');
       return;
     }
     setAcaoErro(null);
@@ -427,6 +470,66 @@ export default function ParceriaDetalhePage() {
                 </div>
               )}
             </div>
+
+            {/* Item 3 — feedback pós-visita */}
+            {detalhe.feedback.disponivel && (
+              <div className="card" style={{ marginTop: '0.85rem' }}>
+                <h3 className="detail-label">Feedback da visita</h3>
+                {detalhe.feedback.ja_respondi && detalhe.feedback.meu_resultado && (
+                  <div className="banner banner-success" style={{ marginBottom: '0.75rem' }}>
+                    ✓ Você registrou: {FEEDBACK_LABEL[detalhe.feedback.meu_resultado] ?? detalhe.feedback.meu_resultado}. Pode atualizar abaixo se algo mudar.
+                  </div>
+                )}
+                <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>
+                  Como foi a visita? Seu retorno ajuda a decidir os próximos passos.
+                </p>
+
+                <div className="confirm-acao" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+                  {FEEDBACK_OPCOES.map(([valor, label]) => (
+                    <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.3rem 0', cursor: 'pointer' }}>
+                      <input
+                        type="radio"
+                        name="feedback-resultado"
+                        value={valor}
+                        checked={fbResultado === valor}
+                        onChange={(e) => setFbResultado(e.target.value)}
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+
+                  <textarea
+                    className="input"
+                    placeholder="Observações (opcional)"
+                    maxLength={1000}
+                    value={fbObs}
+                    onChange={(e) => setFbObs(e.target.value)}
+                    style={{ minHeight: 64, marginTop: '0.5rem' }}
+                  />
+
+                  {detalhe.papel === 'captador' && (
+                    <div style={{ marginTop: '0.85rem' }}>
+                      <span className="detail-label">O imóvel deve continuar em negociação?</span>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.35rem 0', cursor: 'pointer' }}>
+                        <input type="radio" name="feedback-manter" checked={fbManter} onChange={() => setFbManter(true)} />
+                        <span>Sim, manter em negociação</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.35rem 0', cursor: 'pointer' }}>
+                        <input type="radio" name="feedback-manter" checked={!fbManter} onChange={() => setFbManter(false)} />
+                        <span>Não, voltar o imóvel para a vitrine</span>
+                      </label>
+                      <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+                        Enquanto o imóvel fica <strong>em negociação</strong>, ele não recebe novas demandas de outros corretores.
+                      </p>
+                    </div>
+                  )}
+
+                  <button className="btn btn-emerald btn-sm" style={{ marginTop: '0.85rem' }} onClick={enviarFeedback} disabled={!fbResultado}>
+                    Enviar feedback
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Fase 8/9 — fechamento */}
             {['em_negociacao', 'vendida', 'encerrada'].includes(detalhe.status) && (

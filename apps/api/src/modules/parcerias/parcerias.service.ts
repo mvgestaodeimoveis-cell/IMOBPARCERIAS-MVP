@@ -6,6 +6,7 @@ import { sendWhatsapp } from '../../lib/whatsapp';
 import { calcularComissaoTaxa } from '../../lib/comissao';
 import {
   emailContatoLiberado,
+  emailFeedbackVisita,
   emailImovelDisponivel,
   emailPagamentoConfirmado,
   emailParceriaAceita,
@@ -19,7 +20,7 @@ import {
 } from '../../lib/email-templates';
 import { TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
 import { gerarContratoParceria } from '../../lib/contrato-parceria';
-import type { SolicitarParceriaInput } from './parcerias.schemas';
+import type { FeedbackVisitaInput, SolicitarParceriaInput } from './parcerias.schemas';
 
 const JANELA_DIAS = 180;
 
@@ -363,6 +364,7 @@ interface ParceriaFull {
   visita_em: string | null;
   visita_proposta_por: string | null;
   visita_confirmada_em: string | null;
+  feedback_solicitado_em: string | null;
   cpf_cliente: string | null;
   confirmada_em: string | null;
   janela_ativada_em: string | null;
@@ -397,7 +399,7 @@ interface ParceriaFull {
 async function buscarParceriaFull(parceriaId: string): Promise<ParceriaFull> {
   const { rows } = await query<ParceriaFull>(
     `SELECT p.id, p.status, p.cliente_nome, p.criado_em, p.captador_id, p.comprador_id,
-            p.visita_em, p.visita_proposta_por, p.visita_confirmada_em,
+            p.visita_em, p.visita_proposta_por, p.visita_confirmada_em, p.feedback_solicitado_em,
             p.cpf_cliente, p.confirmada_em, p.janela_ativada_em, p.janela_dias,
             p.venda_valor::text AS venda_valor, p.comissao::text AS comissao,
             p.taxa_plataforma::text AS taxa_plataforma, p.venda_declarada_em,
@@ -432,8 +434,13 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
 
   // Nível 2 (após match aceito): endereço completo e condições.
   const nivel2 = ['aceita', 'em_negociacao', 'encerrada'].includes(p.status);
-  // Nível 3 (após confirmação bilateral): contatos revelados.
+  // Nível 3 (após confirmação bilateral): CPF do cliente revelado ao captador.
   const nivel3 = ['em_negociacao', 'encerrada'].includes(p.status) && Boolean(p.confirmada_em);
+  // Contato por WhatsApp entre os corretores: liberado assim que AMBOS aprovam a data
+  // da visita (não espera o CPF) — item 2. Fica disponível enquanto a parceria está viva.
+  const contatosLiberados =
+    Boolean(p.visita_confirmada_em) &&
+    ['aceita', 'em_negociacao', 'encerrada'].includes(p.status);
 
   return {
     id: p.id,
@@ -471,7 +478,7 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
       janela_ativada_em: p.janela_ativada_em,
       janela_dias: p.janela_dias,
     },
-    contatos: nivel3
+    contatos: contatosLiberados
       ? {
           captador: { nome: p.captador_nome, whatsapp: p.captador_whatsapp },
           comprador: { nome: p.comprador_nome, whatsapp: p.comprador_whatsapp },
@@ -489,6 +496,31 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
         }
       : null,
     avaliacao: await resumoAvaliacao(p.id, corretorId),
+    feedback: await resumoFeedback(p, corretorId),
+  };
+}
+
+/** Resumo do feedback pós-visita para o detalhe da parceria (item 3). */
+async function resumoFeedback(p: ParceriaFull, corretorId: string) {
+  const { rows } = await query<{ autor_id: string; resultado: string; observacao: string | null; criado_em: string }>(
+    `SELECT autor_id, resultado, observacao, criado_em::text AS criado_em
+     FROM parceria_visita_feedback WHERE parceria_id = $1 ORDER BY criado_em DESC`,
+    [p.id],
+  );
+  // “Pendente” = a visita já foi confirmada por ambos e este corretor ainda não respondeu
+  // desde a última solicitação de feedback (revisitas zeram feedback_solicitado_em).
+  const meuUltimo = rows.find((r) => r.autor_id === corretorId);
+  const solicitadoEm = p.feedback_solicitado_em ? new Date(p.feedback_solicitado_em).getTime() : 0;
+  const respondiDepois = meuUltimo ? new Date(meuUltimo.criado_em).getTime() >= solicitadoEm : false;
+  // Fica disponível quando a visita foi confirmada por ambos, a data/hora já passou e a
+  // parceria segue ativa (aceita ou em negociação).
+  const visitaPassou = Boolean(p.visita_em) && new Date(p.visita_em as string).getTime() <= Date.now();
+  return {
+    disponivel:
+      Boolean(p.visita_confirmada_em) && visitaPassou && ['aceita', 'em_negociacao'].includes(p.status),
+    solicitado: Boolean(p.feedback_solicitado_em),
+    ja_respondi: respondiDepois,
+    meu_resultado: meuUltimo?.resultado ?? null,
   };
 }
 
@@ -528,8 +560,8 @@ export async function enviarMensagem(parceriaId: string, corretorId: string, cor
   if (p.captador_id !== corretorId && p.comprador_id !== corretorId) {
     throw forbidden('Acesso negado.');
   }
-  if (p.status !== 'aceita') {
-    throw conflict('O chat está disponível apenas enquanto a parceria está aceita.');
+  if (!['aceita', 'em_negociacao'].includes(p.status)) {
+    throw conflict('O chat fica disponível enquanto a parceria está ativa.');
   }
   const { rows } = await query<MensagemRow>(
     `INSERT INTO parceria_mensagem (parceria_id, autor_id, corpo)
@@ -659,6 +691,15 @@ async function notificarContatoLiberado(p: ParceriaFull): Promise<void> {
   await sendWhatsapp({ to: p.comprador_whatsapp, message: `Imob Parcerias: confirmação concluída (${resumo}). Contato direto liberado: ${url}` });
 }
 
+/** Item 2 — visita aprovada por ambos: libera o contato por WhatsApp para combinar a visita. */
+async function notificarVisitaConfirmada(p: ParceriaFull): Promise<void> {
+  const resumo = resumoImovel(p);
+  const url = `${env.APP_WEB_URL}/parcerias/${p.id}`;
+  const msg = `Imob Parcerias: a visita (${resumo}) foi confirmada pelos dois lados! O WhatsApp dos corretores já está liberado no painel para combinar os detalhes: ${url}`;
+  await sendWhatsapp({ to: p.captador_whatsapp, message: msg });
+  await sendWhatsapp({ to: p.comprador_whatsapp, message: msg });
+}
+
 /** Formata "YYYY-MM-DDTHH:MM" (ou só data) para exibição pt-BR, sem depender de fuso. */
 function formatarVisita(iso: string): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/);
@@ -678,7 +719,7 @@ export async function proporVisita(parceriaId: string, corretorId: string, visit
   }
   await query(
     `UPDATE parceria SET visita_em = $2, visita_proposta_por = $3,
-       visita_confirmada_em = NULL, atualizado_em = now()
+       visita_confirmada_em = NULL, feedback_solicitado_em = NULL, atualizado_em = now()
      WHERE id = $1`,
     [parceriaId, visitaEm, corretorId],
   );
@@ -725,7 +766,12 @@ export async function confirmarVisita(parceriaId: string, corretorId: string) {
     );
     const status = await finalizarSeBilateral(client, parceriaId, p.imovel_id);
     await client.query('COMMIT');
+    // A aprovação bilateral da visita já libera o contato direto (WhatsApp) entre os
+    // corretores — item 2. Se o CPF também já estava preenchido, a confirmação
+    // bilateral fechou (em_negociacao) e enviamos o aviso completo; senão, um aviso
+    // enxuto de que o WhatsApp foi liberado para combinar a visita.
     if (status === 'em_negociacao') await notificarContatoLiberado(p);
+    else await notificarVisitaConfirmada(p);
     return { id: parceriaId, status };
   } catch (err) {
     await client.query('ROLLBACK');
@@ -893,6 +939,82 @@ async function notificarFilaEspera(
     });
   }
   await query('DELETE FROM fila_espera WHERE imovel_id = $1', [imovelId]);
+}
+
+// ============================================================
+// Item 3 — Feedback pós-visita
+// ============================================================
+
+/** Um dos corretores registra o resultado da visita; captador decide o status do imóvel. */
+export async function registrarFeedbackVisita(
+  parceriaId: string,
+  corretorId: string,
+  input: FeedbackVisitaInput,
+) {
+  const p = await buscarParceriaFull(parceriaId);
+  if (p.captador_id !== corretorId && p.comprador_id !== corretorId) {
+    throw forbidden('Acesso negado.');
+  }
+  if (!p.visita_confirmada_em) {
+    throw conflict('O feedback fica disponível após a visita ser confirmada pelos dois lados.');
+  }
+  if (!['aceita', 'em_negociacao'].includes(p.status)) {
+    throw conflict('Esta parceria não aceita mais feedback de visita.');
+  }
+  await query(
+    `INSERT INTO parceria_visita_feedback (parceria_id, autor_id, resultado, observacao)
+     VALUES ($1, $2, $3, $4)`,
+    [parceriaId, corretorId, input.resultado, input.observacao ?? null],
+  );
+  // A decisão de status é exclusiva do captador e só se aplica com o imóvel em negociação:
+  // manter_status === false libera o imóvel de volta para a vitrine (encerra a negociação).
+  const souCaptador = p.captador_id === corretorId;
+  if (souCaptador && input.manter_status === false && p.status === 'em_negociacao') {
+    return encerrarSemVenda(parceriaId, corretorId);
+  }
+  return { id: parceriaId, status: p.status, resultado: input.resultado };
+}
+
+/**
+ * Job (cron diário) — algumas horas após a data/hora agendada da visita, envia o e-mail
+ * de feedback aos dois corretores. feedback_solicitado_em evita reenvio (revisitas o zeram).
+ */
+export async function solicitarFeedbackVisitas(): Promise<number> {
+  const { rows } = await query<{
+    id: string;
+    captador_nome: string;
+    captador_email: string;
+    comprador_nome: string;
+    comprador_email: string;
+    imovel_tipo: string;
+    imovel_bairro: string;
+    imovel_cidade: string;
+    visita_em: string;
+  }>(
+    `SELECT p.id,
+            cap.nome AS captador_nome, cap.email AS captador_email,
+            comp.nome AS comprador_nome, comp.email AS comprador_email,
+            i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+            p.visita_em::text AS visita_em
+     FROM parceria p
+     JOIN imovel i ON i.id = p.imovel_id
+     JOIN corretor cap ON cap.id = p.captador_id
+     JOIN corretor comp ON comp.id = p.comprador_id
+     WHERE p.visita_confirmada_em IS NOT NULL
+       AND p.feedback_solicitado_em IS NULL
+       AND p.status IN ('aceita', 'em_negociacao')
+       AND p.visita_em < now() - ($1 || ' hours')::interval`,
+    [String(env.FEEDBACK_VISITA_HORAS)],
+  );
+  for (const r of rows) {
+    const url = `${env.APP_WEB_URL}/parcerias/${r.id}`;
+    const quando = formatarVisita(r.visita_em);
+    const resumo = resumoImovel(r);
+    await sendEmail({ to: r.captador_email, ...emailFeedbackVisita(r.captador_nome, resumo, quando, url, true) });
+    await sendEmail({ to: r.comprador_email, ...emailFeedbackVisita(r.comprador_nome, resumo, quando, url, false) });
+    await query(`UPDATE parceria SET feedback_solicitado_em = now() WHERE id = $1`, [r.id]);
+  }
+  return rows.length;
 }
 
 /** Confirmação manual do pagamento (equipe) — libera a avaliação mútua. */

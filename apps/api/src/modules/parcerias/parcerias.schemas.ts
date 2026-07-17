@@ -55,6 +55,15 @@ export const avaliacaoSchema = z.object({
   comentario: z.string().trim().max(1000).optional(),
 });
 
+export const feedbackVisitaSchema = z.object({
+  resultado: z.enum(['proposta', 'interesse_sem_proposta', 'sem_interesse', 'revisitar', 'outros'], {
+    errorMap: () => ({ message: 'Selecione o resultado da visita.' }),
+  }),
+  observacao: z.string().trim().max(1000).optional(),
+  // Decisão do captador: manter o imóvel em negociação (true) ou liberá-lo p/ a vitrine (false).
+  manter_status: z.boolean().optional(),
+});
+
 export type SolicitarParceriaInput = z.infer<typeof solicitarParceriaSchema>;
 export type RecusarParceriaInput = z.infer<typeof recusarParceriaSchema>;
 export type MensagemInput = z.infer<typeof mensagemSchema>;
@@ -62,3 +71,4 @@ export type VisitaInput = z.infer<typeof visitaSchema>;
 export type CpfInput = z.infer<typeof cpfSchema>;
 export type VendaInput = z.infer<typeof vendaSchema>;
 export type AvaliacaoInput = z.infer<typeof avaliacaoSchema>;
+export type FeedbackVisitaInput = z.infer<typeof feedbackVisitaSchema>;

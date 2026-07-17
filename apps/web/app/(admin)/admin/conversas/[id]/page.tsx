@@ -16,6 +16,14 @@ interface Mensagem {
   alerta: boolean;
 }
 
+interface Feedback {
+  autor_id: string;
+  autor_nome: string;
+  resultado: string;
+  observacao: string | null;
+  criado_em: string;
+}
+
 interface Conversa {
   parceria: {
     id: string;
@@ -30,7 +38,16 @@ interface Conversa {
     comprador_nome: string;
   };
   mensagens: Mensagem[];
+  feedbacks: Feedback[];
 }
+
+const FEEDBACK_LABEL: Record<string, string> = {
+  proposta: 'Houve proposta',
+  interesse_sem_proposta: 'Interesse, sem proposta',
+  sem_interesse: 'Sem interesse / não gostou',
+  revisitar: 'Deseja revisitar (sem data)',
+  outros: 'Outros motivos',
+};
 
 export default function AdminConversaDetalhePage() {
   const router = useRouter();
@@ -85,6 +102,25 @@ export default function AdminConversaDetalhePage() {
             <div className="banner banner-error" style={{ marginTop: '0.5rem' }}>
               ⚠️ Esta conversa tem mensagens que podem indicar tentativa de contato ou negociação por
               fora da plataforma (destacadas abaixo).
+            </div>
+          )}
+
+          {conversa.feedbacks.length > 0 && (
+            <div className="card" style={{ marginTop: '1rem' }}>
+              <h3 className="detail-label">Feedback da visita</h3>
+              <div className="info-stack">
+                {conversa.feedbacks.map((f) => (
+                  <div key={`${f.autor_id}-${f.criado_em}`} className="info-item">
+                    <span className="info-dt">
+                      {f.autor_nome} · {new Date(f.criado_em).toLocaleString('pt-BR')}
+                    </span>
+                    <span className="info-dd">
+                      <strong>{FEEDBACK_LABEL[f.resultado] ?? f.resultado}</strong>
+                      {f.observacao ? ` — ${f.observacao}` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

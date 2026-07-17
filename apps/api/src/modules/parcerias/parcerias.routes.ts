@@ -7,6 +7,7 @@ import { unauthorized } from '../../lib/errors';
 import {
   avaliacaoSchema,
   cpfSchema,
+  feedbackVisitaSchema,
   mensagemSchema,
   recusarParceriaSchema,
   solicitarParceriaSchema,
@@ -14,6 +15,7 @@ import {
   visitaSchema,
   type AvaliacaoInput,
   type CpfInput,
+  type FeedbackVisitaInput,
   type MensagemInput,
   type RecusarParceriaInput,
   type SolicitarParceriaInput,
@@ -186,6 +188,16 @@ parceriasRoutes.post(
   asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw unauthorized();
     res.json(await parcerias.encerrarSemVenda(req.params.id, req.user.id));
+  }),
+);
+
+// Item 3 — feedback pós-visita (resultado + decisão de status do captador).
+parceriasRoutes.post(
+  '/:id/feedback',
+  validate(feedbackVisitaSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.status(201).json(await parcerias.registrarFeedbackVisita(req.params.id, req.user.id, req.body as FeedbackVisitaInput));
   }),
 );
 

@@ -32,3 +32,11 @@ jobs:
           curl -fsS -X POST "$API_BASE_URL/api/v1/jobs/exclusividade-vencendo" \
             -H "x-cron-secret: $CRON_SECRET" \
             --max-time 120 -w '\nHTTP %{http_code}\n'
+      - name: Feedback pós-visita (item 3)
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -fsS -X POST "$API_BASE_URL/api/v1/jobs/feedback-visitas" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            --max-time 120 -w '\nHTTP %{http_code}\n'

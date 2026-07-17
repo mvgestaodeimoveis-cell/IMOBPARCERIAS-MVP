@@ -14,6 +14,7 @@ interface CorretorListRow {
   status: string;
   criado_em: string;
   ultimo_acesso_em: string | null;
+  imoveis_total: number;
 }
 
 export async function listCorretores(q: ListCorretoresQuery) {
@@ -39,7 +40,8 @@ export async function listCorretores(q: ListCorretoresQuery) {
 
   const offset = (q.page - 1) * q.page_size;
   const dataRes = await query<CorretorListRow>(
-    `SELECT id, nome, creci, cidade, status, criado_em, ultimo_acesso_em
+    `SELECT id, nome, creci, cidade, status, criado_em, ultimo_acesso_em,
+            (SELECT count(*)::int FROM imovel i WHERE i.corretor_id = corretor.id AND i.status <> 'inativo') AS imoveis_total
      FROM corretor ${where}
      ORDER BY criado_em ASC
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -336,9 +338,19 @@ export async function obterConversaAdmin(parceriaId: string) {
     [parceriaId],
   );
 
+  const feedbacks = await query<{ autor_id: string; autor_nome: string; resultado: string; observacao: string | null; criado_em: string }>(
+    `SELECT f.autor_id, a.nome AS autor_nome, f.resultado, f.observacao, f.criado_em::text AS criado_em
+     FROM parceria_visita_feedback f
+     JOIN corretor a ON a.id = f.autor_id
+     WHERE f.parceria_id = $1
+     ORDER BY f.criado_em DESC`,
+    [parceriaId],
+  );
+
   return {
     parceria: cab.rows[0],
     mensagens: rows.map((m) => ({ ...m, alerta: detectarContatoExterno(m.corpo) })),
+    feedbacks: feedbacks.rows,
   };
 }
 
