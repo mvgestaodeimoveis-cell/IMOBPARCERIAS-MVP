@@ -65,11 +65,38 @@ async function issueTokens(subjectId: string, role: UserRole, status?: string): 
 
 /** Etapa 1 — cria o corretor como lead (cadastro_incompleto) e já autentica. */
 export async function iniciarCadastro(input: RegistroInput) {
-  const dupe = await query<{ email: string }>('SELECT email FROM corretor WHERE email = $1', [
-    input.email,
-  ]);
-  if (dupe.rowCount) {
-    throw conflict('Cadastro já existente.', { email: 'Este e-mail já está cadastrado.' });
+  const dupe = await query<{ id: string; status: string }>(
+    'SELECT id, status FROM corretor WHERE email = $1',
+    [input.email],
+  );
+  const existente = dupe.rows[0];
+  if (existente) {
+    // Cadastro que ficou pela metade (lead): permite RETOMAR em vez de bloquear.
+    // Sem isso, quem parou antes da etapa 2 ficava travado com "e-mail já cadastrado"
+    // e não conseguia concluir nem recomeçar (é o único e-mail da pessoa).
+    if (existente.status === 'cadastro_incompleto') {
+      const senhaHash = await hashPassword(input.senha);
+      const retomado = await query<{
+        id: string;
+        nome: string;
+        email: string;
+        status: string;
+        papel: string;
+      }>(
+        `UPDATE corretor
+         SET nome = $2, senha_hash = $3, atualizado_em = now()
+         WHERE id = $1
+         RETURNING id, nome, email, status, papel`,
+        [existente.id, input.nome, senhaHash],
+      );
+      const corretor = retomado.rows[0];
+      await enviarConfirmacaoEmail(corretor.id, corretor.nome, corretor.email);
+      const tokens = await issueTokens(corretor.id, 'corretor', corretor.status);
+      return { ...tokens, corretor };
+    }
+    throw conflict('Cadastro já existente.', {
+      email: 'Este e-mail já está cadastrado. Faça login ou use "Esqueci minha senha".',
+    });
   }
 
   const senhaHash = await hashPassword(input.senha);
@@ -170,6 +197,10 @@ export async function loginOuCadastrarGoogle(profile: GoogleProfile) {
 }
 
 async function finalizarSessaoGoogle(corretor: CorretorSessao, novo: boolean) {
+  // Registra o último acesso também no login via Google (best-effort).
+  await query('UPDATE corretor SET ultimo_acesso_em = now() WHERE id = $1', [corretor.id]).catch(
+    () => {},
+  );
   const tokens = await issueTokens(corretor.id, 'corretor', corretor.status);
   return { ...tokens, corretor, novo };
 }
@@ -334,6 +365,12 @@ export async function refreshTokens(refreshToken: string) {
       stored.subject_id,
     ]);
     status = res.rows[0]?.status;
+    // Atualiza o "último acesso" na renovação da sessão (best-effort). Sessões ativas
+    // (PWA/app instalado) renovam o token periodicamente sem passar por loginCorretor —
+    // sem isto o último acesso ficava congelado próximo da data de inscrição.
+    await query('UPDATE corretor SET ultimo_acesso_em = now() WHERE id = $1', [
+      stored.subject_id,
+    ]).catch(() => {});
   }
 
   return issueTokens(stored.subject_id, stored.role, status);
