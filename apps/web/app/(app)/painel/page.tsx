@@ -185,7 +185,7 @@ export default function AppHomePage() {
                   </div>
                 </Link>
                 <div className="imovel-actions">
-                  <Link href={`/imoveis/${im.id}`} className="imovel-action">
+                  <Link href={`/imoveis/${im.id}/editar`} className="imovel-action">
                     Editar
                   </Link>
                   {im.status !== 'vendido' && (

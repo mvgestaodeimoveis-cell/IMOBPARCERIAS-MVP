@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
@@ -192,6 +193,11 @@ export default function ImovelDetalhePage() {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginTop: '1.25rem' }}>
+              {imovel.status !== 'inativo' && (
+                <Link href={`/imoveis/${id}/editar`} className="btn btn-emerald">
+                  Editar imóvel
+                </Link>
+              )}
               {imovel.status === 'ativo' && (
                 <>
                   <button className="btn btn-orange" disabled={acao} onClick={() => mudarStatus('em_negociacao')}>

@@ -114,6 +114,15 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
     onChange([url, ...value.filter((u) => u !== url)]);
   }
 
+  // Reordena a foto trocando de posição com a vizinha (−1 = esquerda, +1 = direita).
+  function mover(i: number, delta: number) {
+    const destino = i + delta;
+    if (destino < 0 || destino >= value.length) return;
+    const proximo = [...value];
+    [proximo[i], proximo[destino]] = [proximo[destino], proximo[i]];
+    onChange(proximo);
+  }
+
   return (
     <div className="uploader">
       <div className="uploader-grid">
@@ -121,6 +130,26 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
           <div key={url} className="uploader-thumb">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt={`Foto ${i + 1}`} />
+            {value.length > 1 && (
+              <div className="uploader-move">
+                <button
+                  type="button"
+                  aria-label="Mover foto para trás"
+                  disabled={i === 0}
+                  onClick={() => mover(i, -1)}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  aria-label="Mover foto para frente"
+                  disabled={i === value.length - 1}
+                  onClick={() => mover(i, 1)}
+                >
+                  ›
+                </button>
+              </div>
+            )}
             {i === 0 ? (
               <span className="uploader-cover">Capa</span>
             ) : (
@@ -156,7 +185,7 @@ export function PhotoUploader({ value, onChange, max = 10 }: Props) {
         </p>
       )}
       <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>
-        Até {max} fotos. A primeira é a capa do anúncio.
+        Até {max} fotos. A primeira é a capa do anúncio. Use ‹ › para reordenar.
       </p>
     </div>
   );
