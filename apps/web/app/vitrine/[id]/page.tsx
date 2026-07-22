@@ -210,54 +210,63 @@ export default function VitrineDetalhePage() {
                   </p>
                 </div>
 
-                {solicitada ? (
-                  <div className="banner banner-success" style={{ marginTop: '1.25rem' }}>
-                    Solicitação enviada! Acompanhe em{' '}
-                    <Link href="/parcerias">Minhas parcerias</Link>.
-                  </div>
-                ) : mostrarForm ? (
-                  <form className="card" onSubmit={solicitarParceria} style={{ marginTop: '1.25rem' }}>
-                    <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Solicitar parceria</h3>
-                    {parceriaErro && <div className="banner banner-error">{parceriaErro}</div>}
-                    <div className="field">
-                      <label htmlFor="cliente_nome">Nome do seu cliente</label>
-                      <input
-                        id="cliente_nome"
-                        className="input"
-                        placeholder="Nome do cliente comprador"
-                        maxLength={120}
-                        value={clienteNome}
-                        onChange={(e) => setClienteNome(e.target.value)}
-                      />
+                {appNav ? (
+                  solicitada ? (
+                    <div className="banner banner-success" style={{ marginTop: '1.25rem' }}>
+                      Solicitação enviada! Acompanhe em{' '}
+                      <Link href="/parcerias">Minhas parcerias</Link>.
                     </div>
-                    <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', margin: '0.5rem 0 1rem' }}>
-                      <input
-                        type="checkbox"
-                        checked={perfilConfirmado}
-                        onChange={(e) => setPerfilConfirmado(e.target.checked)}
-                        style={{ width: 18, height: 18, marginTop: 2 }}
-                      />
-                      <span className="muted">
-                        Confirmo que meu cliente tem interesse real em visitar este imóvel.
-                      </span>
-                    </label>
+                  ) : mostrarForm ? (
+                    <form className="card" onSubmit={solicitarParceria} style={{ marginTop: '1.25rem' }}>
+                      <h3 style={{ marginTop: 0, fontSize: '1rem' }}>Solicitar parceria</h3>
+                      {parceriaErro && <div className="banner banner-error">{parceriaErro}</div>}
+                      <div className="field">
+                        <label htmlFor="cliente_nome">Nome do seu cliente</label>
+                        <input
+                          id="cliente_nome"
+                          className="input"
+                          placeholder="Nome do cliente comprador"
+                          maxLength={120}
+                          value={clienteNome}
+                          onChange={(e) => setClienteNome(e.target.value)}
+                        />
+                      </div>
+                      <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', margin: '0.5rem 0 1rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={perfilConfirmado}
+                          onChange={(e) => setPerfilConfirmado(e.target.checked)}
+                          style={{ width: 18, height: 18, marginTop: 2 }}
+                        />
+                        <span className="muted">
+                          Confirmo que meu cliente tem interesse real em visitar este imóvel.
+                        </span>
+                      </label>
+                      <button
+                        type="submit"
+                        className="btn btn-emerald"
+                        disabled={enviando || clienteNome.trim().length < 3 || !perfilConfirmado}
+                      >
+                        {enviando ? 'Enviando…' : 'Enviar solicitação'}
+                      </button>
+                    </form>
+                  ) : (
                     <button
-                      type="submit"
+                      type="button"
                       className="btn btn-emerald"
-                      disabled={enviando || clienteNome.trim().length < 3 || !perfilConfirmado}
+                      style={{ marginTop: '1.25rem' }}
+                      onClick={iniciarSolicitacao}
                     >
-                      {enviando ? 'Enviando…' : 'Enviar solicitação'}
+                      Solicitar parceria
                     </button>
-                  </form>
+                  )
                 ) : (
-                  <button
-                    type="button"
-                    className="btn btn-emerald"
-                    style={{ marginTop: '1.25rem' }}
-                    onClick={iniciarSolicitacao}
-                  >
-                    Solicitar parceria
-                  </button>
+                  <div className="card" style={{ marginTop: '1.25rem' }}>
+                    <p className="muted" style={{ margin: 0, fontSize: '0.9rem' }}>
+                      Para solicitar parceria neste imóvel,{' '}
+                      <Link href="/login">entre na plataforma</Link>.
+                    </p>
+                  </div>
                 )}
               </>
             )}
