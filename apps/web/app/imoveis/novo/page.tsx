@@ -282,7 +282,10 @@ export default function NovoImovelPage() {
       fd.append('timestamp', String(sig.timestamp));
       fd.append('folder', sig.folder);
       fd.append('signature', sig.signature);
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/auto/upload`, {
+      // Contrato vai como `raw` (não `auto`): PDFs enviados como imagem ficam
+      // sujeitos ao bloqueio padrão de entrega de PDF do Cloudinary e não abrem.
+      // Como `raw`, o arquivo é entregue direto (abre/baixa normalmente).
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloud_name}/raw/upload`, {
         method: 'POST',
         body: fd,
       });
