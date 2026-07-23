@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const listCorretoresQuery = z.object({
   status: z.enum(['verificacao_pendente', 'ativo', 'rejeitado', 'suspenso', 'cadastro_incompleto']).optional(),
   busca: z.string().trim().min(1).max(120).optional(),
+  ordem: z.enum(['recentes', 'antigos', 'ultimo_acesso', 'mais_imoveis', 'nome']).default('antigos'),
   page: z.coerce.number().int().min(1).default(1),
   page_size: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -29,7 +30,17 @@ export const criarAdminSchema = z.object({
     .regex(/\d/, 'A senha deve conter ao menos um número.'),
 });
 
+export const listDenunciasQuery = z.object({
+  status: z.enum(['pendente', 'em_analise', 'resolvida']).optional(),
+});
+
+export const resolverDenunciaSchema = z.object({
+  nota: z.string().trim().min(3, 'Descreva como o caso foi tratado.').max(2000),
+});
+
 export type ListCorretoresQuery = z.infer<typeof listCorretoresQuery>;
 export type ListImoveisQuery = z.infer<typeof listImoveisQuery>;
 export type RejeitarInput = z.infer<typeof rejeitarSchema>;
 export type CriarAdminInput = z.infer<typeof criarAdminSchema>;
+export type ListDenunciasQuery = z.infer<typeof listDenunciasQuery>;
+export type ResolverDenunciaInput = z.infer<typeof resolverDenunciaSchema>;

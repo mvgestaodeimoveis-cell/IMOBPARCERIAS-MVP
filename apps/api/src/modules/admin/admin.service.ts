@@ -39,11 +39,19 @@ export async function listCorretores(q: ListCorretoresQuery) {
   const total = Number(totalRes.rows[0]?.count ?? 0);
 
   const offset = (q.page - 1) * q.page_size;
+  const ORDER_BY: Record<string, string> = {
+    recentes: 'criado_em DESC',
+    antigos: 'criado_em ASC',
+    ultimo_acesso: 'ultimo_acesso_em DESC NULLS LAST',
+    mais_imoveis: 'imoveis_total DESC, criado_em ASC',
+    nome: 'nome ASC',
+  };
+  const orderBy = ORDER_BY[q.ordem] ?? ORDER_BY.antigos;
   const dataRes = await query<CorretorListRow>(
     `SELECT id, nome, creci, cidade, status, criado_em, ultimo_acesso_em,
             (SELECT count(*)::int FROM imovel i WHERE i.corretor_id = corretor.id AND i.status <> 'inativo') AS imoveis_total
      FROM corretor ${where}
-     ORDER BY criado_em ASC
+     ORDER BY ${orderBy}
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, q.page_size, offset],
   );
@@ -379,6 +387,94 @@ export async function obterConversaAdmin(parceriaId: string) {
     feedbacks: feedbacks.rows,
   };
 }
+
+// ============================================================
+// Denúncias / relatos de problema no chat (jul/2026)
+// ============================================================
+
+interface DenunciaAdminRow {
+  id: string;
+  parceria_id: string;
+  categoria: string;
+  descricao: string;
+  status: string;
+  resolucao_nota: string | null;
+  resolvido_em: string | null;
+  criado_em: string;
+  autor_id: string;
+  autor_nome: string;
+  imovel_id: string;
+  imovel_tipo: string;
+  imovel_bairro: string;
+  imovel_cidade: string;
+  captador_nome: string;
+  captador_email: string;
+  captador_whatsapp: string | null;
+  comprador_nome: string;
+  comprador_email: string;
+  comprador_whatsapp: string | null;
+}
+
+function mapDenuncia(r: DenunciaAdminRow) {
+  return {
+    id: r.id,
+    parceria_id: r.parceria_id,
+    categoria: r.categoria,
+    descricao: r.descricao,
+    status: r.status,
+    resolucao_nota: r.resolucao_nota,
+    resolvido_em: r.resolvido_em,
+    criado_em: r.criado_em,
+    autor_nome: r.autor_nome,
+    imovel: { id: r.imovel_id, tipo: r.imovel_tipo, bairro: r.imovel_bairro, cidade: r.imovel_cidade },
+    captador: { nome: r.captador_nome, email: r.captador_email, whatsapp: r.captador_whatsapp },
+    comprador: { nome: r.comprador_nome, email: r.comprador_email, whatsapp: r.comprador_whatsapp },
+  };
+}
+
+/** Lista as denúncias (filtro opcional por status). Inclui contatos das duas partes. */
+export async function listarDenuncias(status?: string) {
+  const params: unknown[] = [];
+  let where = '';
+  if (status) {
+    params.push(status);
+    where = `WHERE d.status = $${params.length}`;
+  }
+  const { rows } = await query<DenunciaAdminRow>(
+    `SELECT d.id, d.parceria_id, d.categoria, d.descricao, d.status,
+            d.resolucao_nota, d.resolvido_em::text AS resolvido_em, d.criado_em::text AS criado_em,
+            d.autor_id, a.nome AS autor_nome,
+            i.id AS imovel_id, i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+            cap.nome AS captador_nome, cap.email AS captador_email, cap.whatsapp AS captador_whatsapp,
+            comp.nome AS comprador_nome, comp.email AS comprador_email, comp.whatsapp AS comprador_whatsapp
+     FROM parceria_denuncia d
+     JOIN corretor a ON a.id = d.autor_id
+     JOIN parceria p ON p.id = d.parceria_id
+     JOIN imovel i ON i.id = p.imovel_id
+     JOIN corretor cap ON cap.id = p.captador_id
+     JOIN corretor comp ON comp.id = p.comprador_id
+     ${where}
+     ORDER BY (d.status = 'resolvida'), d.criado_em DESC`,
+    params,
+  );
+  return {
+    data: rows.map(mapDenuncia),
+    pendentes: rows.filter((r) => r.status !== 'resolvida').length,
+  };
+}
+
+/** Registra a resolução de uma denúncia (equipe): marca resolvida com uma nota. */
+export async function resolverDenuncia(denunciaId: string, adminId: string, nota: string) {
+  const { rowCount } = await query(
+    `UPDATE parceria_denuncia
+     SET status = 'resolvida', resolucao_nota = $2, resolvido_por = $3, resolvido_em = now()
+     WHERE id = $1 AND status <> 'resolvida'`,
+    [denunciaId, nota, adminId],
+  );
+  if (!rowCount) throw conflict('Denúncia não encontrada ou já resolvida.');
+  return { id: denunciaId, status: 'resolvida' as const };
+}
+
 
 // ============================================================
 // Painel de métricas (KPIs — Seção 1.6 do escopo)

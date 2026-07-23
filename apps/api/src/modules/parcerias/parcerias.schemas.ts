@@ -64,6 +64,15 @@ export const feedbackVisitaSchema = z.object({
   manter_status: z.boolean().optional(),
 });
 
+// Denúncia/relato no chat: falha técnica, conduta indevida, tentativa de fechar
+// negócio fora da plataforma ou outro. Qualquer participante da parceria pode abrir.
+export const denunciaSchema = z.object({
+  categoria: z.enum(['erro_tecnico', 'conduta', 'fora_da_plataforma', 'outro'], {
+    errorMap: () => ({ message: 'Selecione o tipo do problema.' }),
+  }),
+  descricao: z.string().trim().min(5, 'Descreva o que aconteceu.').max(2000),
+});
+
 export type SolicitarParceriaInput = z.infer<typeof solicitarParceriaSchema>;
 export type RecusarParceriaInput = z.infer<typeof recusarParceriaSchema>;
 export type MensagemInput = z.infer<typeof mensagemSchema>;
@@ -72,3 +81,4 @@ export type CpfInput = z.infer<typeof cpfSchema>;
 export type VendaInput = z.infer<typeof vendaSchema>;
 export type AvaliacaoInput = z.infer<typeof avaliacaoSchema>;
 export type FeedbackVisitaInput = z.infer<typeof feedbackVisitaSchema>;
+export type DenunciaInput = z.infer<typeof denunciaSchema>;

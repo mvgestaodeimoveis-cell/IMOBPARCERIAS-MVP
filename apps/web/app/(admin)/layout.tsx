@@ -11,6 +11,7 @@ const NAV: { href: string; label: string }[] = [
   { href: '/admin/corretores', label: 'Corretores' },
   { href: '/admin/imoveis', label: 'Imóveis' },
   { href: '/admin/conversas', label: 'Conversas' },
+  { href: '/admin/denuncias', label: 'Denúncias' },
   { href: '/admin/exclusividades', label: 'Exclusividades' },
   { href: '/admin/pagamentos', label: 'Pagamentos' },
   { href: '/admin/equipe', label: 'Administradores' },

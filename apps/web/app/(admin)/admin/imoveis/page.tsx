@@ -6,6 +6,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken, getRole } from '@/lib/auth';
 import { TIPO_LABEL, IMOVEL_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
+import { Pager } from '@/components/Pager';
 
 interface ImovelRow {
   id: string;
@@ -38,8 +39,11 @@ export default function AdminImoveisPage() {
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState('');
   const [busca, setBusca] = useState('');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+
+  const PAGE_SIZE = 20;
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -52,6 +56,8 @@ export default function AdminImoveisPage() {
       const params = new URLSearchParams();
       if (status) params.set('status', status);
       if (busca.trim()) params.set('busca', busca.trim());
+      params.set('page', String(page));
+      params.set('page_size', String(PAGE_SIZE));
       const res = await apiFetch<{ data: ImovelRow[]; total: number }>(
         `/admin/imoveis?${params.toString()}`,
         { token },
@@ -67,11 +73,16 @@ export default function AdminImoveisPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, status, busca]);
+  }, [router, status, busca, page]);
 
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  // Ao mudar filtro/busca, volta para a primeira página.
+  useEffect(() => {
+    setPage(1);
+  }, [status, busca]);
 
   async function acao(id: string, op: 'desabilitar' | 'reativar' | 'excluir') {
     const token = getAccessToken();
@@ -157,6 +168,7 @@ export default function AdminImoveisPage() {
             </tbody>
           </table>
         )}
+        <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
     </>
   );
 }

@@ -7,7 +7,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { formatBRL } from '@/lib/masks';
 import { getAccessToken } from '@/lib/auth';
 import { TIPO_LABEL } from '@/lib/labels';
-import { iniciais } from '@/lib/format';
+import { iniciais, waLink } from '@/lib/format';
 
 interface Detalhe {
   id: string;
@@ -20,6 +20,11 @@ interface Detalhe {
     cidade: string;
     preco: number;
   };
+  contatos: {
+    captador: { nome: string; whatsapp: string | null };
+    comprador: { nome: string; whatsapp: string | null };
+  } | null;
+  papel: 'captador' | 'comprador';
 }
 
 interface Mensagem {
@@ -43,6 +48,13 @@ function rotuloDia(iso: string): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
 }
 
+const DENUNCIA_CATEGORIAS: { valor: string; label: string }[] = [
+  { valor: 'erro_tecnico', label: 'Falha ou erro na ferramenta' },
+  { valor: 'conduta', label: 'Conduta indevida do parceiro' },
+  { valor: 'fora_da_plataforma', label: 'Tentativa de negociar fora da plataforma' },
+  { valor: 'outro', label: 'Outro' },
+];
+
 export default function ChatPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -52,6 +64,14 @@ export default function ChatPage() {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
+
+  // Denúncia / relato de problema.
+  const [denunciaAberta, setDenunciaAberta] = useState(false);
+  const [denCategoria, setDenCategoria] = useState('erro_tecnico');
+  const [denDescricao, setDenDescricao] = useState('');
+  const [denEnviando, setDenEnviando] = useState(false);
+  const [denOk, setDenOk] = useState(false);
+  const [denErro, setDenErro] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -107,6 +127,37 @@ export default function ChatPage() {
     }
   }
 
+  async function enviarDenuncia(e: React.FormEvent) {
+    e.preventDefault();
+    if (denDescricao.trim().length < 5) {
+      setDenErro('Descreva com um pouco mais de detalhe (mín. 5 caracteres).');
+      return;
+    }
+    const token = getAccessToken();
+    setDenEnviando(true);
+    setDenErro(null);
+    try {
+      await apiFetch(`/parcerias/${params.id}/denuncia`, {
+        method: 'POST',
+        token,
+        body: { categoria: denCategoria, descricao: denDescricao.trim() },
+      });
+      setDenOk(true);
+      setDenDescricao('');
+    } catch (err) {
+      setDenErro(err instanceof ApiRequestError ? err.message : 'Não foi possível enviar o relato.');
+    } finally {
+      setDenEnviando(false);
+    }
+  }
+
+  function fecharDenuncia() {
+    setDenunciaAberta(false);
+    setDenOk(false);
+    setDenErro(null);
+    setDenCategoria('erro_tecnico');
+  }
+
   return (
     <div className="frame frame-app chat-page">
       <header className="chat-topbar">
@@ -124,6 +175,15 @@ export default function ChatPage() {
             </Link>
           )}
         </div>
+        <button
+          type="button"
+          className="chat-denuncia-btn"
+          aria-label="Reportar um problema"
+          title="Reportar um problema"
+          onClick={() => setDenunciaAberta(true)}
+        >
+          ⚑
+        </button>
       </header>
 
       <div className="chat-scroll">
@@ -134,6 +194,24 @@ export default function ChatPage() {
             {formatBRL(detalhe.imovel.preco)} · ver detalhes da parceria →
           </Link>
         )}
+
+        {detalhe?.contatos && (() => {
+          const outro = detalhe.papel === 'captador' ? detalhe.contatos.comprador : detalhe.contatos.captador;
+          const wa = outro.whatsapp ? waLink(outro.whatsapp) : null;
+          return (
+            <div className="chat-wa-banner">
+              <span aria-hidden>💬</span>
+              <span className="chat-wa-texto">
+                Contato liberado — combine a visita com {detalhe.outro_nome} pelo WhatsApp.
+              </span>
+              {wa && (
+                <a className="chat-wa-link" href={wa} target="_blank" rel="noopener noreferrer">
+                  Abrir WhatsApp
+                </a>
+              )}
+            </div>
+          );
+        })()}
 
         {mensagens.length === 0 ? (
           <p className="chat-vazio">
@@ -163,7 +241,7 @@ export default function ChatPage() {
         <div ref={fimRef} />
       </div>
 
-      {detalhe && ['aceita', 'em_negociacao'].includes(detalhe.status) ? (
+      {detalhe ? (
         <form onSubmit={enviar} className="chat-composer chat-composer-fixo">
           <input
             className="input"
@@ -180,11 +258,59 @@ export default function ChatPage() {
             ➤
           </button>
         </form>
-      ) : detalhe ? (
-        <p className="chat-encerrado">
-          Esta parceria foi finalizada. O histórico da conversa fica registrado.
-        </p>
       ) : null}
+
+      {denunciaAberta && (
+        <div className="modal-overlay" onClick={fecharDenuncia}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <h2 style={{ fontSize: '1.15rem', margin: 0 }}>Reportar um problema</h2>
+              <button className="btn btn-ghost btn-sm" style={{ width: 'auto' }} onClick={fecharDenuncia}>Fechar</button>
+            </div>
+
+            {denOk ? (
+              <div style={{ marginTop: '1rem' }}>
+                <div className="banner banner-success">
+                  Relato enviado para a equipe. Vamos analisar e, se necessário, entrar em contato. Obrigado!
+                </div>
+                <button className="btn btn-emerald" style={{ marginTop: '0.85rem' }} onClick={fecharDenuncia}>Concluir</button>
+              </div>
+            ) : (
+              <form onSubmit={enviarDenuncia} style={{ marginTop: '1rem' }}>
+                <p className="muted" style={{ margin: '0 0 0.85rem', fontSize: '0.86rem' }}>
+                  Use este canal para relatar falhas, erros ou uso indevido da ferramenta. A equipe recebe por e-mail e acompanha o caso.
+                </p>
+                <label className="detail-label" htmlFor="den-cat">Tipo do problema</label>
+                <select
+                  id="den-cat"
+                  className="input"
+                  value={denCategoria}
+                  onChange={(e) => setDenCategoria(e.target.value)}
+                  style={{ marginBottom: '0.75rem' }}
+                >
+                  {DENUNCIA_CATEGORIAS.map((c) => (
+                    <option key={c.valor} value={c.valor}>{c.label}</option>
+                  ))}
+                </select>
+                <label className="detail-label" htmlFor="den-desc">O que aconteceu?</label>
+                <textarea
+                  id="den-desc"
+                  className="input"
+                  placeholder="Descreva o problema com o máximo de detalhes."
+                  maxLength={2000}
+                  value={denDescricao}
+                  onChange={(e) => setDenDescricao(e.target.value)}
+                  style={{ minHeight: 110 }}
+                />
+                {denErro && <div className="banner banner-error" style={{ marginTop: '0.6rem' }}>{denErro}</div>}
+                <button className="btn btn-emerald" style={{ marginTop: '0.85rem' }} disabled={denEnviando}>
+                  {denEnviando ? 'Enviando…' : 'Enviar relato'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

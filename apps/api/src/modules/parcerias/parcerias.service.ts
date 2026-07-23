@@ -17,10 +17,11 @@ import {
   emailVendaDeclarada,
   emailNovaMensagem,
   emailVisitaProposta,
+  emailDenunciaEquipe,
 } from '../../lib/email-templates';
 import { TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
 import { gerarContratoParceria } from '../../lib/contrato-parceria';
-import type { FeedbackVisitaInput, SolicitarParceriaInput } from './parcerias.schemas';
+import type { DenunciaInput, FeedbackVisitaInput, SolicitarParceriaInput } from './parcerias.schemas';
 
 const JANELA_DIAS = 180;
 
@@ -202,7 +203,8 @@ export async function listarConversas(corretorId: string) {
        WHERE parceria_id = p.id ORDER BY criado_em DESC LIMIT 1
      ) m ON true
      WHERE (p.captador_id = $1 OR p.comprador_id = $1)
-       AND p.status IN ('aceita', 'em_negociacao', 'vendida', 'encerrada')
+       AND (p.status IN ('aceita', 'em_negociacao', 'vendida', 'encerrada', 'cancelada')
+            OR m.criado_em IS NOT NULL)
      ORDER BY COALESCE(m.criado_em, p.criado_em) DESC`,
     [corretorId],
   );
@@ -560,9 +562,9 @@ export async function enviarMensagem(parceriaId: string, corretorId: string, cor
   if (p.captador_id !== corretorId && p.comprador_id !== corretorId) {
     throw forbidden('Acesso negado.');
   }
-  if (!['aceita', 'em_negociacao'].includes(p.status)) {
-    throw conflict('O chat fica disponível enquanto a parceria está ativa.');
-  }
+  // O chat entre os corretores nunca é bloqueado por status (decisão do cliente,
+  // jul/2026): o canal segue aberto mesmo após venda/encerramento/recusa para que
+  // os dois lados possam se comunicar e, se preciso, acionar a equipe.
   const { rows } = await query<MensagemRow>(
     `INSERT INTO parceria_mensagem (parceria_id, autor_id, corpo)
      VALUES ($1, $2, $3)
@@ -1108,4 +1110,53 @@ export async function suspenderInadimplentes(): Promise<number> {
     [ids],
   );
   return rowCount ?? 0;
+}
+
+// ============================================================
+// Denúncia / relato de problema no chat (jul/2026)
+// ============================================================
+
+const DENUNCIA_CATEGORIA_LABEL: Record<string, string> = {
+  erro_tecnico: 'Falha ou erro técnico',
+  conduta: 'Conduta indevida do parceiro',
+  fora_da_plataforma: 'Tentativa de negociar fora da plataforma',
+  outro: 'Outro',
+};
+
+/**
+ * Qualquer participante da parceria abre uma denúncia/relato (falha técnica, conduta
+ * indevida, tentativa de fechar fora da plataforma etc.). A equipe é avisada por e-mail
+ * e acompanha/resolve no painel admin. Best-effort: o e-mail não bloqueia o registro.
+ */
+export async function registrarDenuncia(
+  parceriaId: string,
+  corretorId: string,
+  input: DenunciaInput,
+) {
+  const p = await buscarParceriaFull(parceriaId);
+  if (p.captador_id !== corretorId && p.comprador_id !== corretorId) {
+    throw forbidden('Acesso negado.');
+  }
+  const { rows } = await query<{ id: string; criado_em: string }>(
+    `INSERT INTO parceria_denuncia (parceria_id, autor_id, categoria, descricao)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, criado_em`,
+    [parceriaId, corretorId, input.categoria, input.descricao],
+  );
+
+  const autorNome = corretorId === p.captador_id ? p.captador_nome : p.comprador_nome;
+  const categoriaLabel = DENUNCIA_CATEGORIA_LABEL[input.categoria] ?? input.categoria;
+  if (env.EQUIPE_NOTIFICACAO_EMAIL) {
+    await sendEmail({
+      to: env.EQUIPE_NOTIFICACAO_EMAIL,
+      ...emailDenunciaEquipe(
+        autorNome,
+        categoriaLabel,
+        input.descricao,
+        resumoImovel(p),
+        `${env.APP_WEB_URL}/admin/denuncias`,
+      ),
+    });
+  }
+  return { id: rows[0].id, status: 'pendente' as const, criado_em: rows[0].criado_em };
 }

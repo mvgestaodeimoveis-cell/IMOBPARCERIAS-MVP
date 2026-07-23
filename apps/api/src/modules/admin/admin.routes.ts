@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
-import { listCorretoresQuery, listImoveisQuery, rejeitarSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type RejeitarInput, type CriarAdminInput } from './admin.schemas';
+import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, rejeitarSchema, resolverDenunciaSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type RejeitarInput, type ResolverDenunciaInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
 import * as parceriasService from '../parcerias/parcerias.service';
 
@@ -88,6 +88,26 @@ adminRoutes.get(
   '/conversas/:id',
   asyncHandler(async (req: Request, res: Response) => {
     res.json(await adminService.obterConversaAdmin(req.params.id));
+  }),
+);
+
+// Denúncias / relatos de problema abertos pelos corretores no chat.
+adminRoutes.get(
+  '/denuncias',
+  validate(listDenunciasQuery, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { status } = req.query as unknown as ListDenunciasQuery;
+    res.json(await adminService.listarDenuncias(status));
+  }),
+);
+
+adminRoutes.post(
+  '/denuncias/:id/resolver',
+  validate(resolverDenunciaSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    const { nota } = req.body as ResolverDenunciaInput;
+    res.json(await adminService.resolverDenuncia(req.params.id, req.user.id, nota));
   }),
 );
 

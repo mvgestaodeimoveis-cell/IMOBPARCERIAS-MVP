@@ -509,3 +509,28 @@ export function emailRecuperacaoSenha(nome: string, url: string): EmailContent {
     }),
   };
 }
+
+/** Denúncia/relato aberto por um corretor no chat — aviso para a equipe. */
+export function emailDenunciaEquipe(
+  autorNome: string,
+  categoriaLabel: string,
+  descricao: string,
+  imovelResumo: string,
+  url: string,
+): EmailContent {
+  return {
+    subject: `Nova denúncia no chat (${categoriaLabel}) — Imob Parcerias`,
+    html: baseLayout({
+      preheader: `${primeiroNome(autorNome)} relatou um problema em uma parceria.`,
+      heading: 'Nova denúncia de um corretor',
+      paragraphs: [
+        `<strong>${escapeHtml(autorNome)}</strong> abriu uma denúncia na parceria do imóvel <strong>${escapeHtml(imovelResumo)}</strong>.`,
+        `<strong>Tipo:</strong> ${escapeHtml(categoriaLabel)}`,
+        `<strong>Relato:</strong> ${escapeHtml(descricao)}`,
+        'Acesse o painel para ver os detalhes, entrar em contato com os corretores e registrar a resolução.',
+      ],
+      cta: { label: 'Abrir denúncias no painel', url },
+    }),
+  };
+}
+

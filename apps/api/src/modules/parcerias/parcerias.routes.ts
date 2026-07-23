@@ -7,6 +7,7 @@ import { unauthorized } from '../../lib/errors';
 import {
   avaliacaoSchema,
   cpfSchema,
+  denunciaSchema,
   feedbackVisitaSchema,
   mensagemSchema,
   recusarParceriaSchema,
@@ -15,6 +16,7 @@ import {
   visitaSchema,
   type AvaliacaoInput,
   type CpfInput,
+  type DenunciaInput,
   type FeedbackVisitaInput,
   type MensagemInput,
   type RecusarParceriaInput,
@@ -132,6 +134,16 @@ parceriasRoutes.post(
     if (!req.user) throw unauthorized();
     const { corpo } = req.body as MensagemInput;
     res.status(201).json(await parcerias.enviarMensagem(req.params.id, req.user.id, corpo));
+  }),
+);
+
+// Denúncia/relato de problema no chat (qualquer participante).
+parceriasRoutes.post(
+  '/:id/denuncia',
+  validate(denunciaSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    res.status(201).json(await parcerias.registrarDenuncia(req.params.id, req.user.id, req.body as DenunciaInput));
   }),
 );
 

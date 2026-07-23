@@ -6,6 +6,7 @@ import { apiFetch, ApiRequestError } from '@/lib/api';
 import { getAccessToken, getRole } from '@/lib/auth';
 import { dataPublicacao, tempoRelativo } from '@/lib/format';
 import { CORRETOR_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
+import { Pager } from '@/components/Pager';
 
 interface CorretorRow {
   id: string;
@@ -44,17 +45,37 @@ interface AceitesResponse {
   data: AceiteTermo[];
 }
 
-const STATUS_FILTROS = ['verificacao_pendente', 'ativo', 'suspenso', 'rejeitado', ''];
+const STATUS_FILTROS = ['', 'verificacao_pendente', 'ativo', 'suspenso', 'rejeitado', 'cadastro_incompleto'];
+
+const ORDENS: { valor: string; label: string }[] = [
+  { valor: 'antigos', label: 'Mais antigos' },
+  { valor: 'recentes', label: 'Mais recentes' },
+  { valor: 'ultimo_acesso', label: 'Último acesso' },
+  { valor: 'mais_imoveis', label: 'Mais imóveis' },
+  { valor: 'nome', label: 'Nome (A–Z)' },
+];
 
 export default function AdminCorretoresPage() {
   const router = useRouter();
   const [rows, setRows] = useState<CorretorRow[]>([]);
-  const [status, setStatus] = useState('verificacao_pendente');
+  const [total, setTotal] = useState(0);
+  const [status, setStatus] = useState('');
   const [busca, setBusca] = useState('');
+  const [buscaDeb, setBuscaDeb] = useState('');
+  const [ordem, setOrdem] = useState('antigos');
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [aceites, setAceites] = useState<AceitesResponse | null>(null);
   const [aceitesLoading, setAceitesLoading] = useState(false);
+
+  const PAGE_SIZE = 20;
+
+  // Debounce da busca (evita uma requisição por tecla).
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaDeb(busca), 350);
+    return () => clearTimeout(t);
+  }, [busca]);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -66,9 +87,13 @@ export default function AdminCorretoresPage() {
     try {
       const params = new URLSearchParams();
       if (status) params.set('status', status);
-      if (busca.trim()) params.set('busca', busca.trim());
+      if (buscaDeb.trim()) params.set('busca', buscaDeb.trim());
+      params.set('ordem', ordem);
+      params.set('page', String(page));
+      params.set('page_size', String(PAGE_SIZE));
       const res = await apiFetch<ListResponse>(`/admin/corretores?${params.toString()}`, { token });
       setRows(res.data);
+      setTotal(res.total);
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === 'UNAUTHENTICATED') {
         router.replace('/admin/login');
@@ -78,11 +103,16 @@ export default function AdminCorretoresPage() {
     } finally {
       setLoading(false);
     }
-  }, [router, status, busca]);
+  }, [router, status, buscaDeb, ordem, page]);
 
   useEffect(() => {
     carregar();
   }, [carregar]);
+
+  // Ao mudar filtro/busca/ordem, volta para a primeira página.
+  useEffect(() => {
+    setPage(1);
+  }, [status, buscaDeb, ordem]);
 
   async function aprovar(id: string) {
     const token = getAccessToken();
@@ -139,12 +169,17 @@ export default function AdminCorretoresPage() {
 
   return (
     <>
-      <h1 style={{ fontSize: '1.5rem' }}>Corretores</h1>
+      <h1 style={{ fontSize: '1.5rem' }}>Corretores ({total})</h1>
 
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <select className="input" style={{ width: 'auto' }} value={status} onChange={(e) => setStatus(e.target.value)}>
             {STATUS_FILTROS.map((s) => (
-              <option key={s} value={s}>{s ? STATUS_LABEL[s] : 'Todos'}</option>
+              <option key={s} value={s}>{s ? STATUS_LABEL[s] : 'Todos os status'}</option>
+            ))}
+          </select>
+          <select className="input" style={{ width: 'auto' }} value={ordem} onChange={(e) => setOrdem(e.target.value)} aria-label="Ordenar por">
+            {ORDENS.map((o) => (
+              <option key={o.valor} value={o.valor}>{o.label}</option>
             ))}
           </select>
           <input
@@ -208,6 +243,7 @@ export default function AdminCorretoresPage() {
             </tbody>
           </table>
         )}
+        <Pager page={page} pageSize={PAGE_SIZE} total={total} onPage={setPage} />
 
       {(aceites || aceitesLoading) && (
         <div className="modal-overlay" onClick={() => { setAceites(null); }}>
