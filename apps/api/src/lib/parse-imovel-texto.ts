@@ -109,15 +109,16 @@ export function parseImovelTexto(textoOriginal: string): ImovelExtraido {
   if (/\balug|loca[çc]|para alugar|pra alugar/.test(t)) {
     out.finalidade = 'aluguel';
     reconhecidos.push('finalidade');
-  } else if (/\bvenda|\bvende|a venda|à venda|comprar|compra|vendo/.test(t)) {
+  } else if (/\bvenda|\bvende|a venda|à venda|comprar|compra|vendo|investimento|à vista|financia/.test(t)) {
     out.finalidade = 'venda';
     reconhecidos.push('finalidade');
   }
 
-  // Tipo
-  if (/apartamento|\bapto?\b|\bap\b|ap[êe]|kitnet|kitinete|studio|st[úu]dio|\bflat\b/.test(t)) {
+  // Tipo. IMPORTANTE: usar limites de palavra nos apelidos curtos (ap/apê) para não
+  // casar dentro de outras palavras (era o bug: "ape" em "apenas" virava apartamento).
+  if (/apartamento|\bapto?\b|\bap\b|\bap[êe]\b|kitnet|kitinete|studio|st[úu]dio|\bflat\b/.test(t)) {
     out.tipo = 'apartamento';
-  } else if (/\bcasa\b|sobrado|duplex|triplex|t[ée]rrea/.test(t)) {
+  } else if (/\bcasas?\b|sobrado|duplex|triplex|t[ée]rre[oa]/.test(t)) {
     out.tipo = 'casa';
   } else if (/terreno|\blote\b/.test(t)) {
     out.tipo = 'terreno';

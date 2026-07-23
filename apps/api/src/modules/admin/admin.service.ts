@@ -190,7 +190,7 @@ export async function listImoveis(q: ListImoveisQuery) {
   if (q.cidade) conditions.push(add('i.cidade ILIKE $?', `%${q.cidade}%`));
   if (q.busca) {
     params.push(`%${q.busca}%`);
-    conditions.push(`(i.bairro ILIKE $${params.length} OR c.nome ILIKE $${params.length})`);
+    conditions.push(`(i.bairro ILIKE $${params.length} OR c.nome ILIKE $${params.length} OR c.email ILIKE $${params.length})`);
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 

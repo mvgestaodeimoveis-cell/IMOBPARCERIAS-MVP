@@ -112,7 +112,7 @@ export default function AdminImoveisPage() {
           <input
             className="input"
             style={{ flex: 1, minWidth: 180 }}
-            placeholder="Buscar por bairro ou corretor…"
+            placeholder="Buscar por bairro, corretor ou e-mail…"
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
           />
