@@ -64,6 +64,7 @@ export default function ChatPage() {
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const fimRef = useRef<HTMLDivElement>(null);
+  const carregadoRef = useRef(false);
 
   // Denúncia / relato de problema.
   const [denunciaAberta, setDenunciaAberta] = useState(false);
@@ -86,6 +87,8 @@ export default function ChatPage() {
       ]);
       setDetalhe(d);
       setMensagens(m.data);
+      setErro(null);
+      carregadoRef.current = true;
       // Marca a conversa como lida (zera o indicador de não lidas). Best-effort.
       apiFetch(`/parcerias/${params.id}/ler`, { method: 'POST', token }).catch(() => {});
     } catch (err) {
@@ -93,7 +96,8 @@ export default function ChatPage() {
         router.replace('/login');
         return;
       }
-      setErro('Não foi possível carregar a conversa.');
+      // Falhas transitórias do polling não apagam a conversa já carregada.
+      if (!carregadoRef.current) setErro('Não foi possível carregar a conversa.');
     }
   }, [params.id, router]);
 

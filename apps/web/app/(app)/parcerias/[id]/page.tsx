@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
@@ -127,6 +127,7 @@ export default function ParceriaDetalhePage() {
   const [fbResultado, setFbResultado] = useState('');
   const [fbObs, setFbObs] = useState('');
   const [fbManter, setFbManter] = useState(true);
+  const carregadoRef = useRef(false);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -141,12 +142,16 @@ export default function ParceriaDetalhePage() {
       ]);
       setDetalhe(d);
       setMensagens(m.data);
+      setErro(null);
+      carregadoRef.current = true;
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === 'UNAUTHENTICATED') {
         router.replace('/login');
         return;
       }
-      setErro('Não foi possível carregar a parceria.');
+      // Falhas transitórias do polling (cold start/rede) não devem exibir erro
+      // se a parceria já foi carregada — mantém o conteúdo na tela.
+      if (!carregadoRef.current) setErro('Não foi possível carregar a parceria.');
     }
   }, [params.id, router]);
 

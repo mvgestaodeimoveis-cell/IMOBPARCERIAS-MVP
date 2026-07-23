@@ -62,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="frame frame-app">
       <AppHeader active={tab.tab} parceriasBadge={pendentes} conversasBadge={naoLidas} />
       <div className="screen has-bottomnav">{children}</div>
-      <BottomNav active={tab.tab} conversasBadge={naoLidas} />
+      <BottomNav active={tab.tab} conversasBadge={naoLidas} parceriasBadge={pendentes} />
     </div>
   );
 }

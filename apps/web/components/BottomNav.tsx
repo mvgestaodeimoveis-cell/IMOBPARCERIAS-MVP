@@ -47,7 +47,7 @@ const ITEMS: { key: Tab; label: string; href: string }[] = [
   { key: 'parcerias', label: 'Parcerias', href: '/parcerias' },
 ];
 
-export function BottomNav({ active = 'inicio', conversasBadge = 0 }: { active?: Tab; conversasBadge?: number }) {
+export function BottomNav({ active = 'inicio', conversasBadge = 0, parceriasBadge = 0 }: { active?: Tab; conversasBadge?: number; parceriasBadge?: number }) {
   return (
     <nav className="bottomnav" aria-label="Navegação principal">
       {ITEMS.map((item) => (
@@ -62,6 +62,11 @@ export function BottomNav({ active = 'inicio', conversasBadge = 0 }: { active?: 
             {item.key === 'conversas' && conversasBadge > 0 && (
               <span className="bottomnav-badge" aria-label={`${conversasBadge} não lidas`}>
                 {conversasBadge > 9 ? '9+' : conversasBadge}
+              </span>
+            )}
+            {item.key === 'parcerias' && parceriasBadge > 0 && (
+              <span className="bottomnav-badge" aria-label={`${parceriasBadge} solicitações pendentes`}>
+                {parceriasBadge > 9 ? '9+' : parceriasBadge}
               </span>
             )}
           </span>
