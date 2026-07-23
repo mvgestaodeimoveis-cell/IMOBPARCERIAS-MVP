@@ -475,6 +475,89 @@ export async function resolverDenuncia(denunciaId: string, adminId: string, nota
   return { id: denunciaId, status: 'resolvida' as const };
 }
 
+// ============================================================
+// Acompanhamento das parcerias (equipe) — visão do "desenrolar"
+// ============================================================
+
+interface ParceriaAdminRow {
+  id: string;
+  status: string;
+  cliente_nome: string;
+  criado_em: string;
+  atualizado_em: string;
+  visita_em: string | null;
+  visita_confirmada_em: string | null;
+  confirmada_em: string | null;
+  venda_declarada_em: string | null;
+  venda_valor: string | null;
+  pagamento_status: string;
+  imovel_tipo: string;
+  imovel_bairro: string;
+  imovel_cidade: string;
+  imovel_preco: string;
+  captador_nome: string;
+  comprador_nome: string;
+  total_mensagens: string;
+}
+
+/** Lista todas as parcerias com o estágio atual (filtro opcional por status). */
+export async function listarParceriasAdmin(status?: string) {
+  const params: unknown[] = [];
+  let where = '';
+  if (status) {
+    params.push(status);
+    where = `WHERE p.status = $${params.length}`;
+  }
+  const { rows } = await query<ParceriaAdminRow>(
+    `SELECT p.id, p.status, p.cliente_nome, p.criado_em::text AS criado_em,
+            p.atualizado_em::text AS atualizado_em,
+            p.visita_em::text AS visita_em, p.visita_confirmada_em::text AS visita_confirmada_em,
+            p.confirmada_em::text AS confirmada_em, p.venda_declarada_em::text AS venda_declarada_em,
+            p.venda_valor::text AS venda_valor, p.pagamento_status,
+            i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
+            i.preco::text AS imovel_preco,
+            cap.nome AS captador_nome, comp.nome AS comprador_nome,
+            (SELECT count(*) FROM parceria_mensagem m WHERE m.parceria_id = p.id)::text AS total_mensagens
+     FROM parceria p
+     JOIN imovel i ON i.id = p.imovel_id
+     JOIN corretor cap ON cap.id = p.captador_id
+     JOIN corretor comp ON comp.id = p.comprador_id
+     ${where}
+     ORDER BY p.atualizado_em DESC`,
+    params,
+  );
+
+  const resumo = await query<{ status: string; total: string }>(
+    `SELECT status, count(*)::text AS total FROM parceria GROUP BY status`,
+  );
+
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      cliente_nome: r.cliente_nome,
+      criado_em: r.criado_em,
+      atualizado_em: r.atualizado_em,
+      visita_em: r.visita_em,
+      visita_confirmada_em: r.visita_confirmada_em,
+      confirmada_em: r.confirmada_em,
+      venda_declarada_em: r.venda_declarada_em,
+      venda_valor: r.venda_valor ? Number(r.venda_valor) : null,
+      pagamento_status: r.pagamento_status,
+      total_mensagens: Number(r.total_mensagens),
+      imovel: {
+        tipo: r.imovel_tipo,
+        bairro: r.imovel_bairro,
+        cidade: r.imovel_cidade,
+        preco: Number(r.imovel_preco),
+      },
+      captador_nome: r.captador_nome,
+      comprador_nome: r.comprador_nome,
+    })),
+    resumo: Object.fromEntries(resumo.rows.map((r) => [r.status, Number(r.total)])),
+  };
+}
+
 
 // ============================================================
 // Painel de métricas (KPIs — Seção 1.6 do escopo)

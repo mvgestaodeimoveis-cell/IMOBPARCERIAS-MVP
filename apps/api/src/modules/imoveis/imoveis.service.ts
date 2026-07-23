@@ -121,7 +121,7 @@ function chaveDedupe(c: CamposChave): string {
     case 'casa':
       return c.nome_condominio
         ? `casacond|${soDigitos(c.cep) || norm(c.cidade)}|${norm(c.nome_condominio)}|${norm(c.numero)}`
-        : `casa|${base}`;
+        : `casa|${base}|${norm(c.logradouro)}`;
     default:
       return `x|${base}`;
   }
@@ -182,18 +182,35 @@ async function checarDuplicata(
   const predio = chavePredio(c);
 
   const p1: unknown[] = [chave];
-  let sql1 = `SELECT corretor_id FROM imovel WHERE chave_dedupe = $1 AND status = 'ativo'`;
+  let sql1 = `SELECT id, corretor_id, bairro, logradouro, numero FROM imovel WHERE chave_dedupe = $1 AND status = 'ativo'`;
   if (ignorarId) {
     p1.push(ignorarId);
     sql1 += ` AND id <> $${p1.length}`;
   }
-  const exata = await query<{ corretor_id: string }>(sql1, p1);
+  const exata = await query<{ id: string; corretor_id: string; bairro: string; logradouro: string; numero: string }>(sql1, p1);
   if (exata.rows[0]) {
-    throw conflict(
-      exata.rows[0].corretor_id === corretorId
-        ? 'Você já cadastrou este imóvel.'
-        : 'Este imóvel já foi cadastrado por outro corretor (exclusividade verificada).',
-    );
+    const dup = exata.rows[0];
+    const onde = `${dup.logradouro}, ${dup.numero} — ${dup.bairro}`;
+    if (dup.corretor_id !== corretorId) {
+      throw conflict(
+        `Este endereço (${onde}) já foi cadastrado por outro corretor e está com exclusividade na plataforma.`,
+      );
+    }
+    // Mesmo corretor. Apartamento/comercial têm chave precisa (unidade/andar) → bloqueio
+    // direto. Casa/terreno usam CEP+número: em CEP "geral" imóveis diferentes podem
+    // colidir, então viram "duplicata possível" (o corretor confirma que é outro imóvel).
+    const chavePrecisa = c.tipo === 'apartamento' || c.tipo === 'comercial';
+    if (chavePrecisa) {
+      throw conflict(
+        `Você já tem um imóvel ativo neste mesmo endereço/unidade (${onde}). Se for outra unidade, ajuste a unidade e o andar.`,
+      );
+    }
+    if (!confirmarDistinto) {
+      throw duplicataPossivel(
+        `Você já tem um imóvel ativo com este mesmo CEP e número (${onde}). Se for um imóvel diferente, confirme para continuar.`,
+      );
+    }
+    // confirmarDistinto === true: o corretor afirmou ser outro imóvel → segue.
   }
 
   // INATIVO com exclusividade verificada e ainda vigente: bloqueado até o vencimento (Fase 3).
@@ -314,9 +331,10 @@ export async function criarImovel(
     return mapImovel(imovel);
   } catch (err) {
     await client.query('ROLLBACK');
-    // Corrida no índice único parcial de exclusividade.
+    // Corrida no índice único parcial (chave de deduplicação / exclusividade): já existe
+    // um imóvel ATIVO com este mesmo endereço.
     if (err && typeof err === 'object' && (err as { code?: string }).code === '23505') {
-      throw conflict('Este imóvel já foi cadastrado por outro corretor (exclusividade verificada).');
+      throw conflict('Já existe um imóvel ativo com este mesmo endereço na plataforma.');
     }
     throw err;
   } finally {

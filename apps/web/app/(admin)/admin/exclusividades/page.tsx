@@ -23,6 +23,18 @@ interface ListResponse {
   data: ExclusividadeRow[];
 }
 
+/**
+ * PDFs antigos foram enviados ao Cloudinary como `image` e a entrega inline de PDF
+ * fica bloqueada por padrão (401). Forçar o download (`fl_attachment`) contorna parte
+ * dos casos. PDFs novos usam `raw/upload` e abrem direto (não sofrem alteração aqui).
+ */
+function linkContrato(url: string): string {
+  if (url.includes('/image/upload/') && /\.pdf($|\?)/i.test(url)) {
+    return url.replace('/image/upload/', '/image/upload/fl_attachment/');
+  }
+  return url;
+}
+
 export default function AdminExclusividadesPage() {
   const router = useRouter();
   const [rows, setRows] = useState<ExclusividadeRow[]>([]);
@@ -118,7 +130,7 @@ export default function AdminExclusividadesPage() {
                   </td>
                   <td>
                     {c.exclusividade_contrato_url ? (
-                      <a href={c.exclusividade_contrato_url} target="_blank" rel="noreferrer">
+                      <a href={linkContrato(c.exclusividade_contrato_url)} target="_blank" rel="noreferrer">
                         Abrir
                       </a>
                     ) : (

@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
-import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, rejeitarSchema, resolverDenunciaSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type RejeitarInput, type ResolverDenunciaInput, type CriarAdminInput } from './admin.schemas';
+import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, listParceriasQuery, rejeitarSchema, resolverDenunciaSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type ListParceriasQuery, type RejeitarInput, type ResolverDenunciaInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
 import * as parceriasService from '../parcerias/parcerias.service';
 
@@ -108,6 +108,16 @@ adminRoutes.post(
     if (!req.user) throw unauthorized();
     const { nota } = req.body as ResolverDenunciaInput;
     res.json(await adminService.resolverDenuncia(req.params.id, req.user.id, nota));
+  }),
+);
+
+// Acompanhamento de todas as parcerias (equipe).
+adminRoutes.get(
+  '/parcerias',
+  validate(listParceriasQuery, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { status } = req.query as unknown as ListParceriasQuery;
+    res.json(await adminService.listarParceriasAdmin(status));
   }),
 );
 

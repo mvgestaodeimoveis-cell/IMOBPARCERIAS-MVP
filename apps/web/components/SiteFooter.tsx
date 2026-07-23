@@ -9,6 +9,7 @@ export function SiteFooter() {
           <Brandmark />
         </Link>
         <nav className="foot-links" aria-label="Rodapé">
+          <Link href="/como-instalar">Instalar o app</Link>
           <Link href="/termo">Termo de Uso</Link>
           <Link href="/politica-privacidade">Política de Privacidade</Link>
         </nav>

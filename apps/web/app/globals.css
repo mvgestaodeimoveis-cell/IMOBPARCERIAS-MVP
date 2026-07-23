@@ -2997,6 +2997,17 @@ a.stat-chip:hover {
   font-size: 0.8rem;
   color: #64748b;
 }
+.install-tutorial-link {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--emerald-600, #0f8a56);
+  text-decoration: none;
+}
+.install-tutorial-link:hover {
+  text-decoration: underline;
+}
 .install-cta {
   width: auto;
   min-height: auto;

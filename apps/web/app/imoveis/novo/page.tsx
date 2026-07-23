@@ -414,7 +414,9 @@ export default function NovoImovelPage() {
         setImportMsg(`Reconhecemos: ${rec.join(', ')}. Revise cada etapa e complete o endereço e as fotos.`);
         setStep(2);
       } else {
-        setImportMsg('Não reconhecemos campos automaticamente. Preencha manualmente nas próximas etapas.');
+        setImportMsg(
+          'Não deu para reconhecer os campos automaticamente neste texto. Sem problema: toque em “Continuar” e preencha as etapas — leva só uns minutos.',
+        );
       }
     } catch (err) {
       setImportMsg(

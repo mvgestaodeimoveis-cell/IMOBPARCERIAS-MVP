@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -89,6 +90,9 @@ export function InstallPrompt() {
           ) : (
             <p>Acesso rápido, sem precisar baixar da loja.</p>
           )}
+          <Link href="/como-instalar" className="install-tutorial-link">
+            Ver o passo a passo →
+          </Link>
         </div>
       </div>
       <button type="button" className="btn btn-emerald install-cta" onClick={acao}>
