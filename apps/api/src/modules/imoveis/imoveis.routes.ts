@@ -30,7 +30,11 @@ imoveisRoutes.post(
   validate(importarTextoSchema),
   asyncHandler(async (req: Request, res: Response) => {
     if (!req.user) throw unauthorized();
-    res.json(parseImovelTexto((req.body as ImportarTextoInput).texto));
+    const texto = (req.body as ImportarTextoInput).texto;
+    const extraido = parseImovelTexto(texto);
+    // Registra a colagem + o que foi reconhecido (histórico p/ evoluir o parser). Best-effort.
+    void imoveis.registrarImportTexto(req.user.id, texto, extraido.reconhecidos, 'cadastro');
+    res.json(extraido);
   }),
 );
 

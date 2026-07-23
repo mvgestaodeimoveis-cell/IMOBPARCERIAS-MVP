@@ -560,6 +560,44 @@ export async function listarParceriasAdmin(status?: string) {
 
 
 // ============================================================
+// Histórico de importações por texto (colar do WhatsApp)
+// ============================================================
+
+interface ImportLogRow {
+  id: string;
+  texto: string;
+  reconhecidos: string[];
+  reconhecidos_count: number;
+  origem: string;
+  criado_em: string;
+  corretor_nome: string | null;
+}
+
+/** Lista as importações por texto (opcionalmente só as que não reconheceram nada). */
+export async function listarImportLogs(soFalhas?: boolean) {
+  const where = soFalhas ? 'WHERE l.reconhecidos_count = 0' : '';
+  const { rows } = await query<ImportLogRow>(
+    `SELECT l.id, l.texto, l.reconhecidos, l.reconhecidos_count, l.origem,
+            l.criado_em::text AS criado_em, c.nome AS corretor_nome
+     FROM import_texto_log l
+     LEFT JOIN corretor c ON c.id = l.corretor_id
+     ${where}
+     ORDER BY l.criado_em DESC
+     LIMIT 200`,
+  );
+  const totais = await query<{ total: string; falhas: string }>(
+    `SELECT count(*)::text AS total,
+            count(*) FILTER (WHERE reconhecidos_count = 0)::text AS falhas
+     FROM import_texto_log`,
+  );
+  return {
+    data: rows,
+    total: Number(totais.rows[0]?.total ?? 0),
+    falhas: Number(totais.rows[0]?.falhas ?? 0),
+  };
+}
+
+// ============================================================
 // Painel de métricas (KPIs — Seção 1.6 do escopo)
 // ============================================================
 

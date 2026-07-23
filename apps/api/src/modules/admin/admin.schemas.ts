@@ -38,6 +38,10 @@ export const listParceriasQuery = z.object({
   status: z.enum(['solicitada', 'aceita', 'recusada', 'em_negociacao', 'vendida', 'encerrada', 'cancelada']).optional(),
 });
 
+export const listImportLogsQuery = z.object({
+  so_falhas: z.enum(['0', '1']).optional(),
+});
+
 export const resolverDenunciaSchema = z.object({
   nota: z.string().trim().min(3, 'Descreva como o caso foi tratado.').max(2000),
 });
@@ -49,3 +53,4 @@ export type CriarAdminInput = z.infer<typeof criarAdminSchema>;
 export type ListDenunciasQuery = z.infer<typeof listDenunciasQuery>;
 export type ResolverDenunciaInput = z.infer<typeof resolverDenunciaSchema>;
 export type ListParceriasQuery = z.infer<typeof listParceriasQuery>;
+export type ListImportLogsQuery = z.infer<typeof listImportLogsQuery>;

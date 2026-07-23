@@ -351,6 +351,33 @@ export async function iniciarSessaoCadastro(corretorId: string): Promise<{ id: s
   return { id: rows[0].id };
 }
 
+/**
+ * Registra uma colagem de texto (import do WhatsApp) + os campos reconhecidos, para
+ * termos histórico dos formatos que falham e evoluir o parser sem depender de o corretor
+ * reenviar o texto. Best-effort: nunca quebra o fluxo de importação.
+ */
+export async function registrarImportTexto(
+  corretorId: string | null,
+  texto: string,
+  reconhecidos: string[],
+  origem: string,
+): Promise<void> {
+  try {
+    await query(
+      `INSERT INTO import_texto_log (corretor_id, texto, reconhecidos, reconhecidos_count, origem)
+       VALUES ($1, $2, $3::jsonb, $4, $5)`,
+      [corretorId, texto.slice(0, 8000), JSON.stringify(reconhecidos), reconhecidos.length, origem],
+    );
+  } catch (err) {
+    console.error('[import-log] falha ao registrar importação de texto', err);
+  }
+  if (reconhecidos.length === 0) {
+    console.warn(
+      `[import-texto] 0 campos reconhecidos (origem=${origem}): "${texto.replace(/\s+/g, ' ').slice(0, 300)}"`,
+    );
+  }
+}
+
 /** Marca a sessão aberta mais recente do corretor como concluída (best-effort). */
 async function marcarSessaoCadastroConcluida(corretorId: string, imovelId: string): Promise<void> {
   await query(

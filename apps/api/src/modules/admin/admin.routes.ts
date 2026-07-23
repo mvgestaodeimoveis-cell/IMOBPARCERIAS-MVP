@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
-import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, listParceriasQuery, rejeitarSchema, resolverDenunciaSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type ListParceriasQuery, type RejeitarInput, type ResolverDenunciaInput, type CriarAdminInput } from './admin.schemas';
+import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, listParceriasQuery, listImportLogsQuery, rejeitarSchema, resolverDenunciaSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type ListParceriasQuery, type ListImportLogsQuery, type RejeitarInput, type ResolverDenunciaInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
 import * as parceriasService from '../parcerias/parcerias.service';
 
@@ -118,6 +118,16 @@ adminRoutes.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { status } = req.query as unknown as ListParceriasQuery;
     res.json(await adminService.listarParceriasAdmin(status));
+  }),
+);
+
+// Histórico de importações por texto (colar do WhatsApp).
+adminRoutes.get(
+  '/import-logs',
+  validate(listImportLogsQuery, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { so_falhas } = req.query as unknown as ListImportLogsQuery;
+    res.json(await adminService.listarImportLogs(so_falhas === '1'));
   }),
 );
 
