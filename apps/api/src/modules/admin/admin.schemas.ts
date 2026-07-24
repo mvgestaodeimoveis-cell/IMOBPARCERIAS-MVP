@@ -42,8 +42,16 @@ export const listImportLogsQuery = z.object({
   so_falhas: z.enum(['0', '1']).optional(),
 });
 
+export const listDuplicatasQuery = z.object({
+  status: z.enum(['pendente', 'revisada']).optional(),
+});
+
 export const resolverDenunciaSchema = z.object({
   nota: z.string().trim().min(3, 'Descreva como o caso foi tratado.').max(2000),
+});
+
+export const resolverDuplicataSchema = z.object({
+  nota: z.string().trim().min(3, 'Descreva a decisão da equipe.').max(2000),
 });
 
 export type ListCorretoresQuery = z.infer<typeof listCorretoresQuery>;
@@ -54,3 +62,5 @@ export type ListDenunciasQuery = z.infer<typeof listDenunciasQuery>;
 export type ResolverDenunciaInput = z.infer<typeof resolverDenunciaSchema>;
 export type ListParceriasQuery = z.infer<typeof listParceriasQuery>;
 export type ListImportLogsQuery = z.infer<typeof listImportLogsQuery>;
+export type ListDuplicatasQuery = z.infer<typeof listDuplicatasQuery>;
+export type ResolverDuplicataInput = z.infer<typeof resolverDuplicataSchema>;

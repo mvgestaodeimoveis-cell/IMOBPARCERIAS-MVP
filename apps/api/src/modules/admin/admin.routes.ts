@@ -4,7 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 import { authorize } from '../../middleware/authorize';
 import { validate } from '../../middleware/validate';
 import { unauthorized } from '../../lib/errors';
-import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, listParceriasQuery, listImportLogsQuery, rejeitarSchema, resolverDenunciaSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type ListParceriasQuery, type ListImportLogsQuery, type RejeitarInput, type ResolverDenunciaInput, type CriarAdminInput } from './admin.schemas';
+import { listCorretoresQuery, listImoveisQuery, listDenunciasQuery, listParceriasQuery, listImportLogsQuery, listDuplicatasQuery, rejeitarSchema, resolverDenunciaSchema, resolverDuplicataSchema, criarAdminSchema, type ListCorretoresQuery, type ListImoveisQuery, type ListDenunciasQuery, type ListParceriasQuery, type ListImportLogsQuery, type ListDuplicatasQuery, type RejeitarInput, type ResolverDenunciaInput, type ResolverDuplicataInput, type CriarAdminInput } from './admin.schemas';
 import * as adminService from './admin.service';
 import * as parceriasService from '../parcerias/parcerias.service';
 
@@ -128,6 +128,26 @@ adminRoutes.get(
   asyncHandler(async (req: Request, res: Response) => {
     const { so_falhas } = req.query as unknown as ListImportLogsQuery;
     res.json(await adminService.listarImportLogs(so_falhas === '1'));
+  }),
+);
+
+// Duplicatas suspeitas (casa/terreno entre corretores) — rede soft para revisão da equipe.
+adminRoutes.get(
+  '/duplicatas',
+  validate(listDuplicatasQuery, 'query'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { status } = req.query as unknown as ListDuplicatasQuery;
+    res.json(await adminService.listarDuplicatasSuspeitas(status));
+  }),
+);
+
+adminRoutes.post(
+  '/duplicatas/:id/resolver',
+  validate(resolverDuplicataSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    if (!req.user) throw unauthorized();
+    const { nota } = req.body as ResolverDuplicataInput;
+    res.json(await adminService.resolverDuplicataSuspeita(req.params.id, req.user.id, nota));
   }),
 );
 

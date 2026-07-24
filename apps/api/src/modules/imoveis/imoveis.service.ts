@@ -250,6 +250,53 @@ async function checarDuplicata(
   return { chave, predio };
 }
 
+/**
+ * Rede de segurança (soft) para CASA/TERRENO. A chave de deduplicação exige CEP + número +
+ * logradouro idênticos, então dois corretores que digitam o mesmo endereço de formas
+ * diferentes (ou um marca condomínio e o outro não) cadastram o MESMO imóvel sem colidir.
+ * Aqui, depois do cadastro, procuramos imóveis ATIVOS de OUTRO corretor no mesmo tipo /
+ * cidade / bairro e faixa de preço próxima (±20%) e registramos uma "duplicata suspeita"
+ * para a equipe revisar no admin. NÃO bloqueia o cadastro. Best-effort: nunca quebra o fluxo.
+ */
+async function registrarDuplicataSuspeita(novo: Imovel, chaveNova: string): Promise<void> {
+  if (novo.tipo !== 'casa' && novo.tipo !== 'terreno') return;
+
+  const candidatos = await query<{ id: string; corretor_id: string; logradouro: string; numero: string }>(
+    `SELECT id, corretor_id, logradouro, numero FROM imovel
+     WHERE status = 'ativo'
+       AND tipo = $1
+       AND lower(btrim(cidade)) = lower(btrim($2))
+       AND lower(btrim(bairro)) = lower(btrim($3))
+       AND corretor_id <> $4
+       AND id <> $5
+       AND chave_dedupe <> $6
+       AND preco BETWEEN $7 * 0.8 AND $7 * 1.2
+     ORDER BY criado_em DESC
+     LIMIT 5`,
+    [novo.tipo, novo.cidade, novo.bairro, novo.corretor_id, novo.id, chaveNova, novo.preco],
+  );
+
+  for (const cand of candidatos.rows) {
+    await query(
+      `INSERT INTO imovel_duplicata_suspeita
+         (imovel_novo_id, imovel_existente_id, corretor_novo_id, corretor_existente_id, motivo)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (imovel_novo_id, imovel_existente_id) DO NOTHING`,
+      [
+        novo.id,
+        cand.id,
+        novo.corretor_id,
+        cand.corretor_id,
+        `Mesmo tipo (${novo.tipo}), cidade e bairro (${novo.bairro}, ${novo.cidade}) e faixa de preço próxima; endereços digitados diferentes (chave de deduplicação não colidiu).`,
+      ],
+    );
+    // Observabilidade: fica visível nos logs do Render para auditoria.
+    console.warn(
+      `[dedupe] possível duplicata: imóvel ${novo.id} (corretor ${novo.corretor_id}) ~ imóvel ${cand.id} (corretor ${cand.corretor_id}) — ${novo.tipo} ${novo.bairro}/${novo.cidade} R$${novo.preco}`,
+    );
+  }
+}
+
 export async function criarImovel(
   corretorId: string,
   input: CriarImovelInput,
@@ -328,7 +375,12 @@ export async function criarImovel(
     );
     await client.query('COMMIT');
     await marcarSessaoCadastroConcluida(corretorId, imovel.id);
-    return mapImovel(imovel);
+    const resultado = mapImovel(imovel);
+    // Rede de segurança (soft) contra duplicata de casa/terreno entre corretores — não bloqueia.
+    void registrarDuplicataSuspeita(resultado, chave).catch((e) =>
+      console.warn('[dedupe] falha ao registrar suspeita de duplicata:', e),
+    );
+    return resultado;
   } catch (err) {
     await client.query('ROLLBACK');
     // Corrida no índice único parcial (chave de deduplicação / exclusividade): já existe

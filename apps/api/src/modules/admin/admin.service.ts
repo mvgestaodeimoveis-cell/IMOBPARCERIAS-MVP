@@ -560,6 +560,119 @@ export async function listarParceriasAdmin(status?: string) {
 
 
 // ============================================================
+// Duplicatas suspeitas (casa/terreno entre corretores) — rede soft
+// ============================================================
+
+interface DuplicataSuspeitaRow {
+  id: string;
+  motivo: string;
+  status: string;
+  criado_em: string;
+  revisado_em: string | null;
+  resolucao_nota: string | null;
+  novo_id: string;
+  novo_tipo: string;
+  novo_bairro: string;
+  novo_cidade: string;
+  novo_preco: string;
+  novo_logradouro: string;
+  novo_numero: string;
+  novo_status: string;
+  novo_corretor_nome: string;
+  novo_corretor_email: string;
+  novo_corretor_whatsapp: string | null;
+  existente_id: string;
+  existente_bairro: string;
+  existente_cidade: string;
+  existente_preco: string;
+  existente_logradouro: string;
+  existente_numero: string;
+  existente_status: string;
+  existente_corretor_nome: string;
+  existente_corretor_email: string;
+  existente_corretor_whatsapp: string | null;
+}
+
+/** Lista as suspeitas de duplicata para a equipe revisar (pendentes primeiro). */
+export async function listarDuplicatasSuspeitas(status?: string) {
+  const params: unknown[] = [];
+  let where = '';
+  if (status) {
+    params.push(status);
+    where = `WHERE s.status = $${params.length}`;
+  }
+  const { rows } = await query<DuplicataSuspeitaRow>(
+    `SELECT s.id, s.motivo, s.status, s.criado_em::text AS criado_em,
+            s.revisado_em::text AS revisado_em, s.resolucao_nota,
+            n.id AS novo_id, n.tipo AS novo_tipo, n.bairro AS novo_bairro, n.cidade AS novo_cidade,
+            n.preco::text AS novo_preco, n.logradouro AS novo_logradouro, n.numero AS novo_numero,
+            n.status AS novo_status,
+            cn.nome AS novo_corretor_nome, cn.email AS novo_corretor_email, cn.whatsapp AS novo_corretor_whatsapp,
+            e.id AS existente_id, e.bairro AS existente_bairro, e.cidade AS existente_cidade,
+            e.preco::text AS existente_preco, e.logradouro AS existente_logradouro, e.numero AS existente_numero,
+            e.status AS existente_status,
+            ce.nome AS existente_corretor_nome, ce.email AS existente_corretor_email, ce.whatsapp AS existente_corretor_whatsapp
+     FROM imovel_duplicata_suspeita s
+     JOIN imovel n ON n.id = s.imovel_novo_id
+     JOIN imovel e ON e.id = s.imovel_existente_id
+     JOIN corretor cn ON cn.id = s.corretor_novo_id
+     JOIN corretor ce ON ce.id = s.corretor_existente_id
+     ${where}
+     ORDER BY (s.status = 'revisada'), s.criado_em DESC
+     LIMIT 200`,
+    params,
+  );
+  return {
+    data: rows.map((r) => ({
+      id: r.id,
+      motivo: r.motivo,
+      status: r.status,
+      criado_em: r.criado_em,
+      revisado_em: r.revisado_em,
+      resolucao_nota: r.resolucao_nota,
+      novo: {
+        id: r.novo_id,
+        tipo: r.novo_tipo,
+        bairro: r.novo_bairro,
+        cidade: r.novo_cidade,
+        preco: Number(r.novo_preco),
+        logradouro: r.novo_logradouro,
+        numero: r.novo_numero,
+        status: r.novo_status,
+        corretor_nome: r.novo_corretor_nome,
+        corretor_email: r.novo_corretor_email,
+        corretor_whatsapp: r.novo_corretor_whatsapp,
+      },
+      existente: {
+        id: r.existente_id,
+        bairro: r.existente_bairro,
+        cidade: r.existente_cidade,
+        preco: Number(r.existente_preco),
+        logradouro: r.existente_logradouro,
+        numero: r.existente_numero,
+        status: r.existente_status,
+        corretor_nome: r.existente_corretor_nome,
+        corretor_email: r.existente_corretor_email,
+        corretor_whatsapp: r.existente_corretor_whatsapp,
+      },
+    })),
+    pendentes: rows.filter((r) => r.status !== 'revisada').length,
+  };
+}
+
+/** Marca uma suspeita como revisada, com a decisão da equipe. */
+export async function resolverDuplicataSuspeita(id: string, adminId: string, nota: string) {
+  const { rowCount } = await query(
+    `UPDATE imovel_duplicata_suspeita
+     SET status = 'revisada', resolucao_nota = $2, revisado_por = $3, revisado_em = now()
+     WHERE id = $1 AND status <> 'revisada'`,
+    [id, nota, adminId],
+  );
+  if (!rowCount) throw conflict('Suspeita não encontrada ou já revisada.');
+  return { id, status: 'revisada' as const };
+}
+
+// ============================================================
 // Histórico de importações por texto (colar do WhatsApp)
 // ============================================================
 
