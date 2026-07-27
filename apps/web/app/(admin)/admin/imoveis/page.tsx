@@ -38,7 +38,12 @@ export default function AdminImoveisPage() {
   const [rows, setRows] = useState<ImovelRow[]>([]);
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState('');
-  const [busca, setBusca] = useState('');
+  // Pré-preenche a busca a partir da URL (?busca=…) — permite abrir um imóvel
+  // específico vindo da aba de duplicatas.
+  const [busca, setBusca] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('busca') ?? '';
+  });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);

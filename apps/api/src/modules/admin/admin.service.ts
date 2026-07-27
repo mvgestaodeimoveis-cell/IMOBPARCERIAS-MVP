@@ -189,8 +189,15 @@ export async function listImoveis(q: ListImoveisQuery) {
   if (q.status) conditions.push(add('i.status = $?', q.status));
   if (q.cidade) conditions.push(add('i.cidade ILIKE $?', `%${q.cidade}%`));
   if (q.busca) {
+    // Busca por texto (bairro/corretor/e-mail) OU pelo ID exato do imóvel — este último
+    // permite abrir um imóvel específico direto da aba de duplicatas.
     params.push(`%${q.busca}%`);
-    conditions.push(`(i.bairro ILIKE $${params.length} OR c.nome ILIKE $${params.length} OR c.email ILIKE $${params.length})`);
+    const like = params.length;
+    params.push(q.busca);
+    const exato = params.length;
+    conditions.push(
+      `(i.bairro ILIKE $${like} OR c.nome ILIKE $${like} OR c.email ILIKE $${like} OR i.id::text = $${exato})`,
+    );
   }
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 

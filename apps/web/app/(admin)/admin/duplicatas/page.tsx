@@ -68,9 +68,16 @@ function LadoImovel({ titulo, imovel }: { titulo: string; imovel: ImovelLado }) 
           WhatsApp: {imovel.corretor_whatsapp}
         </a>
       )}
-      <a className="info-wa" href={`/admin/imoveis?busca=${encodeURIComponent(imovel.corretor_email)}`}>
-        Ver nos imóveis →
-      </a>
+      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.15rem' }}>
+        <a className="info-wa" href={`/admin/imoveis?busca=${encodeURIComponent(imovel.id)}`}>
+          Ver na tabela (excluir) →
+        </a>
+        {imovel.status === 'ativo' && (
+          <a className="info-wa" href={`/vitrine/${imovel.id}`} target="_blank" rel="noopener noreferrer">
+            Ver na vitrine →
+          </a>
+        )}
+      </div>
     </div>
   );
 }
