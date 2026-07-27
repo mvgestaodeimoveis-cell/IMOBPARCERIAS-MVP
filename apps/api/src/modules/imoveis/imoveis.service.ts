@@ -4,6 +4,7 @@ import { conflict, duplicataPossivel, forbidden, notFound } from '../../lib/erro
 import { sendEmail } from '../../lib/email';
 import { emailExclusividadeVencendo, emailManutencaoImovel } from '../../lib/email-templates';
 import { TERMO_PARCERIA_HASH, TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
+import { chaveDedupe, chavePredio, type CamposChave } from './dedupe';
 import type {
   AtualizarImovelInput,
   CriarImovelInput,
@@ -79,63 +80,11 @@ function mapImovel(row: ImovelRow): Imovel {
   };
 }
 
-interface CamposChave {
-  tipo: string;
-  cep: string;
-  cidade: string;
-  logradouro: string;
-  numero: string;
-  unidade: string | null;
-  andar: string | null;
-  bloco: string | null;
-  nome_condominio: string | null;
-  area_m2: number | null;
-}
-
-const norm = (s: string | null | undefined): string => (s ?? '').trim().toLowerCase();
-const soDigitos = (s: string | null | undefined): string => (s ?? '').replace(/\D/g, '');
-
-/**
- * Endereço-base canônico da deduplicação. Ancorado no CEP (só dígitos) + número:
- * o CEP identifica a rua/quadra de forma estável, independentemente de como o
- * logradouro foi digitado (o formulário autopreenche via ViaCEP). Sem CEP válido,
- * cai no logradouro digitado como último recurso.
- */
-function baseEndereco(c: CamposChave): string {
-  const cep = soDigitos(c.cep);
-  return cep
-    ? `${cep}|${norm(c.numero)}`
-    : `${norm(c.cidade)}|${norm(c.logradouro)}|${norm(c.numero)}`;
-}
-
-/** Chave única por tipo de imóvel (Seção 5 do escopo). */
-function chaveDedupe(c: CamposChave): string {
-  const base = baseEndereco(c);
-  switch (c.tipo) {
-    case 'apartamento':
-      return `apt|${base}|${norm(c.unidade)}|${norm(c.andar)}|${norm(c.bloco)}`;
-    case 'comercial':
-      return `com|${base}|${norm(c.unidade)}`;
-    case 'terreno':
-      return `ter|${base}|${c.area_m2 ?? ''}`;
-    case 'casa':
-      return c.nome_condominio
-        ? `casacond|${soDigitos(c.cep) || norm(c.cidade)}|${norm(c.nome_condominio)}|${norm(c.numero)}`
-        : `casa|${base}|${norm(c.logradouro)}`;
-    default:
-      return `x|${base}`;
-  }
-}
-
-/** Chave do prédio (endereço-base) para detectar DUPLICATA POSSÍVEL. */
-function chavePredio(c: CamposChave): string {
-  return `predio|${baseEndereco(c)}`;
-}
-
 function camposDe(input: {
   tipo: string;
   cep: string;
   cidade: string;
+  bairro: string;
   logradouro: string;
   numero: string;
   unidade: string | null;
@@ -148,6 +97,7 @@ function camposDe(input: {
     tipo: input.tipo,
     cep: input.cep,
     cidade: input.cidade,
+    bairro: input.bairro,
     logradouro: input.logradouro,
     numero: input.numero,
     unidade: input.unidade,
@@ -251,50 +201,135 @@ async function checarDuplicata(
 }
 
 /**
- * Rede de segurança (soft) para CASA/TERRENO. A chave de deduplicação exige CEP + número +
- * logradouro idênticos, então dois corretores que digitam o mesmo endereço de formas
- * diferentes (ou um marca condomínio e o outro não) cadastram o MESMO imóvel sem colidir.
- * Aqui, depois do cadastro, procuramos imóveis ATIVOS de OUTRO corretor no mesmo tipo /
- * cidade / bairro e faixa de preço próxima (±20%) e registramos uma "duplicata suspeita"
- * para a equipe revisar no admin. NÃO bloqueia o cadastro. Best-effort: nunca quebra o fluxo.
+ * Rede de segurança (soft) para CASA/TERRENO. A chave de deduplicação exige endereço
+ * idêntico, então dois corretores que digitam o mesmo endereço de formas diferentes
+ * (abreviações, com/sem condomínio, CEP geral) cadastram o MESMO imóvel sem colidir.
+ * Aqui procuramos imóveis ATIVOS de OUTRO corretor no mesmo tipo/cidade que batam por
+ * UM de dois sinais e registramos uma "duplicata suspeita" para a equipe revisar:
+ *   (a) MESMO ENDEREÇO digitado (logradouro + número normalizados) — sinal forte; ou
+ *   (b) MESMO BAIRRO e faixa de preço próxima (±25%) — sinal fraco (heurística).
+ * NÃO bloqueia o cadastro. Best-effort: nunca quebra o fluxo.
  */
-async function registrarDuplicataSuspeita(novo: Imovel, chaveNova: string): Promise<void> {
-  if (novo.tipo !== 'casa' && novo.tipo !== 'terreno') return;
+async function inserirSuspeitasPara(novo: {
+  id: string;
+  tipo: string;
+  cidade: string;
+  bairro: string;
+  logradouro: string;
+  numero: string;
+  corretor_id: string;
+  preco: number;
+  chave_dedupe: string;
+  criado_em?: string;
+}): Promise<number> {
+  if (novo.tipo !== 'casa' && novo.tipo !== 'terreno') return 0;
 
-  const candidatos = await query<{ id: string; corretor_id: string; logradouro: string; numero: string }>(
-    `SELECT id, corretor_id, logradouro, numero FROM imovel
+  const candidatos = await query<{
+    id: string;
+    corretor_id: string;
+    logradouro: string;
+    numero: string;
+    mesmo_endereco: boolean;
+  }>(
+    `SELECT id, corretor_id, logradouro, numero,
+            (lower(btrim(logradouro)) = lower(btrim($3)) AND lower(btrim(numero)) = lower(btrim($4))) AS mesmo_endereco
+     FROM imovel
      WHERE status = 'ativo'
        AND tipo = $1
        AND lower(btrim(cidade)) = lower(btrim($2))
-       AND lower(btrim(bairro)) = lower(btrim($3))
-       AND corretor_id <> $4
-       AND id <> $5
-       AND chave_dedupe <> $6
-       AND preco BETWEEN $7 * 0.8 AND $7 * 1.2
+       AND corretor_id <> $5
+       AND id <> $6
+       AND chave_dedupe <> $7
+       AND (
+         (lower(btrim(logradouro)) = lower(btrim($3)) AND lower(btrim(numero)) = lower(btrim($4)))
+         OR (lower(btrim(bairro)) = lower(btrim($8)) AND preco BETWEEN $9 * 0.75 AND $9 * 1.25)
+       )
+       ${novo.criado_em ? 'AND criado_em < $10' : ''}
      ORDER BY criado_em DESC
      LIMIT 5`,
-    [novo.tipo, novo.cidade, novo.bairro, novo.corretor_id, novo.id, chaveNova, novo.preco],
+    novo.criado_em
+      ? [novo.tipo, novo.cidade, novo.logradouro, novo.numero, novo.corretor_id, novo.id, novo.chave_dedupe, novo.bairro, novo.preco, novo.criado_em]
+      : [novo.tipo, novo.cidade, novo.logradouro, novo.numero, novo.corretor_id, novo.id, novo.chave_dedupe, novo.bairro, novo.preco],
   );
 
+  let inseridos = 0;
   for (const cand of candidatos.rows) {
-    await query(
+    const motivo = cand.mesmo_endereco
+      ? `Mesmo endereço digitado (${novo.logradouro}, ${novo.numero} — ${novo.cidade}) por corretores diferentes; a chave de deduplicação não colidiu (grafia/CEP diferentes).`
+      : `Mesmo tipo (${novo.tipo}), cidade e bairro (${novo.bairro}, ${novo.cidade}) e faixa de preço próxima; endereços digitados diferentes.`;
+    const { rowCount } = await query(
       `INSERT INTO imovel_duplicata_suspeita
          (imovel_novo_id, imovel_existente_id, corretor_novo_id, corretor_existente_id, motivo)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (imovel_novo_id, imovel_existente_id) DO NOTHING`,
-      [
-        novo.id,
-        cand.id,
-        novo.corretor_id,
-        cand.corretor_id,
-        `Mesmo tipo (${novo.tipo}), cidade e bairro (${novo.bairro}, ${novo.cidade}) e faixa de preço próxima; endereços digitados diferentes (chave de deduplicação não colidiu).`,
-      ],
+      [novo.id, cand.id, novo.corretor_id, cand.corretor_id, motivo],
     );
-    // Observabilidade: fica visível nos logs do Render para auditoria.
-    console.warn(
-      `[dedupe] possível duplicata: imóvel ${novo.id} (corretor ${novo.corretor_id}) ~ imóvel ${cand.id} (corretor ${cand.corretor_id}) — ${novo.tipo} ${novo.bairro}/${novo.cidade} R$${novo.preco}`,
-    );
+    if (rowCount) {
+      inseridos += 1;
+      // Observabilidade: fica visível nos logs do Render para auditoria.
+      console.warn(
+        `[dedupe] possível duplicata: imóvel ${novo.id} (corretor ${novo.corretor_id}) ~ imóvel ${cand.id} (corretor ${cand.corretor_id}) — ${novo.tipo} ${novo.bairro}/${novo.cidade} R$${novo.preco}`,
+      );
+    }
   }
+  return inseridos;
+}
+
+async function registrarDuplicataSuspeita(novo: Imovel, chaveNova: string): Promise<void> {
+  await inserirSuspeitasPara({
+    id: novo.id,
+    tipo: novo.tipo,
+    cidade: novo.cidade,
+    bairro: novo.bairro,
+    logradouro: novo.logradouro,
+    numero: novo.numero,
+    corretor_id: novo.corretor_id,
+    preco: novo.preco,
+    chave_dedupe: chaveNova,
+  });
+}
+
+/**
+ * Reescaneia TODOS os imóveis ativos (casa/terreno) em busca de duplicatas suspeitas
+ * entre corretores diferentes. Usado pelo painel do admin para varrer imóveis que já
+ * estavam na vitrine antes desta rede de segurança existir. Idempotente (ON CONFLICT
+ * evita pares repetidos) e considera cada imóvel contra os MAIS ANTIGOS (evita par duplo).
+ */
+export async function rescanDuplicatasSuspeitas(): Promise<{ verificados: number; suspeitas: number }> {
+  const { rows } = await query<{
+    id: string;
+    tipo: string;
+    cidade: string;
+    bairro: string;
+    logradouro: string;
+    numero: string;
+    corretor_id: string;
+    preco: string;
+    chave_dedupe: string;
+    criado_em: string;
+  }>(
+    `SELECT id, tipo, cidade, bairro, logradouro, numero, corretor_id,
+            preco::text AS preco, chave_dedupe, criado_em::text AS criado_em
+     FROM imovel
+     WHERE status = 'ativo' AND tipo IN ('casa', 'terreno')
+     ORDER BY criado_em ASC`,
+  );
+  let suspeitas = 0;
+  for (const r of rows) {
+    suspeitas += await inserirSuspeitasPara({
+      id: r.id,
+      tipo: r.tipo,
+      cidade: r.cidade,
+      bairro: r.bairro,
+      logradouro: r.logradouro,
+      numero: r.numero,
+      corretor_id: r.corretor_id,
+      preco: Number(r.preco),
+      chave_dedupe: r.chave_dedupe,
+      criado_em: r.criado_em,
+    });
+  }
+  return { verificados: rows.length, suspeitas };
 }
 
 export async function criarImovel(

@@ -85,6 +85,7 @@ export default function AdminDuplicatasPage() {
   const [aberta, setAberta] = useState<Suspeita | null>(null);
   const [nota, setNota] = useState('');
   const [salvando, setSalvando] = useState(false);
+  const [reescaneando, setReescaneando] = useState(false);
 
   const carregar = useCallback(async () => {
     const token = getAccessToken();
@@ -139,6 +140,23 @@ export default function AdminDuplicatasPage() {
     setNota(s.resolucao_nota ?? '');
   }
 
+  async function reescanear() {
+    const token = getAccessToken();
+    setReescaneando(true);
+    try {
+      const r = await apiFetch<{ verificados: number; suspeitas: number }>('/admin/duplicatas/rescan', {
+        method: 'POST',
+        token,
+      });
+      alert(`Reescaneamento concluído: ${r.verificados} imóvel(is) verificado(s), ${r.suspeitas} nova(s) suspeita(s).`);
+      carregar();
+    } catch (err) {
+      alert(err instanceof ApiRequestError ? err.message : 'Erro ao reescanear.');
+    } finally {
+      setReescaneando(false);
+    }
+  }
+
   return (
     <>
       <h1 style={{ fontSize: '1.5rem' }}>
@@ -146,8 +164,10 @@ export default function AdminDuplicatasPage() {
         {pendentes > 0 && <span className="badge badge-amber">{pendentes} pendente(s)</span>}
       </h1>
       <p className="muted" style={{ marginTop: '-0.4rem', fontSize: '0.85rem' }}>
-        Casas/terrenos de corretores diferentes no mesmo tipo, cidade, bairro e faixa de preço cujos
-        endereços foram digitados de formas distintas (a chave de deduplicação não pegou).
+        Casas/terrenos de corretores diferentes na mesma cidade que batem pelo mesmo endereço
+        digitado (logradouro + número) ou pelo mesmo bairro e faixa de preço próxima — casos que a
+        chave de deduplicação exata não pegou. Use “Reescanear vitrine” para varrer imóveis já
+        publicados.
       </p>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
@@ -156,6 +176,9 @@ export default function AdminDuplicatasPage() {
             <option key={s} value={s}>{s ? (STATUS_BADGE[s]?.label ?? s) : 'Todas'}</option>
           ))}
         </select>
+        <button type="button" className="btn btn-secondary" onClick={reescanear} disabled={reescaneando}>
+          {reescaneando ? 'Reescaneando…' : 'Reescanear vitrine'}
+        </button>
       </div>
 
       {erro && <div className="banner banner-error">{erro}</div>}

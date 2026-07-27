@@ -660,6 +660,9 @@ export async function listarDuplicatasSuspeitas(status?: string) {
   };
 }
 
+/** Reescaneia imóveis ativos (casa/terreno) em busca de duplicatas entre corretores. */
+export { rescanDuplicatasSuspeitas as rescanDuplicatas } from '../imoveis/imoveis.service';
+
 /** Marca uma suspeita como revisada, com a decisão da equipe. */
 export async function resolverDuplicataSuspeita(id: string, adminId: string, nota: string) {
   const { rowCount } = await query(

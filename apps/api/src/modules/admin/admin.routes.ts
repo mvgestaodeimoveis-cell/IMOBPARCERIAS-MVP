@@ -151,6 +151,15 @@ adminRoutes.post(
   }),
 );
 
+// Reescaneia imóveis ativos (casa/terreno) em busca de duplicatas entre corretores —
+// varre o que já estava na vitrine antes desta rede de segurança existir.
+adminRoutes.post(
+  '/duplicatas/rescan',
+  asyncHandler(async (_req: Request, res: Response) => {
+    res.json(await adminService.rescanDuplicatas());
+  }),
+);
+
 // Moderação de imóveis (equipe).
 adminRoutes.get(
   '/imoveis',
