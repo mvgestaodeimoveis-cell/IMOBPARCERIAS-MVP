@@ -63,6 +63,8 @@ const TIPOS_FILTRO: { v: string; l: string }[] = [
 ];
 
 // Faixas de valor prontas para a busca rápida (mapeiam para preco_min/preco_max).
+const VITRINE_PAGE_SIZE = 12;
+
 const FAIXAS: { v: string; l: string; min: string; max: string }[] = [
   { v: '', l: 'Qualquer valor', min: '', max: '' },
   { v: 'a', l: 'Até R$ 300 mil', min: '', max: '300000' },
@@ -76,6 +78,8 @@ export default function VitrinePage() {
   const [filtros, setFiltros] = useState(FILTROS_INICIAIS);
   const [imoveis, setImoveis] = useState<ImovelVitrine[] | null>(null);
   const [total, setTotal] = useState(0);
+  const [pagina, setPagina] = useState(1);
+  const [carregandoMais, setCarregandoMais] = useState(false);
   const [appNav, setAppNav] = useState(false);
   const [selMode, setSelMode] = useState(false);
   const [sel, setSel] = useState<string[]>([]);
@@ -131,26 +135,36 @@ export default function VitrinePage() {
     window.open(`https://wa.me/?text=${encodeURIComponent(`${texto} ${url}`)}`, '_blank');
   }
 
-  const buscar = useCallback(async () => {
-    const params = new URLSearchParams();
-    Object.entries(filtros).forEach(([k, v]) => {
-      if (v.trim()) params.set(k, v.trim());
-    });
-    const qs = params.toString();
-    try {
-      const res = await apiFetch<{ data: ImovelVitrine[]; total: number }>(
-        `/vitrine${qs ? `?${qs}` : ''}`,
-      );
-      setImoveis(res.data);
-      setTotal(res.total);
-    } catch {
-      setImoveis([]);
-      setTotal(0);
-    }
-  }, [filtros]);
+  const buscar = useCallback(
+    async (page: number, append: boolean) => {
+      const params = new URLSearchParams();
+      Object.entries(filtros).forEach(([k, v]) => {
+        if (v.trim()) params.set(k, v.trim());
+      });
+      params.set('page', String(page));
+      params.set('page_size', String(VITRINE_PAGE_SIZE));
+      const qs = params.toString();
+      if (append) setCarregandoMais(true);
+      try {
+        const res = await apiFetch<{ data: ImovelVitrine[]; total: number }>(`/vitrine?${qs}`);
+        setImoveis((prev) => (append && prev ? [...prev, ...res.data] : res.data));
+        setTotal(res.total);
+        setPagina(page);
+      } catch {
+        if (!append) {
+          setImoveis([]);
+          setTotal(0);
+        }
+      } finally {
+        if (append) setCarregandoMais(false);
+      }
+    },
+    [filtros],
+  );
 
+  // Ao mudar os filtros, recomeça da primeira página (substitui a lista).
   useEffect(() => {
-    buscar();
+    buscar(1, false);
   }, [buscar]);
 
   function set<K extends keyof typeof filtros>(k: K, v: string) {
@@ -550,6 +564,21 @@ export default function VitrinePage() {
                     );
                   })}
                 </div>
+                {imoveis.length < total && (
+                  <div className="center" style={{ marginTop: '1.5rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-ghost"
+                      style={{ width: 'auto', minHeight: 'auto', padding: '0.6rem 1.2rem' }}
+                      onClick={() => buscar(pagina + 1, true)}
+                      disabled={carregandoMais}
+                    >
+                      {carregandoMais
+                        ? 'Carregando…'
+                        : `Carregar mais (${total - imoveis.length} restante${total - imoveis.length > 1 ? 's' : ''})`}
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
