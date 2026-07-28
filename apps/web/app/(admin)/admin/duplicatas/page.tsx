@@ -171,10 +171,10 @@ export default function AdminDuplicatasPage() {
         {pendentes > 0 && <span className="badge badge-amber">{pendentes} pendente(s)</span>}
       </h1>
       <p className="muted" style={{ marginTop: '-0.4rem', fontSize: '0.85rem' }}>
-        Casas/terrenos de corretores diferentes na mesma cidade que batem pelo mesmo endereço
-        digitado (logradouro + número) ou pelo mesmo bairro e faixa de preço próxima — casos que a
-        chave de deduplicação exata não pegou. Use “Reescanear vitrine” para varrer imóveis já
-        publicados.
+        Casas/terrenos de corretores diferentes na mesma cidade, com preços compatíveis, que batem
+        pelo mesmo endereço digitado (logradouro + número) ou pelo mesmo bairro com preço quase igual
+        — casos que a chave de deduplicação exata não pegou. Use “Reescanear vitrine” para varrer
+        imóveis já publicados.
       </p>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>

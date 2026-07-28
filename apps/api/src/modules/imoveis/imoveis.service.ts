@@ -4,7 +4,14 @@ import { conflict, duplicataPossivel, forbidden, notFound } from '../../lib/erro
 import { sendEmail } from '../../lib/email';
 import { emailExclusividadeVencendo, emailManutencaoImovel } from '../../lib/email-templates';
 import { TERMO_PARCERIA_HASH, TERMO_PARCERIA_VERSAO } from '../../lib/termo-parceria';
-import { chaveDedupe, chavePredio, type CamposChave } from './dedupe';
+import {
+  chaveDedupe,
+  chavePredio,
+  precosProximos,
+  PRECO_RATIO_ENDERECO,
+  PRECO_RATIO_BAIRRO,
+  type CamposChave,
+} from './dedupe';
 import type {
   AtualizarImovelInput,
   CriarImovelInput,
@@ -205,9 +212,11 @@ async function checarDuplicata(
  * idêntico, então dois corretores que digitam o mesmo endereço de formas diferentes
  * (abreviações, com/sem condomínio, CEP geral) cadastram o MESMO imóvel sem colidir.
  * Aqui procuramos imóveis ATIVOS de OUTRO corretor no mesmo tipo/cidade que batam por
- * UM de dois sinais e registramos uma "duplicata suspeita" para a equipe revisar:
- *   (a) MESMO ENDEREÇO digitado (logradouro + número normalizados) — sinal forte; ou
- *   (b) MESMO BAIRRO e faixa de preço próxima (±25%) — sinal fraco (heurística).
+ * UM de dois sinais E cujo PREÇO seja compatível, registrando uma "duplicata suspeita":
+ *   (a) MESMO ENDEREÇO digitado (logradouro + número) — sinal forte → tolera até ~30%
+ *       de diferença de preço (PRECO_RATIO_ENDERECO); ou
+ *   (b) MESMO BAIRRO — sinal fraco → exige preços quase iguais (PRECO_RATIO_BAIRRO, ~12%).
+ * O preço é filtrado em JS (precosProximos) para ser único ponto de verdade e testável.
  * NÃO bloqueia o cadastro. Best-effort: nunca quebra o fluxo.
  */
 async function inserirSuspeitasPara(novo: {
@@ -229,9 +238,10 @@ async function inserirSuspeitasPara(novo: {
     corretor_id: string;
     logradouro: string;
     numero: string;
+    preco: string;
     mesmo_endereco: boolean;
   }>(
-    `SELECT id, corretor_id, logradouro, numero,
+    `SELECT id, corretor_id, logradouro, numero, preco,
             (lower(btrim(logradouro)) = lower(btrim($3)) AND lower(btrim(numero)) = lower(btrim($4))) AS mesmo_endereco
      FROM imovel
      WHERE status = 'ativo'
@@ -242,21 +252,32 @@ async function inserirSuspeitasPara(novo: {
        AND chave_dedupe <> $7
        AND (
          (lower(btrim(logradouro)) = lower(btrim($3)) AND lower(btrim(numero)) = lower(btrim($4)))
-         OR (lower(btrim(bairro)) = lower(btrim($8)) AND preco BETWEEN $9 * 0.75 AND $9 * 1.25)
+         OR (lower(btrim(bairro)) = lower(btrim($8)) AND btrim($8) <> '')
        )
-       ${novo.criado_em ? 'AND criado_em < $10' : ''}
+       ${novo.criado_em ? 'AND criado_em < $9' : ''}
      ORDER BY criado_em DESC
-     LIMIT 5`,
+     LIMIT 50`,
     novo.criado_em
-      ? [novo.tipo, novo.cidade, novo.logradouro, novo.numero, novo.corretor_id, novo.id, novo.chave_dedupe, novo.bairro, novo.preco, novo.criado_em]
-      : [novo.tipo, novo.cidade, novo.logradouro, novo.numero, novo.corretor_id, novo.id, novo.chave_dedupe, novo.bairro, novo.preco],
+      ? [novo.tipo, novo.cidade, novo.logradouro, novo.numero, novo.corretor_id, novo.id, novo.chave_dedupe, novo.bairro, novo.criado_em]
+      : [novo.tipo, novo.cidade, novo.logradouro, novo.numero, novo.corretor_id, novo.id, novo.chave_dedupe, novo.bairro],
   );
 
+  // Filtro de preço em JS: mesmo endereço tolera mais; só bairro exige preço quase igual.
+  const aceitos = candidatos.rows
+    .filter((c) =>
+      precosProximos(
+        novo.preco,
+        Number(c.preco),
+        c.mesmo_endereco ? PRECO_RATIO_ENDERECO : PRECO_RATIO_BAIRRO,
+      ),
+    )
+    .slice(0, 5);
+
   let inseridos = 0;
-  for (const cand of candidatos.rows) {
+  for (const cand of aceitos) {
     const motivo = cand.mesmo_endereco
-      ? `Mesmo endereço digitado (${novo.logradouro}, ${novo.numero} — ${novo.cidade}) por corretores diferentes; a chave de deduplicação não colidiu (grafia/CEP diferentes).`
-      : `Mesmo tipo (${novo.tipo}), cidade e bairro (${novo.bairro}, ${novo.cidade}) e faixa de preço próxima; endereços digitados diferentes.`;
+      ? `Mesmo endereço digitado (${novo.logradouro}, ${novo.numero} — ${novo.cidade}) por corretores diferentes, com preços compatíveis; a chave de deduplicação não colidiu (grafia/CEP diferentes).`
+      : `Mesmo tipo (${novo.tipo}), cidade e bairro (${novo.bairro}, ${novo.cidade}) com preço muito próximo; endereços digitados diferentes.`;
     const { rowCount } = await query(
       `INSERT INTO imovel_duplicata_suspeita
          (imovel_novo_id, imovel_existente_id, corretor_novo_id, corretor_existente_id, motivo)

@@ -67,3 +67,22 @@ export function chaveDedupe(c: CamposChave): string {
 export function chavePredio(c: CamposChave): string {
   return `predio|${baseEndereco(c)}`;
 }
+
+/**
+ * Limiares de proximidade de preço (razão menor/maior) usados na "duplicata suspeita".
+ * O preço passa a ser um filtro de verdade: imóveis com preços muito distantes NÃO são
+ * marcados como suspeitos, mesmo que endereço/bairro batam.
+ *  - ENDERECO: mesmo logradouro + número (sinal forte) → tolera até ~30% de diferença.
+ *  - BAIRRO: só o bairro coincide (sinal fraco) → exige preços quase iguais (~12%).
+ */
+export const PRECO_RATIO_ENDERECO = 0.7;
+export const PRECO_RATIO_BAIRRO = 0.88;
+
+/**
+ * `true` quando os dois preços estão próximos o suficiente: razão menor/maior ≥ ratioMin.
+ * Simétrico (não importa qual é o novo/existente). Preços ausentes/≤0 nunca são "próximos".
+ */
+export function precosProximos(a: number, b: number, ratioMin: number): boolean {
+  if (!(a > 0) || !(b > 0)) return false;
+  return Math.min(a, b) / Math.max(a, b) >= ratioMin;
+}
