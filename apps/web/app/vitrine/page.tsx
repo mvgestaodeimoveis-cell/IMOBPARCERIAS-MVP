@@ -171,14 +171,6 @@ export default function VitrinePage() {
     setFiltros((f) => ({ ...f, [k]: v }));
   }
 
-  const faixaAtual =
-    FAIXAS.find((f) => f.min === filtros.preco_min && f.max === filtros.preco_max)?.v ?? '';
-
-  function setFaixa(v: string) {
-    const f = FAIXAS.find((x) => x.v === v) ?? FAIXAS[0];
-    setFiltros((prev) => ({ ...prev, preco_min: f.min, preco_max: f.max }));
-  }
-
   async function interpretarBusca() {
     if (buscaTexto.trim().length < 10) return;
     setBuscaMsg(null);
@@ -207,7 +199,53 @@ export default function VitrinePage() {
     }
   }
 
-  const filtrosAtivos = Object.values(filtros).filter((v) => v.trim() !== '').length;
+  // Finalidade vira aba no topo — não conta como "filtro" do painel nem como chip.
+  const filtrosAtivos = Object.entries(filtros).filter(
+    ([k, v]) => k !== 'finalidade' && v.trim() !== '',
+  ).length;
+
+  function precoLabel(): string {
+    const known = FAIXAS.find(
+      (f) => f.v && f.min === filtros.preco_min && f.max === filtros.preco_max,
+    );
+    if (known) return known.l;
+    const { preco_min: min, preco_max: max } = filtros;
+    if (min && max) return `R$ ${formatMilhar(min)}–${formatMilhar(max)}`;
+    if (min) return `A partir de R$ ${formatMilhar(min)}`;
+    if (max) return `Até R$ ${formatMilhar(max)}`;
+    return '';
+  }
+
+  // Filtros ativos como chips removíveis individualmente (exceto finalidade).
+  const chipsAtivos: { chave: string; texto: string; limpar: () => void }[] = [];
+  if (filtros.tipo)
+    chipsAtivos.push({
+      chave: 'tipo',
+      texto: TIPOS_FILTRO.find((t) => t.v === filtros.tipo)?.l ?? filtros.tipo,
+      limpar: () => set('tipo', ''),
+    });
+  if (filtros.cidade)
+    chipsAtivos.push({ chave: 'cidade', texto: filtros.cidade, limpar: () => set('cidade', '') });
+  if (filtros.bairro)
+    chipsAtivos.push({ chave: 'bairro', texto: filtros.bairro, limpar: () => set('bairro', '') });
+  if (filtros.quartos_min)
+    chipsAtivos.push({
+      chave: 'quartos_min',
+      texto: `${filtros.quartos_min}+ quartos`,
+      limpar: () => set('quartos_min', ''),
+    });
+  if (filtros.area_min)
+    chipsAtivos.push({
+      chave: 'area_min',
+      texto: `${filtros.area_min}+ m²`,
+      limpar: () => set('area_min', ''),
+    });
+  if (filtros.preco_min || filtros.preco_max)
+    chipsAtivos.push({
+      chave: 'preco',
+      texto: precoLabel(),
+      limpar: () => setFiltros((f) => ({ ...f, preco_min: '', preco_max: '' })),
+    });
 
   return (
     <div className="site">
@@ -223,52 +261,58 @@ export default function VitrinePage() {
               O endereço completo é revelado apenas no chat, após o match.
             </p>
 
-            <div className="card busca-rapida">
-              <div className="busca-rapida-grid">
-                <label className="filtro-campo">
-                  <span className="filtro-campo-label">Finalidade</span>
-                  <select className="input" value={filtros.finalidade} onChange={(e) => set('finalidade', e.target.value)}>
-                    <option value="">Todas</option>
-                    <option value="venda">Venda</option>
-                    <option value="aluguel">Aluguel</option>
-                  </select>
-                </label>
-                <label className="filtro-campo">
-                  <span className="filtro-campo-label">Tipo</span>
-                  <select className="input" value={filtros.tipo} onChange={(e) => set('tipo', e.target.value)}>
-                    {TIPOS_FILTRO.map((t) => (
-                      <option key={t.v} value={t.v}>{t.l}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="filtro-campo">
-                  <span className="filtro-campo-label">Cidade</span>
-                  <select className="input" value={filtros.cidade} onChange={(e) => set('cidade', e.target.value)}>
-                    <option value="">Todas</option>
-                    {CIDADES.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="filtro-campo">
-                  <span className="filtro-campo-label">Faixa de valor</span>
-                  <select className="input" value={faixaAtual} onChange={(e) => setFaixa(e.target.value)}>
-                    {FAIXAS.map((f) => (
-                      <option key={f.v} value={f.v}>{f.l}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <p className="muted busca-rapida-dica">
-                Busque pelos botões acima <strong>ou</strong> cole o pedido do cliente abaixo.
-              </p>
+            {/* Finalidade em destaque no topo (abas) */}
+            <div className="vitrine-tabs" role="group" aria-label="Finalidade">
+              {[
+                ['', 'Todas'],
+                ['venda', 'Venda'],
+                ['aluguel', 'Aluguel'],
+              ].map(([v, l]) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`vitrine-tab${filtros.finalidade === v ? ' on' : ''}`}
+                  aria-pressed={filtros.finalidade === v}
+                  onClick={() => set('finalidade', v)}
+                >
+                  {l}
+                </button>
+              ))}
             </div>
 
-            {!buscaAberta ? (
-              <button type="button" className="vitrine-colar" onClick={() => setBuscaAberta(true)}>
-                <span aria-hidden>✨</span> Colar o pedido do cliente (WhatsApp)
+            {/* Duas portas de entrada para o MESMO resultado: filtros manuais ou IA do WhatsApp */}
+            <div className="vitrine-entradas">
+              <button
+                type="button"
+                className="vitrine-filtros-btn"
+                aria-expanded={filtrosAbertos}
+                onClick={() => {
+                  setFiltrosAbertos((v) => !v);
+                  setBuscaAberta(false);
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="7" y1="12" x2="17" y2="12" />
+                  <line x1="10" y1="18" x2="14" y2="18" />
+                </svg>
+                Filtros
+                {filtrosAtivos > 0 && <span className="vitrine-filtros-badge">{filtrosAtivos}</span>}
               </button>
-            ) : (
+              <button
+                type="button"
+                className="vitrine-colar"
+                aria-expanded={buscaAberta}
+                onClick={() => {
+                  setBuscaAberta((v) => !v);
+                  setFiltrosAbertos(false);
+                }}
+              >
+                <span aria-hidden>✨</span> Colar pedido do cliente (WhatsApp)
+              </button>
+            </div>
+
+            {buscaAberta && (
               <div className="card busca-ia">
                 <div className="busca-ia-head">
                   <strong>Pedido do cliente</strong>
@@ -304,48 +348,29 @@ export default function VitrinePage() {
               </div>
             )}
 
+            {chipsAtivos.length > 0 && (
+              <div className="vitrine-chips-ativos">
+                {chipsAtivos.map((c) => (
+                  <button key={c.chave} type="button" className="chip-ativo" onClick={c.limpar}>
+                    {c.texto} <span aria-hidden>✕</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="vitrine-toolbar">
-              <button
-                type="button"
-                className="vitrine-filtros-btn"
-                aria-expanded={filtrosAbertos}
-                onClick={() => setFiltrosAbertos((v) => !v)}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="7" y1="12" x2="17" y2="12" />
-                  <line x1="10" y1="18" x2="14" y2="18" />
-                </svg>
-                Filtros
-                {filtrosAtivos > 0 && <span className="vitrine-filtros-badge">{filtrosAtivos}</span>}
-              </button>
-              {imoveis !== null && <span className="muted vitrine-count">{total} imóvel(is)</span>}
+              {imoveis !== null && (
+                <span className="muted vitrine-count">{total} imóvel(is) encontrado(s)</span>
+              )}
               {filtrosAtivos > 0 && (
                 <button type="button" className="vitrine-limpar" onClick={() => setFiltros(FILTROS_INICIAIS)}>
-                  Limpar
+                  Limpar tudo
                 </button>
               )}
             </div>
 
             {filtrosAbertos && (
               <div className="filtros-panel">
-                <div className="filtro-grupo">
-                  <span className="filtro-label" id="lbl-finalidade">Finalidade</span>
-                  <div className="filtro-chips" role="group" aria-labelledby="lbl-finalidade">
-                    {[['', 'Todas'], ['venda', 'Venda'], ['aluguel', 'Aluguel']].map(([v, l]) => (
-                      <button
-                        key={v}
-                        type="button"
-                        className={`filtro-chip${filtros.finalidade === v ? ' on' : ''}`}
-                        aria-pressed={filtros.finalidade === v}
-                        onClick={() => set('finalidade', v)}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="filtro-grupo">
                   <span className="filtro-label" id="lbl-tipo">Tipo de imóvel</span>
                   <div className="filtro-chips" role="group" aria-labelledby="lbl-tipo">
