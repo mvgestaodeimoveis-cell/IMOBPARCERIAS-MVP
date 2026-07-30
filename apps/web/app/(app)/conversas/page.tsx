@@ -14,6 +14,7 @@ interface Conversa {
   status: string;
   imovel: { id: string; tipo: string; bairro: string; cidade: string; preco: number; foto: string | null };
   outro_nome: string;
+  nome_revelado: boolean;
   sou_captador: boolean;
   nao_lidas: number;
   ultima_mensagem: { corpo: string; criado_em: string } | null;
@@ -62,8 +63,10 @@ export default function ConversasPage() {
                   {c.imovel.foto ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.imovel.foto} alt="" />
-                  ) : (
+                  ) : c.nome_revelado ? (
                     iniciais(c.outro_nome)
+                  ) : (
+                    '·'
                   )}
                 </div>
                 <div className="conversa-corpo">

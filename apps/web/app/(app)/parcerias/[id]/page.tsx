@@ -26,6 +26,7 @@ interface Detalhe {
   papel: 'captador' | 'comprador';
   cliente_nome: string;
   outro_nome: string;
+  nome_revelado: boolean;
   imovel: {
     id: string;
     tipo: string;
@@ -684,7 +685,11 @@ export default function ParceriaDetalhePage() {
             <Link href={`/conversas/${detalhe.id}`} className="card chat-atalho">
               <span className="chat-atalho-ico" aria-hidden>💬</span>
               <span className="chat-atalho-info">
-                <strong>Conversa com {detalhe.outro_nome}</strong>
+                <strong>
+                  {detalhe.nome_revelado
+                    ? `Conversa com ${detalhe.outro_nome}`
+                    : `Conversar com ${detalhe.outro_nome}`}
+                </strong>
                 <span className="muted">
                   {mensagens.length > 0
                     ? mensagens[mensagens.length - 1].corpo

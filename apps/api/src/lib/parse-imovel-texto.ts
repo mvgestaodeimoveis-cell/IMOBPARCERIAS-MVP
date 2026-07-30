@@ -83,10 +83,18 @@ function extrairPreco(t: string): number | undefined {
     const n = numeroBR(m[1]);
     if (n != null && n >= 1_000) return Math.round(n);
   }
-  m = t.match(/(?:valor|pre[çc]o|por|pedem?)\D{0,8}(\d{1,3}(?:\.\d{3})+|\d{5,})/i);
+  // Inclui rótulos de teto comuns em demandas: "até", "no máximo", "orçamento".
+  m = t.match(/(?:valor|pre[çc]o|por|pedem?|at[ée]|no m[áa]ximo|m[áa]ximo|or[çc]amento|budget)\D{0,8}(\d{1,3}(?:\.\d{3})+|\d{5,})/i);
   if (m) {
     const n = numeroBR(m[1]);
     if (n != null && n >= 1_000) return Math.round(n);
+  }
+  // Fallback: número "solto" no formato milhar BR (ex.: "650.000") — típico de demanda
+  // sem rótulo. Exige o separador de milhar e um piso alto para evitar falsos positivos.
+  m = t.match(/(?:^|[^\d.,])(\d{1,3}(?:\.\d{3})+)(?:,\d{2})?(?![\d.,])/);
+  if (m) {
+    const n = numeroBR(m[1]);
+    if (n != null && n >= 50_000) return Math.round(n);
   }
   return undefined;
 }

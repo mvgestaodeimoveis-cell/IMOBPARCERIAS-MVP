@@ -12,12 +12,14 @@ interface AccessTokenPayload {
 export function signAccessToken(user: AuthUser): string {
   const payload: AccessTokenPayload = { sub: user.id, role: user.role, status: user.status };
   return jwt.sign(payload, env.JWT_SECRET, {
+    algorithm: 'HS256',
     expiresIn: env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
   });
 }
 
 export function verifyAccessToken(token: string): AuthUser {
-  const decoded = jwt.verify(token, env.JWT_SECRET) as AccessTokenPayload;
+  // Fixa o algoritmo esperado (HS256) para não aceitar tokens forjados com outro alg.
+  const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] }) as AccessTokenPayload;
   return { id: decoded.sub, role: decoded.role, status: decoded.status };
 }
 

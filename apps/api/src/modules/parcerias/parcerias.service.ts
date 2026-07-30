@@ -220,7 +220,9 @@ export async function listarConversas(corretorId: string) {
         preco: Number(r.imovel_preco),
         foto: r.imovel_foto,
       },
-      outro_nome: r.outro_nome,
+      // Privacidade (item 3): só revela o nome real depois que a conversa começa.
+      outro_nome: r.ultima_msg ? r.outro_nome.split(' ')[0] : r.sou_captador ? 'o comprador' : 'o captador',
+      nome_revelado: Boolean(r.ultima_msg),
       sou_captador: r.sou_captador,
       nao_lidas: Number(r.nao_lidas),
       ultima_mensagem: r.ultima_msg
@@ -444,13 +446,25 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
     Boolean(p.visita_confirmada_em) &&
     ['aceita', 'em_negociacao', 'encerrada'].includes(p.status);
 
+  // Privacidade: o nome real do parceiro só é revelado depois que a conversa começa
+  // (qualquer mensagem trocada) ou quando os contatos já foram liberados. Antes disso,
+  // o solicitante vê apenas o papel ("o captador"/"o comprador").
+  const { rows: msgRows } = await query<{ n: string }>(
+    'SELECT count(*)::text AS n FROM parceria_mensagem WHERE parceria_id = $1',
+    [p.id],
+  );
+  const nomeRevelado = Number(msgRows[0]?.n ?? 0) > 0 || contatosLiberados;
+  const outroPrimeiroNome = (souCaptador ? p.comprador_nome : p.captador_nome).split(' ')[0];
+  const outroNome = nomeRevelado ? outroPrimeiroNome : souCaptador ? 'o comprador' : 'o captador';
+
   return {
     id: p.id,
     status: p.status,
     papel,
     cliente_nome: p.cliente_nome,
     criado_em: p.criado_em,
-    outro_nome: (souCaptador ? p.comprador_nome : p.captador_nome).split(' ')[0],
+    outro_nome: outroNome,
+    nome_revelado: nomeRevelado,
     imovel: {
       id: p.imovel_id,
       tipo: p.imovel_tipo,

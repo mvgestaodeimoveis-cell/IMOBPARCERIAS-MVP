@@ -26,13 +26,19 @@ vitrineRoutes.post(
     const parsed = importarTextoSchema.safeParse(req.body);
     if (!parsed.success) throw badRequest('Cole o que o cliente procura.');
     const e = parseImovelTexto((parsed.data as ImportarTextoInput).texto);
+    // O preço da demanda é um alvo, não um teto rígido: abre uma faixa de -15% a +10%
+    // em torno dele para não perder imóveis logo abaixo nem os pouco acima (negociáveis).
+    const arredondarMil = (n: number) => String(Math.round(n / 1_000) * 1_000);
+    const precoMin = e.preco != null ? arredondarMil(e.preco * 0.85) : '';
+    const precoMax = e.preco != null ? arredondarMil(e.preco * 1.1) : '';
     res.json({
       filtros: {
         tipo: e.tipo ?? '',
         finalidade: e.finalidade ?? '',
         cidade: e.cidade ?? '',
         bairro: e.bairro ?? '',
-        preco_max: e.preco != null ? String(e.preco) : '',
+        preco_min: precoMin,
+        preco_max: precoMax,
         area_min: e.area_m2 != null ? String(Math.round(e.area_m2)) : '',
         quartos_min: e.quartos != null ? String(e.quartos) : '',
       },

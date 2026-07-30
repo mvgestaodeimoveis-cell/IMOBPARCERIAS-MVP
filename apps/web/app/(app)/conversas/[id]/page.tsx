@@ -13,6 +13,7 @@ interface Detalhe {
   id: string;
   status: string;
   outro_nome: string;
+  nome_revelado: boolean;
   imovel: {
     id: string;
     tipo: string;
@@ -169,7 +170,7 @@ export default function ChatPage() {
           ←
         </button>
         <div className="chat-topbar-avatar" aria-hidden>
-          {detalhe ? iniciais(detalhe.outro_nome) : '·'}
+          {detalhe && detalhe.nome_revelado ? iniciais(detalhe.outro_nome) : '·'}
         </div>
         <div className="chat-topbar-info">
           <strong>{detalhe?.outro_nome ?? 'Conversa'}</strong>

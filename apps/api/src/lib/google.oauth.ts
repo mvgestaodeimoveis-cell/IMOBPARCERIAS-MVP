@@ -31,12 +31,18 @@ export function assertGoogleConfigured(): void {
 
 /** State assinado (curta duração) para proteção CSRF — não depende de cookie. */
 export function signState(intent: GoogleIntent): string {
-  return jwt.sign({ purpose: STATE_PURPOSE, intent }, env.JWT_SECRET, { expiresIn: '10m' });
+  return jwt.sign({ purpose: STATE_PURPOSE, intent }, env.JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: '10m',
+  });
 }
 
 export function verifyState(state: string): GoogleIntent {
   try {
-    const decoded = jwt.verify(state, env.JWT_SECRET) as { purpose?: string; intent?: GoogleIntent };
+    const decoded = jwt.verify(state, env.JWT_SECRET, { algorithms: ['HS256'] }) as {
+      purpose?: string;
+      intent?: GoogleIntent;
+    };
     if (decoded.purpose !== STATE_PURPOSE) throw new Error('purpose inválido');
     return decoded.intent === 'cadastro' ? 'cadastro' : 'login';
   } catch {

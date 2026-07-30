@@ -74,7 +74,7 @@ const COLUNAS = `id, corretor_id, finalidade, tipo, preco, cidade, bairro, cep, 
 
 // Nível 1 (vitrine pública): NUNCA expõe logradouro, número, complemento ou CEP.
 const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, condominio, iptu, taxas_inclusas,
-  area_m2, quartos, banheiros, vagas, fotos, diferenciais, exclusividade_verificada, status,
+  area_m2, quartos, suites, banheiros, vagas, fotos, diferenciais, exclusividade_verificada, status,
   criado_em, atualizado_em`;
 
 function mapImovel(row: ImovelRow): Imovel {
@@ -764,6 +764,7 @@ export interface ImovelVitrine {
   quartos: number | null;
   banheiros: number | null;
   vagas: number | null;
+  suites: number | null;
   fotos: string[];
   diferenciais: string[];
   exclusividade_verificada: boolean;

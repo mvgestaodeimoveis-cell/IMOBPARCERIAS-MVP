@@ -1,4 +1,4 @@
-import { badRequest } from './errors';
+import { AppError, badRequest } from './errors';
 
 export interface ImovelImportado {
   titulo?: string;
@@ -19,6 +19,23 @@ export interface ImovelImportado {
   link_origem: string;
 }
 
+/** Verdadeiro se o host for um IPv4 pontilhado em faixa privada/local/reservada. */
+function ehIpv4PrivadoOuLocal(host: string): boolean {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  return (
+    a === 10 ||
+    a === 127 ||
+    a === 0 ||
+    a === 169 ||
+    (a === 192 && b === 168) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    a >= 224 // multicast/reservado
+  );
+}
+
 /** Bloqueia URLs internas/privadas (mitigação de SSRF). */
 function urlSegura(raw: string): URL {
   let u: URL;
@@ -31,20 +48,43 @@ function urlSegura(raw: string): URL {
     throw badRequest('Link inválido.');
   }
   const host = u.hostname.toLowerCase();
-  if (host === 'localhost' || host === '0.0.0.0' || host.endsWith('.local') || host.endsWith('.internal')) {
+
+  // Nomes locais óbvios.
+  if (
+    host === 'localhost' ||
+    host === '0.0.0.0' ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal') ||
+    host.endsWith('.localhost')
+  ) {
     throw badRequest('Este link não é permitido.');
   }
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
-    const [a, b] = host.split('.').map(Number);
-    const privado =
-      a === 10 ||
-      a === 127 ||
-      a === 0 ||
-      a === 169 ||
-      (a === 192 && b === 168) ||
-      (a === 172 && b >= 16 && b <= 31);
-    if (privado) throw badRequest('Este link não é permitido.');
+
+  // IPv6 (hostname vem sem colchetes): loopback, não-especificado, link-local (fe80),
+  // ULA (fc00::/7 → fc/fd) e IPv4-mapeado.
+  if (host.includes(':')) {
+    const h = host.replace(/^\[|\]$/g, '');
+    if (
+      h === '::1' ||
+      h === '::' ||
+      h.startsWith('fe80') ||
+      h.startsWith('fc') ||
+      h.startsWith('fd') ||
+      h.startsWith('::ffff:')
+    ) {
+      throw badRequest('Este link não é permitido.');
+    }
   }
+
+  // IP em formato numérico não pontilhado (decimal/hex) — ex.: http://2130706433 = 127.0.0.1.
+  if (/^\d+$/.test(host) || /^0x[0-9a-f]+$/i.test(host)) {
+    throw badRequest('Este link não é permitido.');
+  }
+
+  if (ehIpv4PrivadoOuLocal(host)) {
+    throw badRequest('Este link não é permitido.');
+  }
+
   return u;
 }
 
@@ -241,20 +281,38 @@ export async function importarDeUrl(url: string): Promise<ImovelImportado> {
   const u = urlSegura(url);
   let res: Response;
   try {
-    res = await fetch(u.toString(), {
-      redirect: 'follow',
-      signal: AbortSignal.timeout(9000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; ImobParceriasBot/1.0; +https://imobparcerias.com.br)',
-        Accept: 'text/html,application/xhtml+xml',
-      },
-    });
-  } catch {
+    // Redirecionamentos são seguidos manualmente para revalidar cada destino — sem isso,
+    // um link público poderia redirecionar para um host interno (bypass do anti-SSRF).
+    let alvo = u;
+    let resposta: Response | null = null;
+    for (let hop = 0; hop < 4; hop++) {
+      const r = await fetch(alvo.toString(), {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(9000),
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (compatible; ImobParceriasBot/1.0; +https://imobparcerias.com.br)',
+          Accept: 'text/html,application/xhtml+xml',
+        },
+      });
+      if (r.status >= 300 && r.status < 400) {
+        const loc = r.headers.get('location');
+        if (!loc) throw badRequest('O site não permitiu a leitura automática. Preencha manualmente.');
+        alvo = urlSegura(new URL(loc, alvo).toString());
+        continue;
+      }
+      resposta = r;
+      break;
+    }
+    if (!resposta) throw badRequest('O link tem redirecionamentos em excesso.');
+    res = resposta;
+  } catch (err) {
+    if (err instanceof AppError) throw err;
     throw badRequest('Não foi possível acessar o link. Verifique o endereço.');
   }
   if (!res.ok) {
     throw badRequest('O site não permitiu a leitura automática. Preencha manualmente.');
   }
   const html = (await res.text()).slice(0, 3_000_000);
-  return extrairDeHtml(html, u.toString());
+  return extrairDeHtml(html, res.url || u.toString());
 }

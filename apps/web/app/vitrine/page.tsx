@@ -27,6 +27,7 @@ interface ImovelVitrine {
   quartos: number | null;
   banheiros: number | null;
   vagas: number | null;
+  suites: number | null;
   fotos: string[];
   diferenciais: string[];
   exclusividade_verificada: boolean;
@@ -545,13 +546,16 @@ export default function VitrinePage() {
                             {[
                               im.area_m2 ? `${im.area_m2} m²` : null,
                               im.quartos != null ? `${im.quartos} qto` : null,
+                              im.suites != null && im.suites > 0
+                                ? `${im.suites} suíte${im.suites > 1 ? 's' : ''}`
+                                : null,
                               im.banheiros != null ? `${im.banheiros} banh.` : null,
                               im.vagas != null ? `${im.vagas} vaga` : null,
                             ]
                               .filter(Boolean)
                               .join(' · ')}
                           </p>
-                          {im.finalidade === 'aluguel' && (
+                          {im.finalidade === 'aluguel' ? (
                             <p className="imovel-meta">
                               {im.taxas_inclusas
                                 ? 'Condomínio + IPTU inclusos'
@@ -562,6 +566,10 @@ export default function VitrinePage() {
                                     .filter(Boolean)
                                     .join(' · ') || null}
                             </p>
+                          ) : (
+                            im.condominio != null && (
+                              <p className="imovel-meta">Cond. {formatBRL(im.condominio)}</p>
+                            )
                           )}
                           <p className="vitrine-data">Atualizado em {dataPublicacao(im.atualizado_em)}</p>
                         </div>
