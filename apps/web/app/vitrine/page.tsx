@@ -555,7 +555,7 @@ export default function VitrinePage() {
                               .filter(Boolean)
                               .join(' · ')}
                           </p>
-                          {im.finalidade === 'aluguel' ? (
+                          {im.finalidade === 'aluguel' && (
                             <p className="imovel-meta">
                               {im.taxas_inclusas
                                 ? 'Condomínio + IPTU inclusos'
@@ -566,10 +566,6 @@ export default function VitrinePage() {
                                     .filter(Boolean)
                                     .join(' · ') || null}
                             </p>
-                          ) : (
-                            im.condominio != null && (
-                              <p className="imovel-meta">Cond. {formatBRL(im.condominio)}</p>
-                            )
                           )}
                           <p className="vitrine-data">Atualizado em {dataPublicacao(im.atualizado_em)}</p>
                         </div>

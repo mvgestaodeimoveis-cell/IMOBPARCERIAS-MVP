@@ -26,6 +26,7 @@ interface ImovelVitrine {
   taxas_inclusas: boolean;
   area_m2: number | null;
   quartos: number | null;
+  suites: number | null;
   banheiros: number | null;
   vagas: number | null;
   fotos: string[];
@@ -187,8 +188,12 @@ export default function VitrineDetalhePage() {
                   <div className="detail-grid">
                     {imovel.area_m2 != null && <span><b>{imovel.area_m2}</b> m²</span>}
                     {imovel.quartos != null && <span><b>{imovel.quartos}</b> quarto(s)</span>}
+                    {imovel.suites != null && imovel.suites > 0 && <span><b>{imovel.suites}</b> suíte(s)</span>}
                     {imovel.banheiros != null && <span><b>{imovel.banheiros}</b> banheiro(s)</span>}
                     {imovel.vagas != null && <span><b>{imovel.vagas}</b> vaga(s)</span>}
+                    {imovel.finalidade === 'venda' && imovel.condominio != null && (
+                      <span>Condomínio: <b>{formatBRL(imovel.condominio)}</b></span>
+                    )}
                   </div>
                 </div>
 
