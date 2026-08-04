@@ -24,6 +24,8 @@ interface ParceriaRow {
   imovel: { tipo: string; bairro: string; cidade: string; preco: number };
   captador_nome: string;
   comprador_nome: string;
+  feedback_resultado: string | null;
+  feedback_autor: string | null;
 }
 
 interface ListResponse {
@@ -39,6 +41,15 @@ const STATUS_BADGE: Record<string, string> = {
   encerrada: 'badge-gray',
   recusada: 'badge-red',
   cancelada: 'badge-gray',
+};
+
+// Resultado do feedback pós-visita (para a equipe acompanhar o desfecho).
+const FEEDBACK_LABEL: Record<string, string> = {
+  proposta: 'Houve proposta',
+  interesse_sem_proposta: 'Interesse, sem proposta',
+  sem_interesse: 'Cliente não se interessou',
+  revisitar: 'Quer revisitar',
+  outros: 'Outros motivos',
 };
 
 const FILTROS = ['', 'solicitada', 'aceita', 'em_negociacao', 'vendida', 'encerrada', 'recusada', 'cancelada'];
@@ -157,6 +168,14 @@ export default function AdminParceriasPage() {
                 <td style={{ fontSize: '0.84rem' }}>
                   {etapa(p)}
                   {p.venda_valor != null && <><br /><span className="muted">Venda: {formatBRL(p.venda_valor)}</span></>}
+                  {p.feedback_resultado && (
+                    <>
+                      <br />
+                      <span style={{ color: 'var(--emerald, #059669)', fontWeight: 600 }} title={p.feedback_autor ? `Feedback de ${p.feedback_autor}` : undefined}>
+                        📝 Resultado: {FEEDBACK_LABEL[p.feedback_resultado] ?? p.feedback_resultado}
+                      </span>
+                    </>
+                  )}
                 </td>
                 <td>
                   <span className={`badge badge-dot ${STATUS_BADGE[p.status] ?? 'badge-gray'}`}>

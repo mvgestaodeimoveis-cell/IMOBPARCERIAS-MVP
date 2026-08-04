@@ -507,6 +507,8 @@ interface ParceriaAdminRow {
   captador_nome: string;
   comprador_nome: string;
   total_mensagens: string;
+  feedback_resultado: string | null;
+  feedback_autor: string | null;
 }
 
 /** Lista todas as parcerias com o estágio atual (filtro opcional por status). */
@@ -526,7 +528,11 @@ export async function listarParceriasAdmin(status?: string) {
             i.tipo AS imovel_tipo, i.bairro AS imovel_bairro, i.cidade AS imovel_cidade,
             i.preco::text AS imovel_preco,
             cap.nome AS captador_nome, comp.nome AS comprador_nome,
-            (SELECT count(*) FROM parceria_mensagem m WHERE m.parceria_id = p.id)::text AS total_mensagens
+            (SELECT count(*) FROM parceria_mensagem m WHERE m.parceria_id = p.id)::text AS total_mensagens,
+            (SELECT f.resultado FROM parceria_visita_feedback f
+              WHERE f.parceria_id = p.id ORDER BY f.criado_em DESC LIMIT 1) AS feedback_resultado,
+            (SELECT a.nome FROM parceria_visita_feedback f JOIN corretor a ON a.id = f.autor_id
+              WHERE f.parceria_id = p.id ORDER BY f.criado_em DESC LIMIT 1) AS feedback_autor
      FROM parceria p
      JOIN imovel i ON i.id = p.imovel_id
      JOIN corretor cap ON cap.id = p.captador_id
@@ -554,6 +560,8 @@ export async function listarParceriasAdmin(status?: string) {
       venda_valor: r.venda_valor ? Number(r.venda_valor) : null,
       pagamento_status: r.pagamento_status,
       total_mensagens: Number(r.total_mensagens),
+      feedback_resultado: r.feedback_resultado,
+      feedback_autor: r.feedback_autor,
       imovel: {
         tipo: r.imovel_tipo,
         bairro: r.imovel_bairro,
