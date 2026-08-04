@@ -31,7 +31,11 @@ const imovelBase = z.object({
   unidade: opcional(20),
   andar: opcional(20),
   bloco: opcional(40),
+  // Condomínio (Seção padronizada): o corretor responde se o imóvel está em condomínio.
+  // Quando sim, pode informar nome, valor mensal (condominio) e a infraestrutura disponível.
+  em_condominio: z.boolean().optional().default(false),
   nome_condominio: opcional(120),
+  condominio_infraestrutura: z.array(z.string().trim().min(1).max(60)).max(30).optional().default([]),
   // Taxas (relevantes p/ aluguel). Se taxas_inclusas=true, condomínio/IPTU ficam nulos.
   condominio: z.number().min(0).max(1_000_000).nullish(),
   iptu: z.number().min(0).max(1_000_000).nullish(),

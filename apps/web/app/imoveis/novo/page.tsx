@@ -70,6 +70,24 @@ const DOCS_SUGERIDOS = [
   'Planta do imóvel',
 ];
 
+// Infraestrutura de condomínio (exibida padronizada na ficha do imóvel).
+const INFRA_CONDOMINIO = [
+  'Piscina',
+  'Academia',
+  'Salão de festas',
+  'Churrasqueira',
+  'Playground',
+  'Portaria 24h',
+  'Elevador',
+  'Quadra esportiva',
+  'Espaço gourmet',
+  'Sauna',
+  'Segurança/CFTV',
+  'Área verde',
+  'Coworking',
+  'Pet place',
+];
+
 const TOTAL_ETAPAS = 5;
 const TITULOS = ['Tipo do anúncio', 'Localização', 'Detalhes', 'Fotos', 'Revisão'];
 const RASCUNHO_KEY = 'imob.rascunho_imovel';
@@ -123,6 +141,7 @@ export default function NovoImovelPage() {
     descricao: '',
   });
   const [emCondominio, setEmCondominio] = useState(false);
+  const [infraCondominio, setInfraCondominio] = useState<string[]>([]);
   const [taxasInclusas, setTaxasInclusas] = useState(false);
   const [counts, setCounts] = useState({ quartos: 0, suites: 0, banheiros: 0, vagas: 0 });
   const [diferenciais, setDiferenciais] = useState<string[]>([]);
@@ -188,6 +207,7 @@ export default function NovoImovelPage() {
         JSON.stringify({
           form,
           emCondominio,
+          infraCondominio,
           taxasInclusas,
           counts,
           diferenciais,
@@ -204,13 +224,12 @@ export default function NovoImovelPage() {
     } catch {
       /* localStorage cheio/indisponível — ignora */
     }
-  }, [salvarAtivo, form, emCondominio, taxasInclusas, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);
-
-  function restaurarRascunho() {
+  }, [salvarAtivo, form, emCondominio, infraCondominio, taxasInclusas, counts, diferenciais, documentacao, fotos, exclusividade, exclusividadeVencimento, contratoUrl, linkOrigem, step]);  function restaurarRascunho() {
     try {
       const d = JSON.parse(localStorage.getItem(RASCUNHO_KEY) || '{}');
       if (d.form) setForm(d.form);
       if (typeof d.emCondominio === 'boolean') setEmCondominio(d.emCondominio);
+      if (Array.isArray(d.infraCondominio)) setInfraCondominio(d.infraCondominio);
       if (typeof d.taxasInclusas === 'boolean') setTaxasInclusas(d.taxasInclusas);
       if (d.counts) setCounts(d.counts);
       if (Array.isArray(d.diferenciais)) setDiferenciais(d.diferenciais);
@@ -257,6 +276,10 @@ export default function NovoImovelPage() {
   function toggleDoc(d: string) {
     setDocumentacao((arr) => (arr.includes(d) ? arr.filter((x) => x !== d) : [...arr, d]));
     if (fieldErrors.documentacao) setFieldErrors((e) => ({ ...e, documentacao: '' }));
+  }
+
+  function toggleInfra(d: string) {
+    setInfraCondominio((arr) => (arr.includes(d) ? arr.filter((x) => x !== d) : [...arr, d]));
   }
 
   async function enviarContrato(file?: File) {
@@ -477,6 +500,20 @@ export default function NovoImovelPage() {
       setErro('É necessário aceitar o Termo de Parceria para publicar.');
       return;
     }
+    // Sem 5 fotos o imóvel é aceito, mas NÃO aparece na vitrine (regra da “ficha completa”).
+    // Antes isso acontecia em silêncio — a pessoa publicava e achava que tinha travado.
+    if (fotos.length < 5) {
+      const faltam = 5 - fotos.length;
+      const ok = window.confirm(
+        `Seu imóvel tem ${fotos.length} foto${fotos.length === 1 ? '' : 's'}. ` +
+          'Imóveis com menos de 5 fotos NÃO aparecem na vitrine para os outros corretores.\n\n' +
+          `Faltam ${faltam} foto${faltam === 1 ? '' : 's'}. Publicar assim mesmo?`,
+      );
+      if (!ok) {
+        setStep(4);
+        return;
+      }
+    }
     const payload = {
       finalidade: form.finalidade,
       tipo: form.tipo,
@@ -488,13 +525,17 @@ export default function NovoImovelPage() {
       unidade: form.unidade || undefined,
       andar: form.andar || undefined,
       bloco: form.bloco || undefined,
+      em_condominio: form.tipo === 'terreno' ? false : emCondominio,
       nome_condominio: emCondominio ? form.nome_condominio || undefined : undefined,
+      condominio_infraestrutura: emCondominio ? infraCondominio : [],
       bairro: form.bairro,
       cidade: form.cidade,
       area_m2: parseNumero(form.area_m2),
       taxas_inclusas: form.finalidade === 'aluguel' ? taxasInclusas : false,
       condominio:
-        form.finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.condominio) : undefined,
+        emCondominio && !(form.finalidade === 'aluguel' && taxasInclusas)
+          ? parseNumero(form.condominio)
+          : undefined,
       iptu: form.finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.iptu) : undefined,
       quartos: counts.quartos,
       suites: counts.suites,
@@ -787,18 +828,6 @@ export default function NovoImovelPage() {
               </div>
             )}
 
-            {form.tipo === 'casa' && (
-              <div className="field">
-                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontWeight: 400 }}>
-                  <input type="checkbox" checked={emCondominio} onChange={(e) => setEmCondominio(e.target.checked)} style={{ width: 18, height: 18 }} />
-                  <span>Casa em condomínio fechado</span>
-                </label>
-                {emCondominio && (
-                  <input className="input" style={{ marginTop: '0.5rem' }} placeholder="Nome do condomínio" value={form.nome_condominio} onChange={(e) => set('nome_condominio', e.target.value)} />
-                )}
-              </div>
-            )}
-
             <div className="grid-2">
               <div className="field">
                 <label htmlFor="bairro">Bairro</label>
@@ -873,40 +902,94 @@ export default function NovoImovelPage() {
                   />
                   <span>Condomínio e IPTU inclusos no valor do aluguel</span>
                 </label>
-                <div className="grid-2" style={{ marginTop: '0.6rem' }}>
-                  <div className="field">
-                    <label htmlFor="condominio">Condomínio (mês)</label>
-                    <div className="input-prefix">
-                      <span>R$</span>
-                      <input
-                        id="condominio"
-                        inputMode="numeric"
-                        placeholder="0"
-                        disabled={taxasInclusas}
-                        value={form.condominio}
-                        onChange={(e) => set('condominio', formatMilhar(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="iptu">IPTU (mês)</label>
-                    <div className="input-prefix">
-                      <span>R$</span>
-                      <input
-                        id="iptu"
-                        inputMode="numeric"
-                        placeholder="0"
-                        disabled={taxasInclusas}
-                        value={form.iptu}
-                        onChange={(e) => set('iptu', formatMilhar(e.target.value))}
-                      />
-                    </div>
+                <div className="field" style={{ marginTop: '0.6rem' }}>
+                  <label htmlFor="iptu">IPTU (mês)</label>
+                  <div className="input-prefix">
+                    <span>R$</span>
+                    <input
+                      id="iptu"
+                      inputMode="numeric"
+                      placeholder="0"
+                      disabled={taxasInclusas}
+                      value={form.iptu}
+                      onChange={(e) => set('iptu', formatMilhar(e.target.value))}
+                    />
                   </div>
                 </div>
                 {taxasInclusas && (
                   <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
                     As taxas já estão incluídas no valor do aluguel.
                   </p>
+                )}
+              </div>
+            )}
+
+            {form.tipo !== 'terreno' && (
+              <div className="field" style={{ marginTop: '0.75rem' }}>
+                <label>Este imóvel está em condomínio?</label>
+                <div className="sug-chips" style={{ marginBottom: emCondominio ? '0.85rem' : 0 }}>
+                  <button
+                    type="button"
+                    className={`sug-chip ${emCondominio ? 'on' : ''}`}
+                    onClick={() => setEmCondominio(true)}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    className={`sug-chip ${!emCondominio ? 'on' : ''}`}
+                    onClick={() => setEmCondominio(false)}
+                  >
+                    Não
+                  </button>
+                </div>
+                {emCondominio && (
+                  <>
+                    <div className="field">
+                      <label htmlFor="nome_condominio">Nome do condomínio</label>
+                      <input
+                        id="nome_condominio"
+                        className="input"
+                        placeholder="Ex.: Residencial Jardins"
+                        value={form.nome_condominio}
+                        onChange={(e) => set('nome_condominio', e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="condominio">Valor do condomínio (mês)</label>
+                      <div className="input-prefix">
+                        <span>R$</span>
+                        <input
+                          id="condominio"
+                          inputMode="numeric"
+                          placeholder="0"
+                          disabled={form.finalidade === 'aluguel' && taxasInclusas}
+                          value={form.condominio}
+                          onChange={(e) => set('condominio', formatMilhar(e.target.value))}
+                        />
+                      </div>
+                      {form.finalidade === 'aluguel' && taxasInclusas && (
+                        <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
+                          Incluso no valor do aluguel.
+                        </p>
+                      )}
+                    </div>
+                    <div className="field">
+                      <label>Infraestrutura do condomínio</label>
+                      <div className="sug-chips">
+                        {INFRA_CONDOMINIO.map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            className={`sug-chip ${infraCondominio.includes(d) ? 'on' : ''}`}
+                            onClick={() => toggleInfra(d)}
+                          >
+                            {d}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}
@@ -1020,6 +1103,24 @@ export default function NovoImovelPage() {
         {step === 5 && (
           <>
             <h2 className="wizard-q">Revise e publique</h2>
+
+            {fotos.length < 5 && (
+              <div className="banner banner-warning" style={{ marginBottom: '1rem' }}>
+                <strong>Faltam fotos para aparecer na vitrine.</strong> Seu imóvel tem {fotos.length}{' '}
+                de 5 fotos. Ele será publicado, mas só aparece para os outros corretores quando
+                tiver <strong>5 fotos ou mais</strong>.
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    style={{ marginTop: '0.5rem' }}
+                    onClick={() => setStep(4)}
+                  >
+                    Adicionar fotos
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="field">
               <label htmlFor="descricao">Descrição</label>

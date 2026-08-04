@@ -22,6 +22,9 @@ interface Imovel {
   logradouro: string;
   numero: string;
   complemento: string | null;
+  em_condominio: boolean;
+  nome_condominio: string | null;
+  condominio_infraestrutura: string[];
   condominio: number | null;
   iptu: number | null;
   taxas_inclusas: boolean;
@@ -177,6 +180,23 @@ export default function ImovelDetalhePage() {
                 <p className="muted" style={{ marginTop: '0.85rem' }}>{imovel.descricao}</p>
               )}
             </div>
+
+            {imovel.em_condominio && (
+              <div className="card" style={{ marginTop: '0.85rem' }}>
+                <h3 className="detail-label">Condomínio</h3>
+                <div className="detail-grid">
+                  {imovel.nome_condominio && <span>Nome: <b>{imovel.nome_condominio}</b></span>}
+                  {imovel.condominio != null && <span>Valor: <b>{formatBRL(imovel.condominio)}</b>/mês</span>}
+                </div>
+                {imovel.condominio_infraestrutura.length > 0 && (
+                  <div className="chips" style={{ marginTop: '0.6rem' }}>
+                    {imovel.condominio_infraestrutura.map((d) => (
+                      <span key={d} className="chip chip-static">{d}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {imovel.finalidade === 'aluguel' && (
               <div className="card" style={{ marginTop: '0.85rem' }}>

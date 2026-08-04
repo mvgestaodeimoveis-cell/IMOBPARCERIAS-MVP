@@ -33,7 +33,9 @@ export interface Imovel {
   unidade: string | null;
   andar: string | null;
   bloco: string | null;
+  em_condominio: boolean;
   nome_condominio: string | null;
+  condominio_infraestrutura: string[];
   condominio: number | null;
   iptu: number | null;
   taxas_inclusas: boolean;
@@ -66,14 +68,17 @@ interface ImovelRow extends Omit<Imovel, 'preco' | 'area_m2' | 'condominio' | 'i
 }
 
 const COLUNAS = `id, corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro,
-  numero, complemento, unidade, andar, bloco, nome_condominio, condominio, iptu, taxas_inclusas,
+  numero, complemento, unidade, andar, bloco, em_condominio, nome_condominio,
+  condominio_infraestrutura, condominio, iptu, taxas_inclusas,
   area_m2, quartos, suites, banheiros,
   vagas, descricao, fotos, diferenciais, documentacao, exclusividade_verificada, exclusividade,
   exclusividade_contrato_url, exclusividade_vencimento::text AS exclusividade_vencimento,
   exclusividade_status, status, origem, link_origem, criado_em, atualizado_em`;
 
 // Nível 1 (vitrine pública): NUNCA expõe logradouro, número, complemento ou CEP.
-const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, condominio, iptu, taxas_inclusas,
+// O NOME do condomínio também fica oculto (identifica o prédio) — só a infraestrutura e o valor.
+const COLUNAS_VITRINE = `id, finalidade, tipo, preco, cidade, bairro, em_condominio,
+  condominio_infraestrutura, condominio, iptu, taxas_inclusas,
   area_m2, quartos, suites, banheiros, vagas, fotos, diferenciais, exclusividade_verificada, status,
   criado_em, atualizado_em`;
 
@@ -120,7 +125,18 @@ async function garantirCorretorAtivo(corretorId: string): Promise<void> {
     corretorId,
   ]);
   if (!rows[0]) throw notFound('Corretor não encontrado.');
-  if (rows[0].status !== 'ativo') {
+  const status = rows[0].status;
+  if (status !== 'ativo') {
+    // Mensagem específica por situação — antes um corretor com cadastro incompleto recebia
+    // "precisa estar aprovado" e não entendia que faltava concluir o próprio cadastro.
+    if (status === 'cadastro_incompleto') {
+      throw forbidden('Conclua seu cadastro (CRECI e dados profissionais) para publicar imóveis.');
+    }
+    if (status === 'verificacao_pendente') {
+      throw forbidden(
+        'Seu cadastro está em análise. Assim que o CRECI for aprovado, você poderá publicar imóveis.',
+      );
+    }
     throw forbidden('Seu cadastro precisa estar aprovado para publicar imóveis.');
   }
 }
@@ -372,11 +388,12 @@ export async function criarImovel(
     const { rows } = await client.query<ImovelRow>(
       `INSERT INTO imovel
          (corretor_id, finalidade, tipo, preco, cidade, bairro, cep, logradouro, numero,
-          complemento, unidade, andar, bloco, nome_condominio, area_m2, quartos, suites, banheiros,
+          complemento, unidade, andar, bloco, em_condominio, nome_condominio,
+          condominio_infraestrutura, area_m2, quartos, suites, banheiros,
           vagas, descricao, fotos, diferenciais, documentacao, chave_dedupe, chave_predio, origem,
           link_origem, exclusividade, exclusividade_contrato_url, exclusividade_vencimento,
           exclusividade_status, condominio, iptu, taxas_inclusas)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36)
        RETURNING ${COLUNAS}`,
       [
         corretorId,
@@ -392,7 +409,9 @@ export async function criarImovel(
         input.unidade,
         input.andar,
         input.bloco,
-        input.nome_condominio,
+        input.em_condominio ?? false,
+        input.em_condominio ? input.nome_condominio ?? null : null,
+        JSON.stringify(input.em_condominio ? input.condominio_infraestrutura ?? [] : []),
         input.area_m2 ?? null,
         input.quartos ?? null,
         input.suites ?? null,
@@ -410,7 +429,7 @@ export async function criarImovel(
         input.exclusividade_contrato_url ?? null,
         input.exclusividade_vencimento ?? null,
         input.exclusividade ? 'pendente' : 'nao',
-        input.taxas_inclusas ? null : input.condominio ?? null,
+        !input.em_condominio || input.taxas_inclusas ? null : input.condominio ?? null,
         input.taxas_inclusas ? null : input.iptu ?? null,
         input.taxas_inclusas ?? false,
       ],
@@ -538,7 +557,10 @@ export async function atualizarImovel(
     unidade: input.unidade === undefined ? atual.unidade : input.unidade,
     andar: input.andar === undefined ? atual.andar : input.andar,
     bloco: input.bloco === undefined ? atual.bloco : input.bloco,
+    em_condominio: input.em_condominio === undefined ? atual.em_condominio : input.em_condominio,
     nome_condominio: input.nome_condominio === undefined ? atual.nome_condominio : input.nome_condominio,
+    condominio_infraestrutura:
+      input.condominio_infraestrutura === undefined ? atual.condominio_infraestrutura : input.condominio_infraestrutura,
     condominio: input.condominio === undefined ? atual.condominio : input.condominio,
     iptu: input.iptu === undefined ? atual.iptu : input.iptu,
     taxas_inclusas: input.taxas_inclusas === undefined ? atual.taxas_inclusas : input.taxas_inclusas,
@@ -570,7 +592,8 @@ export async function atualizarImovel(
        bloco = $13, nome_condominio = $14, area_m2 = $15, quartos = $16, suites = $17,
        banheiros = $18, vagas = $19, descricao = $20, fotos = $21, diferenciais = $22,
        documentacao = $23, status = $24, chave_dedupe = $25, chave_predio = $26,
-       condominio = $27, iptu = $28, taxas_inclusas = $29, atualizado_em = now()
+       condominio = $27, iptu = $28, taxas_inclusas = $29,
+       em_condominio = $30, condominio_infraestrutura = $31, atualizado_em = now()
      WHERE id = $1
      RETURNING ${COLUNAS}`,
     [
@@ -587,7 +610,7 @@ export async function atualizarImovel(
       merged.unidade,
       merged.andar,
       merged.bloco,
-      merged.nome_condominio,
+      merged.em_condominio ? merged.nome_condominio : null,
       merged.area_m2,
       merged.quartos,
       merged.suites,
@@ -600,9 +623,11 @@ export async function atualizarImovel(
       merged.status,
       chave,
       predio,
-      merged.taxas_inclusas ? null : merged.condominio,
+      !merged.em_condominio || merged.taxas_inclusas ? null : merged.condominio,
       merged.taxas_inclusas ? null : merged.iptu,
       merged.taxas_inclusas,
+      merged.em_condominio,
+      JSON.stringify(merged.em_condominio ? merged.condominio_infraestrutura ?? [] : []),
     ],
   );
   return mapImovel(rows[0]);
@@ -757,6 +782,8 @@ export interface ImovelVitrine {
   preco: number;
   cidade: string;
   bairro: string;
+  em_condominio: boolean;
+  condominio_infraestrutura: string[];
   condominio: number | null;
   iptu: number | null;
   taxas_inclusas: boolean;

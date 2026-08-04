@@ -24,6 +24,9 @@ interface Imovel {
   logradouro: string;
   numero: string;
   complemento: string | null;
+  em_condominio: boolean;
+  nome_condominio: string | null;
+  condominio_infraestrutura: string[];
   condominio: number | null;
   iptu: number | null;
   taxas_inclusas: boolean;
@@ -51,6 +54,24 @@ const DIFERENCIAIS_SUGERIDOS = [
   'Ar-condicionado',
   'Salão de festas',
   'Vista livre',
+];
+
+// Infraestrutura de condomínio (exibida padronizada na ficha do imóvel).
+const INFRA_CONDOMINIO = [
+  'Piscina',
+  'Academia',
+  'Salão de festas',
+  'Churrasqueira',
+  'Playground',
+  'Portaria 24h',
+  'Elevador',
+  'Quadra esportiva',
+  'Espaço gourmet',
+  'Sauna',
+  'Segurança/CFTV',
+  'Área verde',
+  'Coworking',
+  'Pet place',
 ];
 
 function Stepper({
@@ -94,6 +115,7 @@ export default function EditarImovelPage() {
     preco: '',
     area_m2: '',
     condominio: '',
+    nome_condominio: '',
     iptu: '',
     cep: '',
     logradouro: '',
@@ -104,6 +126,8 @@ export default function EditarImovelPage() {
     descricao: '',
   });
   const [taxasInclusas, setTaxasInclusas] = useState(false);
+  const [emCondominio, setEmCondominio] = useState(false);
+  const [infraCondominio, setInfraCondominio] = useState<string[]>([]);
   const [counts, setCounts] = useState({ quartos: 0, suites: 0, banheiros: 0, vagas: 0 });
   const [diferenciais, setDiferenciais] = useState<string[]>([]);
   const [difInput, setDifInput] = useState('');
@@ -123,6 +147,7 @@ export default function EditarImovelPage() {
           preco: im.preco ? formatMilhar(String(Math.round(im.preco))) : '',
           area_m2: im.area_m2 != null ? String(im.area_m2) : '',
           condominio: im.condominio != null ? formatMilhar(String(Math.round(im.condominio))) : '',
+          nome_condominio: im.nome_condominio ?? '',
           iptu: im.iptu != null ? formatMilhar(String(Math.round(im.iptu))) : '',
           cep: maskCep(im.cep ?? ''),
           logradouro: im.logradouro ?? '',
@@ -133,6 +158,8 @@ export default function EditarImovelPage() {
           descricao: im.descricao ?? '',
         });
         setTaxasInclusas(Boolean(im.taxas_inclusas));
+        setEmCondominio(Boolean(im.em_condominio));
+        setInfraCondominio(Array.isArray(im.condominio_infraestrutura) ? im.condominio_infraestrutura : []);
         setCounts({
           quartos: im.quartos ?? 0,
           suites: im.suites ?? 0,
@@ -156,6 +183,10 @@ export default function EditarImovelPage() {
     const d = difInput.trim();
     if (d && !diferenciais.includes(d)) setDiferenciais((atual) => [...atual, d]);
     setDifInput('');
+  }
+
+  function toggleInfra(d: string) {
+    setInfraCondominio((arr) => (arr.includes(d) ? arr.filter((x) => x !== d) : [...arr, d]));
   }
 
   async function salvar() {
@@ -187,9 +218,14 @@ export default function EditarImovelPage() {
       descricao: form.descricao.trim() || undefined,
       diferenciais,
       fotos,
+      em_condominio: tipo === 'terreno' ? false : emCondominio,
+      nome_condominio: emCondominio ? form.nome_condominio.trim() || undefined : undefined,
+      condominio_infraestrutura: emCondominio ? infraCondominio : [],
       taxas_inclusas: finalidade === 'aluguel' ? taxasInclusas : false,
       condominio:
-        finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.condominio) : undefined,
+        emCondominio && !(finalidade === 'aluguel' && taxasInclusas)
+          ? parseNumero(form.condominio)
+          : undefined,
       iptu: finalidade === 'aluguel' && !taxasInclusas ? parseNumero(form.iptu) : undefined,
     };
 
@@ -296,36 +332,90 @@ export default function EditarImovelPage() {
                   />
                   <span>Condomínio e IPTU inclusos no valor do aluguel</span>
                 </label>
-                <div className="grid-2" style={{ marginTop: '0.6rem' }}>
-                  <div className="field">
-                    <label htmlFor="condominio">Condomínio (mês)</label>
-                    <div className="input-prefix">
-                      <span>R$</span>
-                      <input
-                        id="condominio"
-                        inputMode="numeric"
-                        placeholder="0"
-                        disabled={taxasInclusas}
-                        value={form.condominio}
-                        onChange={(e) => set('condominio', formatMilhar(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                  <div className="field">
-                    <label htmlFor="iptu">IPTU (mês)</label>
-                    <div className="input-prefix">
-                      <span>R$</span>
-                      <input
-                        id="iptu"
-                        inputMode="numeric"
-                        placeholder="0"
-                        disabled={taxasInclusas}
-                        value={form.iptu}
-                        onChange={(e) => set('iptu', formatMilhar(e.target.value))}
-                      />
-                    </div>
+                <div className="field" style={{ marginTop: '0.6rem' }}>
+                  <label htmlFor="iptu">IPTU (mês)</label>
+                  <div className="input-prefix">
+                    <span>R$</span>
+                    <input
+                      id="iptu"
+                      inputMode="numeric"
+                      placeholder="0"
+                      disabled={taxasInclusas}
+                      value={form.iptu}
+                      onChange={(e) => set('iptu', formatMilhar(e.target.value))}
+                    />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {tipo !== 'terreno' && (
+              <div className="field" style={{ marginTop: '0.75rem' }}>
+                <label>Este imóvel está em condomínio?</label>
+                <div className="sug-chips" style={{ marginBottom: emCondominio ? '0.85rem' : 0 }}>
+                  <button
+                    type="button"
+                    className={`sug-chip ${emCondominio ? 'on' : ''}`}
+                    onClick={() => setEmCondominio(true)}
+                  >
+                    Sim
+                  </button>
+                  <button
+                    type="button"
+                    className={`sug-chip ${!emCondominio ? 'on' : ''}`}
+                    onClick={() => setEmCondominio(false)}
+                  >
+                    Não
+                  </button>
+                </div>
+                {emCondominio && (
+                  <>
+                    <div className="field">
+                      <label htmlFor="nome_condominio">Nome do condomínio</label>
+                      <input
+                        id="nome_condominio"
+                        className="input"
+                        placeholder="Ex.: Residencial Jardins"
+                        value={form.nome_condominio}
+                        onChange={(e) => set('nome_condominio', e.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label htmlFor="condominio">Valor do condomínio (mês)</label>
+                      <div className="input-prefix">
+                        <span>R$</span>
+                        <input
+                          id="condominio"
+                          inputMode="numeric"
+                          placeholder="0"
+                          disabled={finalidade === 'aluguel' && taxasInclusas}
+                          value={form.condominio}
+                          onChange={(e) => set('condominio', formatMilhar(e.target.value))}
+                        />
+                      </div>
+                      {finalidade === 'aluguel' && taxasInclusas && (
+                        <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.82rem' }}>
+                          Incluso no valor do aluguel.
+                        </p>
+                      )}
+                    </div>
+                    <div className="field">
+                      <label>Infraestrutura do condomínio</label>
+                      <div className="sug-chips">
+                        {INFRA_CONDOMINIO.map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            className={`sug-chip ${infraCondominio.includes(d) ? 'on' : ''}`}
+                            onClick={() => toggleInfra(d)}
+                          >
+                            {d}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

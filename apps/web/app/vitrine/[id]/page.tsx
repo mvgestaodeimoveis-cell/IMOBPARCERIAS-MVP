@@ -21,6 +21,8 @@ interface ImovelVitrine {
   preco: number;
   cidade: string;
   bairro: string;
+  em_condominio: boolean;
+  condominio_infraestrutura: string[];
   condominio: number | null;
   iptu: number | null;
   taxas_inclusas: boolean;
@@ -196,6 +198,20 @@ export default function VitrineDetalhePage() {
                     )}
                   </div>
                 </div>
+
+                {imovel.em_condominio && (
+                  <div className="card" style={{ marginTop: '0.85rem' }}>
+                    <h3 className="detail-label">Condomínio</h3>
+                    <p style={{ margin: 0 }}>Imóvel localizado em condomínio.</p>
+                    {imovel.condominio_infraestrutura.length > 0 && (
+                      <div className="chips" style={{ marginTop: '0.6rem' }}>
+                        {imovel.condominio_infraestrutura.map((d) => (
+                          <span key={d} className="chip chip-static">{d}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {imovel.diferenciais.length > 0 && (
                   <div className="card" style={{ marginTop: '0.85rem' }}>
