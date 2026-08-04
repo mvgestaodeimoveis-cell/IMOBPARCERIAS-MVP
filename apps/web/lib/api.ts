@@ -75,7 +75,12 @@ export async function apiFetch<T = unknown>(path: string, options: ApiOptions = 
       res = await doFetch(novoToken);
     } else {
       clearSession();
-      if (typeof window !== 'undefined') window.location.href = '/login';
+      if (typeof window !== 'undefined') {
+        // Preserva o destino para voltar após o login (ex.: link de feedback do e-mail).
+        const dest = window.location.pathname + window.location.search;
+        const manter = dest.startsWith('/') && !dest.startsWith('//') && !dest.startsWith('/login');
+        window.location.href = manter ? `/login?next=${encodeURIComponent(dest)}` : '/login';
+      }
     }
   }
 

@@ -126,6 +126,7 @@ export default function ParceriaDetalhePage() {
   const [detalhe, setDetalhe] = useState<Detalhe | null>(null);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
   const [erro, setErro] = useState<string | null>(null);
+  const [conectando, setConectando] = useState(false);
   const [dataVisita, setDataVisita] = useState('');
   const [cpf, setCpf] = useState('');
   const [acaoErro, setAcaoErro] = useState<string | null>(null);
@@ -172,21 +173,28 @@ export default function ParceriaDetalhePage() {
     }
   }, [params.id, irParaLogin]);
 
-  // Carga inicial com novas tentativas — cobre o "cold start" do servidor, que fazia a
-  // primeira tentativa falhar e exibir "Não foi possível carregar a parceria" ao abrir o link.
+  // Carga inicial resiliente ao "cold start": no plano free o servidor hiberna e a 1ª
+  // chamada pode levar até ~1 min para responder. Em vez de mostrar erro cedo, avisamos
+  // que está conectando e insistimos por bastante tempo antes de desistir.
   useEffect(() => {
     let ativo = true;
     let tentativas = 0;
     async function tentar() {
       if (!ativo || carregadoRef.current) return;
       const ok = await carregar();
-      if (!ativo || ok) return;
+      if (!ativo) return;
+      if (ok) {
+        setConectando(false);
+        return;
+      }
       tentativas += 1;
-      if (tentativas >= 4) {
+      if (tentativas >= 2) setConectando(true);
+      if (tentativas >= 20) {
+        setConectando(false);
         setErro('Não foi possível carregar a parceria. Verifique sua conexão e tente novamente.');
         return;
       }
-      setTimeout(tentar, 2000);
+      setTimeout(tentar, Math.min(1500 + tentativas * 600, 5000));
     }
     tentar();
     const poll = setInterval(() => {
@@ -350,7 +358,13 @@ export default function ParceriaDetalhePage() {
           </div>
         )}
         {!detalhe ? (
-          !erro && <p className="muted">Carregando…</p>
+          !erro && (
+            <p className="muted">
+              {conectando
+                ? 'Conectando ao servidor… pode levar alguns segundos na primeira vez.'
+                : 'Carregando…'}
+            </p>
+          )
         ) : (
           <>
             <div className="parceria-head">
