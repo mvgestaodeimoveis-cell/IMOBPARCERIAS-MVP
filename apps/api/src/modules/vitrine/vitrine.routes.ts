@@ -3,7 +3,7 @@ import { asyncHandler } from '../../lib/async-handler';
 import { badRequest } from '../../lib/errors';
 import { vitrineQuerySchema, importarTextoSchema } from '../imoveis/imoveis.schemas';
 import type { ImportarTextoInput } from '../imoveis/imoveis.schemas';
-import { listarVitrine, obterVitrine } from '../imoveis/imoveis.service';
+import { listarVitrine, obterVitrine, listarBairros } from '../imoveis/imoveis.service';
 import { parseImovelTexto } from '../../lib/parse-imovel-texto';
 
 // Vitrine pública (Nível 1) — navegável sem login (Fase 4 do escopo).
@@ -44,6 +44,14 @@ vitrineRoutes.post(
       },
       reconhecidos: e.reconhecidos,
     });
+  }),
+);
+
+vitrineRoutes.get(
+  '/bairros',
+  asyncHandler(async (req: Request, res: Response) => {
+    const cidade = typeof req.query.cidade === 'string' ? req.query.cidade.trim() : '';
+    res.json(await listarBairros(cidade || undefined));
   }),
 );
 

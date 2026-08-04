@@ -91,6 +91,7 @@ export default function VitrinePage() {
   const [buscaMsg, setBuscaMsg] = useState<string | null>(null);
   const [buscaAberta, setBuscaAberta] = useState(false);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false);
+  const [bairros, setBairros] = useState<string[]>([]);
 
   useEffect(() => {
     const logado = isAuthenticated() && getRole() !== 'equipe';
@@ -102,6 +103,14 @@ export default function VitrinePage() {
         .catch(() => setMe({}));
     }
   }, []);
+
+  // Sugestões de bairro (autocomplete) a partir dos imóveis publicados na cidade escolhida.
+  useEffect(() => {
+    const qs = filtros.cidade ? `?cidade=${encodeURIComponent(filtros.cidade)}` : '';
+    apiFetch<string[]>(`/vitrine/bairros${qs}`)
+      .then((bs) => setBairros(Array.isArray(bs) ? bs : []))
+      .catch(() => setBairros([]));
+  }, [filtros.cidade]);
 
   function toggleSel(id: string) {
     setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -430,7 +439,18 @@ export default function VitrinePage() {
                     </label>
                     <label className="filtro-campo">
                       <span className="filtro-campo-label">Bairro</span>
-                      <input className="input" placeholder="Ex.: Pituba" value={filtros.bairro} onChange={(e) => set('bairro', e.target.value)} />
+                      <input
+                        className="input"
+                        list="vitrine-bairros"
+                        placeholder="Ex.: Buraquinho"
+                        value={filtros.bairro}
+                        onChange={(e) => set('bairro', e.target.value)}
+                      />
+                      <datalist id="vitrine-bairros">
+                        {bairros.map((b) => (
+                          <option key={b} value={b} />
+                        ))}
+                      </datalist>
                     </label>
                   </div>
                 </div>

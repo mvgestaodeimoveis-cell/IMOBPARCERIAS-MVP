@@ -471,6 +471,20 @@ export async function criarImovel(
 
 /** Funil (KPI): abre uma sessão de cadastro quando o corretor inicia o formulário. */
 export async function iniciarSessaoCadastro(corretorId: string): Promise<{ id: string }> {
+  // Reaproveita uma sessão ainda aberta e recente do corretor em vez de abrir outra a cada
+  // vez que o formulário é carregado. Sem isso, quem reabre o cadastro (ex.: continua noutro
+  // dia, ou o app recarrega a página) gerava várias "iniciadas" para um único cadastro,
+  // inflando artificialmente a taxa de abandono.
+  const aberta = await query<{ id: string }>(
+    `SELECT id FROM cadastro_imovel_sessao
+     WHERE corretor_id = $1 AND concluido_em IS NULL
+       AND iniciado_em > now() - interval '3 days'
+     ORDER BY iniciado_em DESC
+     LIMIT 1`,
+    [corretorId],
+  );
+  if (aberta.rows[0]) return { id: aberta.rows[0].id };
+
   const { rows } = await query<{ id: string }>(
     'INSERT INTO cadastro_imovel_sessao (corretor_id) VALUES ($1) RETURNING id',
     [corretorId],
@@ -824,6 +838,12 @@ const FICHA_COMPLETA = `status = 'ativo'
   AND quartos IS NOT NULL AND banheiros IS NOT NULL AND vagas IS NOT NULL
   AND EXISTS (SELECT 1 FROM corretor c WHERE c.id = imovel.corretor_id AND c.excluido_em IS NULL)`;
 
+// Busca textual tolerante a acento e caixa (sem depender da extensão unaccent): normaliza
+// os dois lados removendo os acentos mais comuns do português antes do ILIKE.
+const AC_DE = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+const AC_PARA = 'aaaaaeeeeiiiiooooouuuucn';
+const semAcento = (expr: string) => `translate(lower(${expr}), '${AC_DE}', '${AC_PARA}')`;
+
 export async function listarVitrine(q: VitrineQuery) {
   const cond: string[] = [FICHA_COMPLETA];
   const params: unknown[] = [];
@@ -834,8 +854,8 @@ export async function listarVitrine(q: VitrineQuery) {
 
   if (q.tipo) add('tipo = $?', q.tipo);
   if (q.finalidade) add('finalidade = $?', q.finalidade);
-  if (q.cidade) add('cidade ILIKE $?', `%${q.cidade}%`);
-  if (q.bairro) add('bairro ILIKE $?', `%${q.bairro}%`);
+  if (q.cidade) add(`${semAcento('cidade')} ILIKE ${semAcento('$?')}`, `%${q.cidade}%`);
+  if (q.bairro) add(`${semAcento('bairro')} ILIKE ${semAcento('$?')}`, `%${q.bairro}%`);
   if (q.preco_min != null) add('preco >= $?', q.preco_min);
   if (q.preco_max != null) add('preco <= $?', q.preco_max);
   if (q.area_min != null) add('area_m2 >= $?', q.area_min);
@@ -867,4 +887,21 @@ export async function obterVitrine(id: string): Promise<ImovelVitrine> {
   );
   if (!rows[0]) throw notFound('Imóvel não encontrado ou indisponível.');
   return mapVitrine(rows[0]);
+}
+
+/** Bairros distintos com imóveis publicados (para o autocomplete da busca), por cidade. */
+export async function listarBairros(cidade?: string): Promise<string[]> {
+  const params: unknown[] = [];
+  let filtro = '';
+  if (cidade) {
+    params.push(`%${cidade}%`);
+    filtro = `AND ${semAcento('cidade')} ILIKE ${semAcento('$1')}`;
+  }
+  const { rows } = await query<{ bairro: string }>(
+    `SELECT DISTINCT bairro FROM imovel
+     WHERE ${FICHA_COMPLETA} ${filtro}
+     ORDER BY bairro`,
+    params,
+  );
+  return rows.map((r) => r.bairro).filter((b) => b && b.trim());
 }
