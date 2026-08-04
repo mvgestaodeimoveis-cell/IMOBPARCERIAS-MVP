@@ -84,10 +84,10 @@ export async function iniciarCadastro(input: RegistroInput) {
         papel: string;
       }>(
         `UPDATE corretor
-         SET nome = $2, senha_hash = $3, atualizado_em = now()
+         SET nome = $2, senha_hash = $3, whatsapp = $4, atualizado_em = now()
          WHERE id = $1
          RETURNING id, nome, email, status, papel`,
-        [existente.id, input.nome, senhaHash],
+        [existente.id, input.nome, senhaHash, input.whatsapp],
       );
       const corretor = retomado.rows[0];
       await enviarConfirmacaoEmail(corretor.id, corretor.nome, corretor.email);
@@ -99,6 +99,22 @@ export async function iniciarCadastro(input: RegistroInput) {
     });
   }
 
+  // Duplicidade por WhatsApp: o mesmo corretor tentando um 2º cadastro com outro e-mail.
+  // Sem isto, ele criava uma conta paralela (uma completa + uma incompleta) sem nenhum
+  // aviso. Comparamos só os dígitos, pois o número é normalizado (+55DDDNNNNNNNN).
+  const dupWhats = await query<{ id: string }>(
+    `SELECT id FROM corretor
+     WHERE regexp_replace(whatsapp, '[^0-9]', '', 'g') = regexp_replace($1, '[^0-9]', '', 'g')
+       AND excluido_em IS NULL
+     LIMIT 1`,
+    [input.whatsapp],
+  );
+  if (dupWhats.rows[0]) {
+    throw conflict('Cadastro já existente.', {
+      whatsapp: 'Já existe uma conta com este WhatsApp. Faça login ou use "Esqueci minha senha".',
+    });
+  }
+
   const senhaHash = await hashPassword(input.senha);
   const inserted = await query<{
     id: string;
@@ -107,10 +123,10 @@ export async function iniciarCadastro(input: RegistroInput) {
     status: string;
     papel: string;
   }>(
-    `INSERT INTO corretor (nome, email, senha_hash, papel, status)
-     VALUES ($1, $2, $3, 'ambos', 'cadastro_incompleto')
+    `INSERT INTO corretor (nome, email, senha_hash, whatsapp, papel, status)
+     VALUES ($1, $2, $3, $4, 'ambos', 'cadastro_incompleto')
      RETURNING id, nome, email, status, papel`,
-    [input.nome, input.email, senhaHash],
+    [input.nome, input.email, senhaHash, input.whatsapp],
   );
   const corretor = inserted.rows[0];
   await enviarConfirmacaoEmail(corretor.id, corretor.nome, corretor.email);

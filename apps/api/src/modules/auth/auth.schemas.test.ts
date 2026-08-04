@@ -3,15 +3,25 @@ import assert from 'node:assert/strict';
 import { registroSchema, completarCadastroSchema, loginSchema } from './auth.schemas';
 
 test('registro normaliza e-mail para minúsculas', () => {
-  const r = registroSchema.safeParse({ nome: 'Ana Souza', email: 'ANA@Ex.COM', senha: 'senha1234' });
+  const r = registroSchema.safeParse({ nome: 'Ana Souza', email: 'ANA@Ex.COM', whatsapp: '71999998888', senha: 'senha1234' });
   assert.equal(r.success, true);
   if (r.success) assert.equal(r.data.email, 'ana@ex.com');
 });
 
+test('registro normaliza WhatsApp para E.164', () => {
+  const r = registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', whatsapp: '(71) 99999-8888', senha: 'senha1234' });
+  assert.equal(r.success, true);
+  if (r.success) assert.equal(r.data.whatsapp, '+5571999998888');
+});
+
+test('registro exige WhatsApp', () => {
+  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', senha: 'senha1234' }).success, false);
+});
+
 test('senha exige 8+ com letra e número', () => {
-  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', senha: 'curta1' }).success, false);
-  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', senha: 'semnumeros' }).success, false);
-  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', senha: 'senha1234' }).success, true);
+  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', whatsapp: '71999998888', senha: 'curta1' }).success, false);
+  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', whatsapp: '71999998888', senha: 'semnumeros' }).success, false);
+  assert.equal(registroSchema.safeParse({ nome: 'Ana Souza', email: 'a@b.com', whatsapp: '71999998888', senha: 'senha1234' }).success, true);
 });
 
 test('completar cadastro normaliza WhatsApp para E.164', () => {

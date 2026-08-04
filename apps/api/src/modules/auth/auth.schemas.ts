@@ -36,6 +36,7 @@ const creciSchema = z
 export const registroSchema = z.object({
   nome: z.string().trim().min(3, 'Informe seu nome completo.').max(120),
   email: z.string().trim().toLowerCase().email('E-mail inválido.'),
+  whatsapp: whatsappSchema,
   senha: senhaSchema,
 });
 

@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch, ApiRequestError } from '@/lib/api';
-import { validateEmail, validateNome, validateSenha } from '@/lib/validation';
+import { validateEmail, validateNome, validateSenha, validateWhatsapp } from '@/lib/validation';
+import { maskPhone } from '@/lib/masks';
 import { saveSession } from '@/lib/auth';
 import { googleLoginEnabled, startGoogleLogin } from '@/lib/googleLogin';
 import { AuthShell } from '@/components/AuthShell';
@@ -20,7 +21,7 @@ interface RegistroResponse {
 
 export default function CadastroPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', confirmarSenha: '' });
+  const [form, setForm] = useState({ nome: '', email: '', whatsapp: '', senha: '', confirmarSenha: '' });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [erro, setErro] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -29,6 +30,7 @@ export default function CadastroPage() {
   const VALIDATORS: Record<string, (v: string) => string | null> = {
     nome: validateNome,
     email: validateEmail,
+    whatsapp: validateWhatsapp,
     senha: validateSenha,
   };
 
@@ -64,6 +66,8 @@ export default function CadastroPage() {
     if (n) errs.nome = n;
     const em = validateEmail(form.email);
     if (em) errs.email = em;
+    const w = validateWhatsapp(form.whatsapp);
+    if (w) errs.whatsapp = w;
     const s = validateSenha(form.senha);
     if (s) errs.senha = s;
     const c = validateConfirmar();
@@ -81,7 +85,7 @@ export default function CadastroPage() {
     try {
       const res = await apiFetch<RegistroResponse>('/auth/registro', {
         method: 'POST',
-        body: { nome: form.nome, email: form.email, senha: form.senha },
+        body: { nome: form.nome, email: form.email, whatsapp: form.whatsapp, senha: form.senha },
       });
       saveSession({
         accessToken: res.access_token,
@@ -151,6 +155,29 @@ export default function CadastroPage() {
             onBlur={() => validateField('email')}
           />
           {fieldErrors.email && <div className="field-error">{fieldErrors.email}</div>}
+        </div>
+
+        <div className="field">
+          <label htmlFor="whatsapp">WhatsApp</label>
+          <input
+            id="whatsapp"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel"
+            className={`input ${fieldErrors.whatsapp ? 'error' : ''}`}
+            placeholder="(00) 00000-0000"
+            value={form.whatsapp}
+            maxLength={16}
+            onChange={(e) => update('whatsapp', maskPhone(e.target.value))}
+            onBlur={() => validateField('whatsapp')}
+          />
+          {fieldErrors.whatsapp ? (
+            <div className="field-error">{fieldErrors.whatsapp}</div>
+          ) : (
+            <p className="muted" style={{ fontSize: '0.78rem', marginTop: '0.35rem' }}>
+              Usamos para falar com você sobre seu cadastro e as parcerias.
+            </p>
+          )}
         </div>
 
         <div className="field">

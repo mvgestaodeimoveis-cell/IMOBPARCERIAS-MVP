@@ -46,7 +46,14 @@ export default function CompletarCadastroPage() {
 
   useEffect(() => {
     if (!token) return;
-    apiFetch<{ nome: string; status: string; email_verificado_em: string | null }>('/corretores/me', { token })
+    apiFetch<{
+      nome: string;
+      status: string;
+      email_verificado_em: string | null;
+      whatsapp: string | null;
+      cidade: string | null;
+      imobiliaria: string | null;
+    }>('/corretores/me', { token })
       .then((me) => {
         if (me.status !== 'cadastro_incompleto') {
           router.replace(routeForStatus(me.status));
@@ -54,6 +61,16 @@ export default function CompletarCadastroPage() {
         }
         setNome(me.nome);
         setEmailVerificado(Boolean(me.email_verificado_em));
+        // Pré-preenche o que já veio da Etapa 1 (ex.: WhatsApp) para não pedir de novo.
+        // O número é salvo em E.164 (+55DDD…); removemos o país para exibir na máscara BR.
+        const wDigits = (me.whatsapp ?? '').replace(/\D/g, '');
+        const wNacional = wDigits.startsWith('55') ? wDigits.slice(2) : wDigits;
+        setForm((f) => ({
+          ...f,
+          whatsapp: wNacional ? maskPhone(wNacional) : f.whatsapp,
+          cidade: me.cidade ?? f.cidade,
+          imobiliaria: me.imobiliaria ?? f.imobiliaria,
+        }));
         setCarregando(false);
       })
       .catch(() => router.replace('/login'));
