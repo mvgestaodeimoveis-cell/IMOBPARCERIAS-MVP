@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { AppHeader, type AppTab } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 /**
  * Rotas de "aba" que compartilham o shell do app (frame + header + navegação inferior).
@@ -61,7 +62,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="frame frame-app">
       <AppHeader active={tab.tab} parceriasBadge={pendentes} conversasBadge={naoLidas} />
-      <div className="screen has-bottomnav">{children}</div>
+      <div className="screen has-bottomnav">
+        <InstallPrompt />
+        {children}
+      </div>
       <BottomNav active={tab.tab} conversasBadge={naoLidas} parceriasBadge={pendentes} />
     </div>
   );

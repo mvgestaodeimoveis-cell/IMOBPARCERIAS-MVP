@@ -12,6 +12,7 @@ import { Topbar } from '@/components/Topbar';
 import { SiteFooter } from '@/components/SiteFooter';
 import { AppHeader } from '@/components/AppHeader';
 import { BottomNav } from '@/components/BottomNav';
+import { InstallPrompt } from '@/components/InstallPrompt';
 
 interface ImovelVitrine {
   id: string;
@@ -253,6 +254,7 @@ export default function VitrinePage() {
       {appNav ? <AppHeader active="inicio" /> : <Topbar />}
 
       <main className={appNav ? 'has-bottomnav' : undefined}>
+        {appNav && <InstallPrompt />}
         <section className="section">
           <div className="section-inner">
             <h1 className="section-title vitrine-titulo">

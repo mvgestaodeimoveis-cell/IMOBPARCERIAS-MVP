@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { GoogleAnalytics } from '@next/third-parties/google';
 import './globals.css';
 import { ErrorReporter } from '@/components/ErrorReporter';
+import { ServiceWorkerRegister } from '@/components/ServiceWorkerRegister';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const poppins = Poppins({
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" className={`${inter.variable} ${poppins.variable}`}>
       <body>
         <ErrorReporter />
+        <ServiceWorkerRegister />
         {children}
         <Analytics />
       </body>
