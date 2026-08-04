@@ -518,9 +518,11 @@ export async function obterParceria(parceriaId: string, corretorId: string) {
 
 /** Resumo do feedback pós-visita para o detalhe da parceria (item 3). */
 async function resumoFeedback(p: ParceriaFull, corretorId: string) {
-  const { rows } = await query<{ autor_id: string; resultado: string; observacao: string | null; criado_em: string }>(
-    `SELECT autor_id, resultado, observacao, criado_em::text AS criado_em
-     FROM parceria_visita_feedback WHERE parceria_id = $1 ORDER BY criado_em DESC`,
+  const { rows } = await query<{ autor_id: string; autor_nome: string; resultado: string; observacao: string | null; criado_em: string }>(
+    `SELECT f.autor_id, c.nome AS autor_nome, f.resultado, f.observacao, f.criado_em::text AS criado_em
+     FROM parceria_visita_feedback f
+     JOIN corretor c ON c.id = f.autor_id
+     WHERE f.parceria_id = $1 ORDER BY f.criado_em DESC`,
     [p.id],
   );
   // “Pendente” = a visita já foi confirmada por ambos e este corretor ainda não respondeu
@@ -528,8 +530,9 @@ async function resumoFeedback(p: ParceriaFull, corretorId: string) {
   const meuUltimo = rows.find((r) => r.autor_id === corretorId);
   const solicitadoEm = p.feedback_solicitado_em ? new Date(p.feedback_solicitado_em).getTime() : 0;
   const respondiDepois = meuUltimo ? new Date(meuUltimo.criado_em).getTime() >= solicitadoEm : false;
-  // Fica disponível quando a visita foi confirmada por ambos, a data/hora já passou e a
-  // parceria segue ativa (aceita ou em negociação).
+  // O formulário fica disponível enquanto a parceria está ativa (aceita/em negociação). O
+  // histórico, porém, é sempre devolvido — assim o retorno já registrado NÃO some da tela
+  // quando o imóvel volta para a vitrine (status 'encerrada').
   const visitaPassou = Boolean(p.visita_em) && new Date(p.visita_em as string).getTime() <= Date.now();
   return {
     disponivel:
@@ -537,6 +540,13 @@ async function resumoFeedback(p: ParceriaFull, corretorId: string) {
     solicitado: Boolean(p.feedback_solicitado_em),
     ja_respondi: respondiDepois,
     meu_resultado: meuUltimo?.resultado ?? null,
+    historico: rows.map((r) => ({
+      autor_nome: r.autor_nome,
+      sou_eu: r.autor_id === corretorId,
+      resultado: r.resultado,
+      observacao: r.observacao,
+      criado_em: r.criado_em,
+    })),
   };
 }
 
@@ -1023,7 +1033,9 @@ export async function solicitarFeedbackVisitas(): Promise<number> {
     [String(env.FEEDBACK_VISITA_HORAS)],
   );
   for (const r of rows) {
-    const url = `${env.APP_WEB_URL}/parcerias/${r.id}`;
+    // ?feedback=1 leva o corretor direto ao bloco de feedback (com rolagem) e, se ele abrir
+    // o link sem sessão ativa, o destino é preservado no login (?next=).
+    const url = `${env.APP_WEB_URL}/parcerias/${r.id}?feedback=1`;
     const quando = formatarVisita(r.visita_em);
     const resumo = resumoImovel(r);
     await sendEmail({ to: r.captador_email, ...emailFeedbackVisita(r.captador_nome, resumo, quando, url, true) });

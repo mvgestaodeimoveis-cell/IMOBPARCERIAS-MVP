@@ -64,6 +64,13 @@ interface Detalhe {
     solicitado: boolean;
     ja_respondi: boolean;
     meu_resultado: string | null;
+    historico: {
+      autor_nome: string;
+      sou_eu: boolean;
+      resultado: string;
+      observacao: string | null;
+      criado_em: string;
+    }[];
   };
 }
 
@@ -129,12 +136,20 @@ export default function ParceriaDetalhePage() {
   const [fbObs, setFbObs] = useState('');
   const [fbManter, setFbManter] = useState(true);
   const carregadoRef = useRef(false);
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
-  const carregar = useCallback(async () => {
+  // Destino preservado quando o corretor abre o link do e-mail sem sessão ativa
+  // (ex.: no navegador in-app do Gmail). Após o login ele volta direto para esta parceria.
+  const irParaLogin = useCallback(() => {
+    const busca = typeof window !== 'undefined' ? window.location.search : '';
+    router.replace(`/login?next=${encodeURIComponent(`/parcerias/${params.id}${busca}`)}`);
+  }, [params.id, router]);
+
+  const carregar = useCallback(async (): Promise<boolean> => {
     const token = getAccessToken();
     if (!token) {
-      router.replace('/login');
-      return;
+      irParaLogin();
+      return false;
     }
     try {
       const [d, m] = await Promise.all([
@@ -145,22 +160,52 @@ export default function ParceriaDetalhePage() {
       setMensagens(m.data);
       setErro(null);
       carregadoRef.current = true;
+      return true;
     } catch (err) {
       if (err instanceof ApiRequestError && err.code === 'UNAUTHENTICATED') {
-        router.replace('/login');
+        irParaLogin();
+        return false;
+      }
+      // Falhas transitórias (cold start do servidor/rede) não exibem erro aqui: o efeito de
+      // carga inicial repete algumas tentativas antes de desistir.
+      return false;
+    }
+  }, [params.id, irParaLogin]);
+
+  // Carga inicial com novas tentativas — cobre o "cold start" do servidor, que fazia a
+  // primeira tentativa falhar e exibir "Não foi possível carregar a parceria" ao abrir o link.
+  useEffect(() => {
+    let ativo = true;
+    let tentativas = 0;
+    async function tentar() {
+      if (!ativo || carregadoRef.current) return;
+      const ok = await carregar();
+      if (!ativo || ok) return;
+      tentativas += 1;
+      if (tentativas >= 4) {
+        setErro('Não foi possível carregar a parceria. Verifique sua conexão e tente novamente.');
         return;
       }
-      // Falhas transitórias do polling (cold start/rede) não devem exibir erro
-      // se a parceria já foi carregada — mantém o conteúdo na tela.
-      if (!carregadoRef.current) setErro('Não foi possível carregar a parceria.');
+      setTimeout(tentar, 2000);
     }
-  }, [params.id, router]);
-
-  useEffect(() => {
-    carregar();
-    const t = setInterval(carregar, 8000);
-    return () => clearInterval(t);
+    tentar();
+    const poll = setInterval(() => {
+      if (carregadoRef.current) carregar();
+    }, 8000);
+    return () => {
+      ativo = false;
+      clearInterval(poll);
+    };
   }, [carregar]);
+
+  // Abertura pelo e-mail "Como foi a visita?" (?feedback=1): rola até o bloco de feedback.
+  useEffect(() => {
+    if (!detalhe) return;
+    const querFeedback = new URLSearchParams(window.location.search).get('feedback') === '1';
+    if (querFeedback && feedbackRef.current) {
+      feedbackRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [detalhe]);
 
   async function proporVisita() {
     if (!dataVisita) return;
@@ -289,7 +334,21 @@ export default function ParceriaDetalhePage() {
       <AppHeader back={{ href: '/parcerias', label: 'Parcerias' }} />
 
       <div className="screen">
-        {erro && <div className="banner banner-error">{erro}</div>}
+        {erro && (
+          <div className="banner banner-error">
+            {erro}
+            <div>
+              <button
+                type="button"
+                className="btn btn-emerald btn-sm"
+                style={{ marginTop: '0.6rem' }}
+                onClick={() => window.location.reload()}
+              >
+                Tentar novamente
+              </button>
+            </div>
+          </div>
+        )}
         {!detalhe ? (
           !erro && <p className="muted">Carregando…</p>
         ) : (
@@ -477,63 +536,80 @@ export default function ParceriaDetalhePage() {
               )}
             </div>
 
-            {/* Item 3 — feedback pós-visita */}
-            {detalhe.feedback.disponivel && (
-              <div className="card" style={{ marginTop: '0.85rem' }}>
+            {/* Item 3 — feedback pós-visita (histórico sempre visível; formulário enquanto ativa) */}
+            {(detalhe.feedback.disponivel || detalhe.feedback.historico.length > 0) && (
+              <div className="card" ref={feedbackRef} style={{ marginTop: '0.85rem' }}>
                 <h3 className="detail-label">Feedback da visita</h3>
-                {detalhe.feedback.ja_respondi && detalhe.feedback.meu_resultado && (
-                  <div className="banner banner-success" style={{ marginBottom: '0.75rem' }}>
-                    ✓ Você registrou: {FEEDBACK_LABEL[detalhe.feedback.meu_resultado] ?? detalhe.feedback.meu_resultado}. Pode atualizar abaixo se algo mudar.
+
+                {detalhe.feedback.historico.length > 0 && (
+                  <div style={{ marginBottom: detalhe.feedback.disponivel ? '1rem' : 0 }}>
+                    {detalhe.feedback.historico.map((f, i) => (
+                      <div key={i} className="banner banner-info" style={{ marginBottom: '0.5rem' }}>
+                        <strong>{f.sou_eu ? 'Você' : f.autor_nome}:</strong>{' '}
+                        {FEEDBACK_LABEL[f.resultado] ?? f.resultado}
+                        {f.observacao && <p style={{ margin: '0.35rem 0 0' }}>{f.observacao}</p>}
+                        <div>
+                          <small className="muted">{new Date(f.criado_em).toLocaleString('pt-BR')}</small>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>
-                  Como foi a visita? Seu retorno ajuda a decidir os próximos passos.
-                </p>
 
-                <div className="confirm-acao" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
-                  {FEEDBACK_OPCOES.map(([valor, label]) => (
-                    <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.3rem 0', cursor: 'pointer' }}>
-                      <input
-                        type="radio"
-                        name="feedback-resultado"
-                        value={valor}
-                        checked={fbResultado === valor}
-                        onChange={(e) => setFbResultado(e.target.value)}
+                {detalhe.feedback.disponivel && (
+                  <>
+                    <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.82rem' }}>
+                      {detalhe.feedback.ja_respondi
+                        ? 'Você já registrou seu retorno. Pode atualizar abaixo se algo mudar.'
+                        : 'Como foi a visita? Seu retorno ajuda a decidir os próximos passos.'}
+                    </p>
+
+                    <div className="confirm-acao" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none' }}>
+                      {FEEDBACK_OPCOES.map(([valor, label]) => (
+                        <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.3rem 0', cursor: 'pointer' }}>
+                          <input
+                            type="radio"
+                            name="feedback-resultado"
+                            value={valor}
+                            checked={fbResultado === valor}
+                            onChange={(e) => setFbResultado(e.target.value)}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+
+                      <textarea
+                        className="input"
+                        placeholder="Observações (opcional)"
+                        maxLength={1000}
+                        value={fbObs}
+                        onChange={(e) => setFbObs(e.target.value)}
+                        style={{ minHeight: 64, marginTop: '0.5rem' }}
                       />
-                      <span>{label}</span>
-                    </label>
-                  ))}
 
-                  <textarea
-                    className="input"
-                    placeholder="Observações (opcional)"
-                    maxLength={1000}
-                    value={fbObs}
-                    onChange={(e) => setFbObs(e.target.value)}
-                    style={{ minHeight: 64, marginTop: '0.5rem' }}
-                  />
+                      {detalhe.papel === 'captador' && (
+                        <div style={{ marginTop: '0.85rem' }}>
+                          <span className="detail-label">O imóvel deve continuar em negociação?</span>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.35rem 0', cursor: 'pointer' }}>
+                            <input type="radio" name="feedback-manter" checked={fbManter} onChange={() => setFbManter(true)} />
+                            <span>Sim, manter em negociação</span>
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.35rem 0', cursor: 'pointer' }}>
+                            <input type="radio" name="feedback-manter" checked={!fbManter} onChange={() => setFbManter(false)} />
+                            <span>Não, voltar o imóvel para a vitrine</span>
+                          </label>
+                          <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
+                            Enquanto o imóvel fica <strong>em negociação</strong>, ele não recebe novas demandas de outros corretores.
+                          </p>
+                        </div>
+                      )}
 
-                  {detalhe.papel === 'captador' && (
-                    <div style={{ marginTop: '0.85rem' }}>
-                      <span className="detail-label">O imóvel deve continuar em negociação?</span>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.35rem 0', cursor: 'pointer' }}>
-                        <input type="radio" name="feedback-manter" checked={fbManter} onChange={() => setFbManter(true)} />
-                        <span>Sim, manter em negociação</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.35rem 0', cursor: 'pointer' }}>
-                        <input type="radio" name="feedback-manter" checked={!fbManter} onChange={() => setFbManter(false)} />
-                        <span>Não, voltar o imóvel para a vitrine</span>
-                      </label>
-                      <p className="muted" style={{ margin: '0.25rem 0 0', fontSize: '0.8rem' }}>
-                        Enquanto o imóvel fica <strong>em negociação</strong>, ele não recebe novas demandas de outros corretores.
-                      </p>
+                      <button className="btn btn-emerald btn-sm" style={{ marginTop: '0.85rem' }} onClick={enviarFeedback} disabled={!fbResultado}>
+                        {detalhe.feedback.ja_respondi ? 'Atualizar feedback' : 'Enviar feedback'}
+                      </button>
                     </div>
-                  )}
-
-                  <button className="btn btn-emerald btn-sm" style={{ marginTop: '0.85rem' }} onClick={enviarFeedback} disabled={!fbResultado}>
-                    Enviar feedback
-                  </button>
-                </div>
+                  </>
+                )}
               </div>
             )}
 

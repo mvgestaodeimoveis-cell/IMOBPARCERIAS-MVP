@@ -59,7 +59,15 @@ export default function LoginPage() {
         refreshToken: res.refresh_token,
         role: 'corretor',
       });
-      router.push(routeForStatus(res.corretor.status));
+      // Preserva o destino quando o corretor chega por um link protegido (ex.: e-mail de
+      // feedback → /login?next=/parcerias/{id}?feedback=1). Aceita apenas caminhos internos
+      // para evitar redirecionamento aberto (open redirect) a domínios externos.
+      const next = new URLSearchParams(window.location.search).get('next');
+      const destino =
+        next && next.startsWith('/') && !next.startsWith('//')
+          ? next
+          : routeForStatus(res.corretor.status);
+      router.push(destino);
     } catch (err) {
       setErro(
         err instanceof ApiRequestError ? err.message : 'Não foi possível entrar. Tente novamente.',
