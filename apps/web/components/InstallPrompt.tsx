@@ -26,7 +26,10 @@ export function InstallPrompt() {
       (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     if (standalone) return;
     try {
-      if (localStorage.getItem('imob.install_dismiss') === '1') return;
+      // Reaparece após alguns dias — não some para sempre. Quem dispensa uma vez (sem
+      // instalar) continua sendo lembrado, senão acaba nunca colocando o app na tela.
+      const dispensadoEm = Number(localStorage.getItem('imob.install_dismiss') || 0);
+      if (dispensadoEm && Date.now() - dispensadoEm < 5 * 24 * 60 * 60 * 1000) return;
     } catch {
       /* localStorage indisponível — segue mostrando */
     }
@@ -50,7 +53,7 @@ export function InstallPrompt() {
   function fechar() {
     setVisivel(false);
     try {
-      localStorage.setItem('imob.install_dismiss', '1');
+      localStorage.setItem('imob.install_dismiss', String(Date.now()));
     } catch {
       /* ignora */
     }

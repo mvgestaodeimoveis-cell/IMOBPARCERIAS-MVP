@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Brandmark } from './Brandmark';
@@ -27,6 +28,15 @@ interface AppHeaderProps {
 
 export function AppHeader({ active, parceriasBadge, conversasBadge, back }: AppHeaderProps) {
   const router = useRouter();
+  const [instalavel, setInstalavel] = useState(false);
+
+  // Mostra o atalho "Instalar" só quando o app ainda não está na tela (não é standalone).
+  useEffect(() => {
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    setInstalavel(!standalone);
+  }, []);
 
   function sair() {
     clearSession();
@@ -57,6 +67,15 @@ export function AppHeader({ active, parceriasBadge, conversasBadge, back }: AppH
               </Link>
             ))}
           </nav>
+          {instalavel && (
+            <Link
+              href="/como-instalar"
+              className="btn btn-ghost topbar-sair"
+              title="Instalar o app na tela do celular"
+            >
+              📲 App
+            </Link>
+          )}
           <button className="btn btn-ghost topbar-sair" onClick={sair}>
             Sair
           </button>
