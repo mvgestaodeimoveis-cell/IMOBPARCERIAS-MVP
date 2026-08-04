@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, ApiRequestError } from '@/lib/api';
 import { getAccessToken, getRole } from '@/lib/auth';
-import { dataPublicacao, tempoRelativo } from '@/lib/format';
+import { dataPublicacao, tempoRelativo, waLink } from '@/lib/format';
+import { maskPhone } from '@/lib/masks';
 import { CORRETOR_STATUS_LABEL as STATUS_LABEL } from '@/lib/labels';
 import { Pager } from '@/components/Pager';
 
@@ -13,6 +14,8 @@ interface CorretorRow {
   nome: string;
   creci: string;
   cidade: string;
+  whatsapp: string | null;
+  email: string;
   status: string;
   criado_em: string;
   ultimo_acesso_em: string | null;
@@ -204,6 +207,7 @@ export default function AdminCorretoresPage() {
               <tr>
                 <th>Nome</th>
                 <th>CRECI</th>
+                <th>Contato</th>
                 <th>Imóveis</th>
                 <th>Inscrição</th>
                 <th>Último acesso</th>
@@ -216,6 +220,24 @@ export default function AdminCorretoresPage() {
                 <tr key={c.id}>
                   <td>{c.nome}</td>
                   <td>{c.creci}</td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', fontSize: '0.84rem' }}>
+                      {c.whatsapp ? (
+                        <a
+                          href={waLink(c.whatsapp) ?? undefined}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Abrir conversa no WhatsApp"
+                          style={{ color: 'var(--emerald, #059669)', fontWeight: 600, textDecoration: 'none' }}
+                        >
+                          💬 {maskPhone(c.whatsapp)}
+                        </a>
+                      ) : (
+                        <span className="muted">Sem WhatsApp</span>
+                      )}
+                      <a href={`mailto:${c.email}`} className="muted" style={{ wordBreak: 'break-all' }}>{c.email}</a>
+                    </div>
+                  </td>
                   <td style={{ textAlign: 'center' }}>{c.imoveis_total}</td>
                   <td>{dataPublicacao(c.criado_em)}</td>
                   <td>{c.ultimo_acesso_em ? tempoRelativo(c.ultimo_acesso_em) : '—'}</td>

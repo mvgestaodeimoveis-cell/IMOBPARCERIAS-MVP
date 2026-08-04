@@ -11,6 +11,8 @@ interface CorretorListRow {
   nome: string;
   creci: string;
   cidade: string;
+  whatsapp: string | null;
+  email: string;
   status: string;
   criado_em: string;
   ultimo_acesso_em: string | null;
@@ -48,7 +50,7 @@ export async function listCorretores(q: ListCorretoresQuery) {
   };
   const orderBy = ORDER_BY[q.ordem] ?? ORDER_BY.antigos;
   const dataRes = await query<CorretorListRow>(
-    `SELECT id, nome, creci, cidade, status, criado_em, ultimo_acesso_em,
+    `SELECT id, nome, creci, cidade, whatsapp, email, status, criado_em, ultimo_acesso_em,
             (SELECT count(*)::int FROM imovel i WHERE i.corretor_id = corretor.id AND i.status <> 'inativo') AS imoveis_total
      FROM corretor ${where}
      ORDER BY ${orderBy}
